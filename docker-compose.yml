@@ -16,6 +16,8 @@ services:
       - CREDENTIALS=true
       - ORIGIN=https://ai-server-new-u14194.vm.elestio.app
       - LOG_FORMAT=combined
+      - TELEGRAM_BOT_TOKEN_DEV=${TELEGRAM_BOT_TOKEN_DEV}
+      - TELEGRAM_BOT_TOKEN_PROD=${TELEGRAM_BOT_TOKEN_PROD}
     restart: always
 
   proxy:
