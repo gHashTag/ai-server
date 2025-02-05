@@ -22,7 +22,7 @@ RUN npm install --production
 
 # Copy built assets from builder
 COPY --from=builder /app/dist ./dist
-COPY .env.production.local ./
+COPY .env ./
 
 # Create logs directory with proper permissions
 RUN mkdir -p /app/logs && \
