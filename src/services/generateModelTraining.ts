@@ -7,8 +7,10 @@ import {
 } from '@/core/supabase'
 import { errorMessage } from '@/helpers'
 import { errorMessageAdmin } from '@/helpers/errorMessageAdmin'
-import { processBalanceOperation } from '@/price/helpers'
-import { calculateTrainingCostInStars } from '@/price/helpers'
+import {
+  calculateTrainingCostInStars,
+  processBalanceOperation,
+} from '@/price/helpers'
 import { getUserBalance } from '@/core/supabase'
 import { createModelTraining } from '@/core/supabase/'
 
@@ -61,6 +63,7 @@ export async function generateModelTraining(
   let currentTraining: TrainingResponse | null = null
   const currentBalance = await getUserBalance(Number(telegram_id))
   const trainingCostInStars = calculateTrainingCostInStars(steps)
+
   const balanceCheck = await processBalanceOperation({
     telegram_id: Number(telegram_id),
     paymentAmount: trainingCostInStars,
