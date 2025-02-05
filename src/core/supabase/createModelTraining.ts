@@ -9,6 +9,7 @@ export interface ModelTraining {
   replicate_training_id?: string
   status?: string
   error?: string
+  steps?: number
 }
 
 export const createModelTraining = async (training: ModelTraining) => {

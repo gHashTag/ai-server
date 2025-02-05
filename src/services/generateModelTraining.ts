@@ -121,6 +121,7 @@ export async function generateModelTraining(
       model_name: modelName,
       trigger_word: triggerWord,
       zip_url: zipUrl,
+      steps,
     })
 
     // Создаем тренировку в Replicate
