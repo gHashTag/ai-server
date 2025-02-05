@@ -5,7 +5,6 @@ import { GenerationRoute } from './generation.route'
 import { UserRoute } from './user.route'
 import { GameRoute } from './leelagame.route'
 import { AiAssistantRoute } from './ai.assistant.route'
-import { BotRoute } from './bot.route'
 
 export const routes = [
   new UploadRoute(),
@@ -15,5 +14,4 @@ export const routes = [
   new UserRoute(),
   new GameRoute(),
   new AiAssistantRoute(),
-  new BotRoute(),
 ]

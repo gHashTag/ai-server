@@ -1,4 +1,4 @@
-export * from './generateLipSync'
+
 export * from './createVoiceAvatar'
 export * from './generateImageToPrompt'
 export * from './generateImageToVideo'
