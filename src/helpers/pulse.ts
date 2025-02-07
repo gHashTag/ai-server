@@ -1,5 +1,4 @@
-import bot from '@/core/bot'
-
+import { pulseBot } from '@/config'
 export const pulse = async (
   image: string,
   prompt: string,
@@ -32,7 +31,11 @@ export const pulse = async (
     const chatId = '@neuro_blogger_pulse' as string // string is required!!!!
 
     // send image as buffer
-    await bot.telegram.sendPhoto(chatId, { source: imageBuffer }, { caption })
+    await pulseBot.telegram.sendPhoto(
+      chatId,
+      { source: imageBuffer },
+      { caption }
+    )
   } catch (error) {
     console.error('Error sending pulse:', error)
     throw new Error('Error sending pulse')

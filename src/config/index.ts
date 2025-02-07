@@ -1,4 +1,6 @@
+import { MyContext } from '@/interfaces'
 import { config } from 'dotenv'
+import { Telegraf } from 'telegraf'
 config({ path: `.env.${process.env.NODE_ENV || 'development'}.local` })
 
 export const isDev = process.env.NODE_ENV === 'development'
@@ -78,3 +80,7 @@ export const BOT_TOKENS =
   NODE_ENV === 'production' ? BOT_TOKENS_PROD : BOT_TOKENS_TEST
 
 export const DEFAULT_BOT_TOKEN = process.env.BOT_TOKEN_1
+
+export const PULSE_BOT_TOKEN = process.env.BOT_TOKEN_1
+
+export const pulseBot = new Telegraf<MyContext>(PULSE_BOT_TOKEN)
