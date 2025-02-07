@@ -1,18 +1,20 @@
-import { pulse } from '@/helpers/pulse'
 import {
   processBalanceOperation,
   imageToPromptCost,
   sendBalanceMessage,
 } from '@/price/helpers'
 import axios from 'axios'
-import bot from '@/core/bot'
+
 import { errorMessage, errorMessageAdmin } from '@/helpers'
+import { Telegraf } from 'telegraf'
+import { MyContext } from '@/interfaces'
 
 export async function generateImageToPrompt(
   imageUrl: string,
   telegram_id: number,
   username: string,
-  is_ru: boolean
+  is_ru: boolean,
+  bot: Telegraf<MyContext>
 ): Promise<string> {
   console.log('generateImageToPrompt', imageUrl, telegram_id, username, is_ru)
   try {

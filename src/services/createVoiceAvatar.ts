@@ -1,13 +1,15 @@
-import bot from '@/core/bot'
 import { supabase } from '@/core/supabase'
 import { createVoiceElevenLabs } from '@/core/supabase/ai'
 import { errorMessage, errorMessageAdmin } from '@/helpers'
+import { Telegraf } from 'telegraf'
+import { MyContext } from '@/interfaces'
 
 export async function createVoiceAvatar(
   fileUrl: string,
   telegram_id: number,
   username: string,
-  isRu: boolean
+  isRu: boolean,
+  bot: Telegraf<MyContext>
 ): Promise<{ voiceId: string }> {
   try {
     console.log('createVoiceAvatar', { fileUrl, telegram_id, username, isRu })

@@ -4,12 +4,14 @@ import { getAspectRatio, savePrompt } from '@/core/supabase'
 import { downloadFile } from '@/helpers/downloadFile'
 import { processApiResponse } from '@/helpers/processApiResponse'
 import { pulse } from '@/helpers/pulse'
-import bot from '@/core/bot'
+
 import { IMAGES_MODELS } from '@/helpers/IMAGES_MODELS'
 
 import { processBalanceOperation } from '@/price/helpers'
 import { errorMessageAdmin } from '@/helpers/errorMessageAdmin'
 import { errorMessage } from '@/helpers'
+import { Telegraf } from 'telegraf'
+import { MyContext } from '@/interfaces'
 
 const supportedSizes = [
   '1024x1024',
@@ -35,7 +37,8 @@ export const generateTextToImage = async (
   num_images: number,
   telegram_id: number,
   username: string,
-  is_ru: boolean
+  is_ru: boolean,
+  bot: Telegraf<MyContext>
 ): Promise<GenerationResult[]> => {
   try {
     const modelKey = model_type.toLowerCase()

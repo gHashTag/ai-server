@@ -2,7 +2,7 @@ import { createWriteStream } from 'fs'
 import path from 'path'
 import os from 'os'
 import elevenLabsClient from '@/core/elevenlabs'
-import bot from '@/core/bot'
+
 import { InputFile } from 'telegraf/typings/core/types/typegram'
 import {
   processBalanceOperation,
@@ -10,17 +10,21 @@ import {
   speechGenerationCost,
 } from '@/price/helpers'
 import { errorMessageAdmin, errorMessage } from '@/helpers'
+import { Telegraf } from 'telegraf'
+import { MyContext } from '@/interfaces'
 
 export const generateSpeech = async ({
   text,
   voice_id,
   telegram_id,
   is_ru,
+  bot,
 }: {
   text: string
   voice_id: string
   telegram_id: number
   is_ru: boolean
+  bot: Telegraf<MyContext>
 }): Promise<{ audioUrl: string }> => {
   // Проверка баланса для всех изображений
   const balanceCheck = await processBalanceOperation({

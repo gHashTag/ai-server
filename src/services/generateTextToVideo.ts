@@ -1,4 +1,3 @@
-import bot from '@/core/bot'
 import { replicate } from '@/core/replicate'
 import { downloadFile } from '@/helpers/downloadFile'
 import { errorMessage, errorMessageAdmin, pulse } from '@/helpers'
@@ -7,13 +6,16 @@ import { mkdir, writeFile } from 'fs/promises'
 import { InputFile } from 'telegraf/typings/core/types/typegram'
 import { saveVideoUrlToSupabase } from '@/core/supabase/saveVideoUrlToSupabase'
 import path from 'path'
+import { Telegraf } from 'telegraf'
+import { MyContext } from '@/interfaces'
 
 export const generateTextToVideo = async (
   prompt: string,
   videoModel: string,
   telegram_id: number,
   username: string,
-  is_ru: boolean
+  is_ru: boolean,
+  bot: Telegraf<MyContext>
 ): Promise<{ videoLocalPath: string }> => {
   try {
     if (!prompt) throw new Error('Prompt is required')

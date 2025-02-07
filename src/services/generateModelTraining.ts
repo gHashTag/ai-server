@@ -1,4 +1,3 @@
-import bot from '@/core/bot'
 import { replicate } from '@/core/replicate'
 import {
   updateModelTraining,
@@ -13,6 +12,8 @@ import {
 } from '@/price/helpers'
 import { getUserBalance } from '@/core/supabase'
 import { createModelTraining } from '@/core/supabase/'
+import { Telegraf } from 'telegraf'
+import { MyContext } from '@/interfaces'
 
 export interface ApiError extends Error {
   response?: {
@@ -49,7 +50,8 @@ export async function generateModelTraining(
   modelName: string,
   steps: number,
   telegram_id: string,
-  is_ru: boolean
+  is_ru: boolean,
+  bot: Telegraf<MyContext>
 ): Promise<ModelTrainingResult> {
   const userExists = await supabase
     .from('users')

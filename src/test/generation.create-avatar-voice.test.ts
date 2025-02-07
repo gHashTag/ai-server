@@ -2,7 +2,7 @@ import request from 'supertest'
 import { App } from '@/app'
 import { GenerationRoute } from '@routes/generation.route'
 import { createVoiceAvatar } from '@/services/createVoiceAvatar'
-import { BOT_TOKEN } from '@/config'
+import { BOT_TOKENS } from '@/config'
 
 jest.mock('../services/createVoiceAvatar', () => ({
   createVoiceAvatar: jest.fn().mockResolvedValue({
@@ -22,7 +22,7 @@ describe('POST /create-avatar-voice', () => {
     app.close(done)
   })
 
-  const fileUrl = `https://api.telegram.org/file/bot${BOT_TOKEN}/voice/file_74.oga`
+  const fileUrl = `https://api.telegram.org/file/bot${BOT_TOKENS[0]}/voice/file_74.oga`
 
   test('should return 200 and start voice creation when valid data is provided', async () => {
     const requestBody = {

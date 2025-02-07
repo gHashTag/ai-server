@@ -1,9 +1,13 @@
 import { Request, Response } from 'express'
 import { supabase } from '@/core/supabase'
-import bot from '@/core/bot'
+import { BOT_TOKENS } from '@/config'
 import { errorMessageAdmin } from '@/helpers'
 import { LipSyncResponse } from '@/services/generateLipSync'
 import { updateResult } from '@/core/supabase'
+import { Telegraf } from 'telegraf'
+import { MyContext } from '@/interfaces'
+
+const bots = BOT_TOKENS.map(token => new Telegraf<MyContext>(token))
 
 export class WebhookController {
   public async handleSyncLabsWebhook(
@@ -13,6 +17,18 @@ export class WebhookController {
     try {
       const { status, outputUrl, id } = req.body as LipSyncResponse
       console.log(req.body, 'req.body')
+
+      const token = req.headers['authorization']?.split(' ')[1] // Извлечение токена из заголовков
+      if (!token) {
+        res.status(403).json({ message: 'Unauthorized' })
+        return
+      }
+      // @ts-ignore
+      const bot = bots.find(bot => bot.token === token)
+      if (!bot) {
+        res.status(403).json({ message: 'Unauthorized' })
+        return
+      }
 
       const { data, error } = await supabase
         .from('synclabs_videos')

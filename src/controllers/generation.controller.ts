@@ -12,7 +12,33 @@ import { generateLipSync } from '@/services/generateLipSync'
 import { API_URL } from '@/config'
 import { deleteFile } from '@/helpers'
 import path from 'path'
+import { Telegraf } from 'telegraf'
+import { MyContext } from '@/interfaces'
 
+const BOT_NAMES = {
+  ['neuro_blogger_bot']: process.env.BOT_TOKEN_1,
+  ['MetaMuse_Manifest_bot']: process.env.BOT_TOKEN_2,
+  ['ai_koshey_bot']: process.env.BOT_TOKEN_TEST_1,
+  ['clip_maker_neuro_bot']: process.env.BOT_TOKEN_TEST_2,
+}
+
+const bots = Object.values(BOT_NAMES).map(
+  token => new Telegraf<MyContext>(token)
+)
+
+export function getBotByName(bot_name: string) {
+  const token = BOT_NAMES[bot_name]
+  if (!token) {
+    return { error: 'Unauthorized' }
+  }
+
+  const bot = bots.find(bot => bot.telegram.token === token)
+  if (!bot) {
+    return { error: 'Unauthorized' }
+  }
+
+  return { bot }
+}
 export class GenerationController {
   public textToImage = async (
     req: Request,
@@ -20,8 +46,15 @@ export class GenerationController {
     next: NextFunction
   ): Promise<void> => {
     try {
-      const { prompt, model, num_images, telegram_id, username, is_ru } =
-        req.body
+      const {
+        prompt,
+        model,
+        num_images,
+        telegram_id,
+        username,
+        is_ru,
+        bot_name,
+      } = req.body
 
       if (!prompt) {
         res.status(400).json({ message: 'prompt is required' })
@@ -40,13 +73,16 @@ export class GenerationController {
       validateUserParams(req)
       res.status(200).json({ message: 'Processing started' })
 
+      const { bot } = getBotByName(bot_name)
+
       generateTextToImage(
         prompt,
         model,
         num_images,
         telegram_id,
         username,
-        is_ru
+        is_ru,
+        bot
       )
     } catch (error) {
       next(error)
@@ -59,8 +95,15 @@ export class GenerationController {
     next: NextFunction
   ): Promise<void> => {
     try {
-      const { prompt, model_url, num_images, telegram_id, username, is_ru } =
-        req.body
+      const {
+        prompt,
+        model_url,
+        num_images,
+        telegram_id,
+        username,
+        is_ru,
+        bot_name,
+      } = req.body
       if (!prompt) {
         res.status(400).json({ message: 'prompt is required' })
         return
@@ -76,13 +119,15 @@ export class GenerationController {
       validateUserParams(req)
       res.status(200).json({ message: 'Processing started' })
 
+      const { bot } = getBotByName(bot_name)
       generateNeuroImage(
         prompt,
         model_url,
         num_images,
         telegram_id,
         username,
-        is_ru
+        is_ru,
+        bot
       ).catch(error => {
         console.error('Ошибка при генерации изображения:', error)
       })
@@ -97,7 +142,7 @@ export class GenerationController {
     next: NextFunction
   ): Promise<void> => {
     try {
-      const { fileUrl, telegram_id, username, is_ru } = req.body
+      const { fileUrl, telegram_id, username, is_ru, bot_name } = req.body
 
       if (!fileUrl) {
         res.status(400).json({ message: 'fileUrl is required' })
@@ -108,7 +153,8 @@ export class GenerationController {
 
       res.status(200).json({ message: 'Voice creation started' })
 
-      createVoiceAvatar(fileUrl, telegram_id, username, is_ru)
+      const { bot } = getBotByName(bot_name)
+      createVoiceAvatar(fileUrl, telegram_id, username, is_ru, bot)
     } catch (error) {
       next(error)
     }
@@ -120,7 +166,7 @@ export class GenerationController {
     next: NextFunction
   ): Promise<void> => {
     try {
-      const { text, voice_id, telegram_id, is_ru } = req.body
+      const { text, voice_id, telegram_id, is_ru, bot_name } = req.body
 
       if (!text) {
         res.status(400).json({ message: 'Text is required' })
@@ -140,7 +186,8 @@ export class GenerationController {
       }
       res.status(200).json({ message: 'Processing started' })
 
-      generateSpeech({ text, voice_id, telegram_id, is_ru })
+      const { bot } = getBotByName(bot_name)
+      generateSpeech({ text, voice_id, telegram_id, is_ru, bot })
     } catch (error) {
       next(error)
     }
@@ -152,7 +199,8 @@ export class GenerationController {
     next: NextFunction
   ): Promise<void> => {
     try {
-      const { prompt, videoModel, telegram_id, username, is_ru } = req.body
+      const { prompt, videoModel, telegram_id, username, is_ru, bot_name } =
+        req.body
       if (!prompt) {
         res.status(400).json({ message: 'Prompt is required' })
         return
@@ -165,7 +213,8 @@ export class GenerationController {
       validateUserParams(req)
       res.status(200).json({ message: 'Processing started' })
 
-      generateTextToVideo(prompt, videoModel, telegram_id, username, is_ru)
+      const { bot } = getBotByName(bot_name)
+      generateTextToVideo(prompt, videoModel, telegram_id, username, is_ru, bot)
     } catch (error) {
       next(error)
     }
@@ -177,8 +226,15 @@ export class GenerationController {
     next: NextFunction
   ): Promise<void> => {
     try {
-      const { imageUrl, prompt, videoModel, telegram_id, username, is_ru } =
-        req.body
+      const {
+        imageUrl,
+        prompt,
+        videoModel,
+        telegram_id,
+        username,
+        is_ru,
+        bot_name,
+      } = req.body
       if (!imageUrl) {
         res.status(400).json({ message: 'Image is required' })
         return
@@ -195,13 +251,15 @@ export class GenerationController {
       validateUserParams(req)
       res.status(200).json({ message: 'Processing started' })
 
+      const { bot } = getBotByName(bot_name)
       generateImageToVideo(
         imageUrl,
         prompt,
         videoModel,
         telegram_id,
         username,
-        is_ru
+        is_ru,
+        bot
       )
     } catch (error) {
       next(error)
@@ -214,7 +272,7 @@ export class GenerationController {
     next: NextFunction
   ): Promise<void> => {
     try {
-      const { image, telegram_id, username, is_ru } = req.body
+      const { image, telegram_id, username, is_ru, bot_name } = req.body
 
       if (!image) {
         res.status(400).json({ message: 'Image is required' })
@@ -222,8 +280,9 @@ export class GenerationController {
       }
       validateUserParams(req)
       res.status(200).json({ message: 'Processing started' })
+      const { bot } = getBotByName(bot_name)
 
-      generateImageToPrompt(image, telegram_id, username, is_ru)
+      generateImageToPrompt(image, telegram_id, username, is_ru, bot)
     } catch (error) {
       next(error)
     }
@@ -235,8 +294,15 @@ export class GenerationController {
     next: NextFunction
   ): Promise<void> => {
     try {
-      const { type, telegram_id, triggerWord, modelName, steps, is_ru } =
-        req.body
+      const {
+        type,
+        telegram_id,
+        triggerWord,
+        modelName,
+        steps,
+        is_ru,
+        bot_name,
+      } = req.body
       if (!type) {
         res.status(400).json({ message: 'type is required' })
         return
@@ -268,14 +334,15 @@ export class GenerationController {
       }
       // Создаем URL для доступа к файлу
       const zipUrl = `https://${req.headers.host}/uploads/${telegram_id}/${type}/${zipFile.filename}`
-
+      const { bot } = getBotByName(bot_name)
       await generateModelTraining(
         zipUrl,
         triggerWord,
         modelName,
         steps,
         telegram_id,
-        is_ru
+        is_ru,
+        bot
       )
 
       res.status(200).json({ message: 'Model training started' })

@@ -1,4 +1,3 @@
-import { BOT_TOKEN } from '@/config'
 import {
   checkUsernameCodesByUserId,
   createUser,
@@ -21,6 +20,7 @@ export type CreateUserT = {
   select_izbushka: string
   telegram_id: number
   photo_url: string
+  bot_name: string
 }
 
 export const createUserService = async (userData: CreateUserT) => {
@@ -35,6 +35,7 @@ export const createUserService = async (userData: CreateUserT) => {
     select_izbushka,
     telegram_id,
     photo_url,
+    bot_name,
   } = userData
   console.log(userData, 'userData')
 
@@ -94,7 +95,7 @@ export const createUserService = async (userData: CreateUserT) => {
     user_id,
     chat_id: telegram_id,
     workspace_id,
-    token: BOT_TOKEN,
+    bot_name: bot_name,
   })
 
   console.log('rooms', rooms)

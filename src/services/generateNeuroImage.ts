@@ -4,7 +4,6 @@ import { getAspectRatio, savePrompt } from '../core/supabase/ai'
 import { processApiResponse } from '@/helpers/processApiResponse'
 import { GenerationResult } from '@/interfaces'
 import { downloadFile } from '@/helpers/downloadFile'
-import bot from '@/core/bot'
 
 import { pulse } from '@/helpers/pulse'
 import {
@@ -12,6 +11,8 @@ import {
   processBalanceOperation,
 } from '@/price/helpers'
 import { errorMessageAdmin } from '@/helpers/errorMessageAdmin'
+import { Telegraf } from 'telegraf'
+import { MyContext } from '@/interfaces'
 
 export async function generateNeuroImage(
   prompt: string,
@@ -19,7 +20,8 @@ export async function generateNeuroImage(
   num_images: number,
   telegram_id: number,
   username: string,
-  is_ru: boolean
+  is_ru: boolean,
+  bot: Telegraf<MyContext>
 ): Promise<GenerationResult | null> {
   try {
     // Проверка баланса для всех изображений

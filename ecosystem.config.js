@@ -23,8 +23,10 @@ module.exports = {
         // environment variable
         PORT: 3000,
         NODE_ENV: 'production',
-        TELEGRAM_BOT_TOKEN_DEV: process.env.TELEGRAM_BOT_TOKEN_DEV,
-        TELEGRAM_BOT_TOKEN_PROD: process.env.TELEGRAM_BOT_TOKEN_PROD,
+        BOT_TOKEN_1: process.env.BOT_TOKEN_1,
+        BOT_TOKEN_2: process.env.BOT_TOKEN_2,
+        BOT_TOKEN_TEST_1: process.env.BOT_TOKEN_TEST_1,
+        BOT_TOKEN_TEST_2: process.env.BOT_TOKEN_TEST_2,
       },
     },
   ],

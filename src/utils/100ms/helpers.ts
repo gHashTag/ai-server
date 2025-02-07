@@ -10,7 +10,7 @@ type CreateOrFetchRoomProps = {
   user_id: string
   chat_id: number
   workspace_id: string
-  token: string
+  bot_name: string
 }
 
 export const createOrFetchRoom = async ({
@@ -21,7 +21,7 @@ export const createOrFetchRoom = async ({
   user_id,
   chat_id,
   workspace_id,
-  token,
+  bot_name,
 }: CreateOrFetchRoomProps) => {
   const roomData = {
     name: `${username}:${uuidv4()}:${language_code}`,
@@ -69,7 +69,7 @@ export const createOrFetchRoom = async ({
     updated_at: new Date(),
     user_id,
     room_id,
-    token,
+    token: bot_name,
     chat_id,
     username,
     workspace_id,

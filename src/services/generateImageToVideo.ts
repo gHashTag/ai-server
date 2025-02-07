@@ -1,18 +1,16 @@
-import bot from '@/core/bot'
 import { replicate } from '@/core/replicate'
 
 import { saveVideoUrlToSupabase } from '@/core/supabase/saveVideoUrlToSupabase'
 import { downloadFile } from '@/helpers/downloadFile'
 import { errorMessageAdmin } from '@/helpers/errorMessageAdmin'
 
-import {
-  imageToVideoGenerationCost,
-  processBalanceVideoOperation,
-} from '@/price/helpers'
+import { processBalanceVideoOperation } from '@/price/helpers'
 
 import { mkdir, writeFile } from 'fs/promises'
 import path from 'path'
 import { InputFile } from 'telegraf/typings/core/types/typegram'
+import { Telegraf } from 'telegraf'
+import { MyContext } from '@/interfaces'
 
 interface ReplicateResponse {
   id: string
@@ -27,7 +25,8 @@ export const generateImageToVideo = async (
   videoModel: string,
   telegram_id: number,
   username: string,
-  is_ru: boolean
+  is_ru: boolean,
+  bot: Telegraf<MyContext>
 ): Promise<{ videoUrl?: string; prediction_id?: string } | string> => {
   try {
     console.log('Start generateImageToVideo', {
