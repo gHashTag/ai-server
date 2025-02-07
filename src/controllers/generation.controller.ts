@@ -27,6 +27,7 @@ const bots = Object.values(BOT_NAMES).map(
 )
 
 export function getBotByName(bot_name: string) {
+  console.log('CASE: getBotByName', bot_name)
   const token = BOT_NAMES[bot_name]
   if (!token) {
     return { error: 'Unauthorized' }

@@ -24,6 +24,7 @@ export async function generateNeuroImage(
   bot: Telegraf<MyContext>
 ): Promise<GenerationResult | null> {
   try {
+    console.log('CASE: generateNeuroImage', bot)
     // Проверка баланса для всех изображений
     const totalCost = imageNeuroGenerationCost * num_images
     const balanceCheck = await processBalanceOperation({
