@@ -31,6 +31,7 @@ export const generateSpeech = async ({
     telegram_id,
     paymentAmount: speechGenerationCost,
     is_ru,
+    bot,
   })
   if (!balanceCheck.success) {
     throw new Error(balanceCheck.error)
@@ -77,7 +78,8 @@ export const generateSpeech = async ({
           telegram_id,
           balanceCheck.newBalance,
           speechGenerationCost,
-          is_ru
+          is_ru,
+          bot
         )
         resolve({ audioUrl })
       })

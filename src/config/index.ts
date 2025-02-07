@@ -80,6 +80,7 @@ export const BOT_TOKENS =
   NODE_ENV === 'production' ? BOT_TOKENS_PROD : BOT_TOKENS_TEST
 
 export const DEFAULT_BOT_TOKEN = process.env.BOT_TOKEN_1
+export const defaultBot = new Telegraf<MyContext>(DEFAULT_BOT_TOKEN)
 
 export const PULSE_BOT_TOKEN = process.env.BOT_TOKEN_1
 

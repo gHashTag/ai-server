@@ -1,6 +1,6 @@
 import { incrementBalance, setPayments } from '@/core/supabase'
 import { sendPaymentNotification } from '@/price/helpers'
-
+import { defaultBot } from '@/config'
 import { supabase } from '@/core/supabase'
 import { errorMessageAdmin } from '@/helpers/errorMessageAdmin'
 import { errorMessage } from '@/helpers'
@@ -36,12 +36,14 @@ export class PaymentService {
           telegram_id: telegram_id.toString(),
           amount: stars,
         })
+
         await sendPaymentNotification(
           Number(OutSum),
           stars,
           telegram_id,
           language,
-          username
+          username,
+          defaultBot
         )
         await setPayments({
           user_id,

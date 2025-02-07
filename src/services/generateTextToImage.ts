@@ -53,6 +53,7 @@ export const generateTextToImage = async (
       telegram_id,
       paymentAmount: modelConfig.costPerImage * num_images,
       is_ru,
+      bot,
     })
     console.log(balanceCheck, 'balanceCheck')
 

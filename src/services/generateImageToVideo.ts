@@ -45,7 +45,12 @@ export const generateImageToVideo = async (
     if (!is_ru) throw new Error('Is RU is required')
 
     const { newBalance, paymentAmount, success, error } =
-      await processBalanceVideoOperation({ videoModel, telegram_id, is_ru })
+      await processBalanceVideoOperation({
+        videoModel,
+        telegram_id,
+        is_ru,
+        bot,
+      })
 
     if (!success) {
       throw new Error(error)

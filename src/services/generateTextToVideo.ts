@@ -28,6 +28,7 @@ export const generateTextToVideo = async (
       videoModel,
       telegram_id,
       is_ru,
+      bot,
     })
 
     let output: any

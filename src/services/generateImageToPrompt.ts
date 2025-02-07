@@ -22,6 +22,7 @@ export async function generateImageToPrompt(
       telegram_id,
       paymentAmount: imageToPromptCost,
       is_ru,
+      bot,
     })
     if (!balanceCheck.success) {
       throw new Error('Not enough stars')
@@ -104,7 +105,8 @@ export async function generateImageToPrompt(
               telegram_id,
               balanceCheck.newBalance,
               imageToPromptCost,
-              is_ru
+              is_ru,
+              bot
             )
             return caption
           }

@@ -70,6 +70,7 @@ export async function generateModelTraining(
     telegram_id: Number(telegram_id),
     paymentAmount: trainingCostInStars,
     is_ru,
+    bot,
   })
 
   if (!balanceCheck.success) {

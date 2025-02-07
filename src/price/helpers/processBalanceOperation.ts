@@ -1,17 +1,20 @@
-import bot from '@/core/bot'
 import { getUserBalance, updateUserBalance } from '@/core/supabase'
 import { BalanceOperationResult } from '@/interfaces/payments.interface'
+import { Telegraf } from 'telegraf'
+import { MyContext } from '@/interfaces'
 
 type BalanceOperationProps = {
   telegram_id: number
   paymentAmount: number
   is_ru: boolean
+  bot: Telegraf<MyContext>
 }
 
 export const processBalanceOperation = async ({
   telegram_id,
   paymentAmount,
   is_ru,
+  bot,
 }: BalanceOperationProps): Promise<BalanceOperationResult> => {
   try {
     // Получаем текущий баланс
@@ -26,6 +29,7 @@ export const processBalanceOperation = async ({
         newBalance: currentBalance,
         success: false,
         error: message,
+        paymentAmount,
       }
     }
 
@@ -38,6 +42,7 @@ export const processBalanceOperation = async ({
     return {
       newBalance,
       success: true,
+      paymentAmount,
     }
   } catch (error) {
     console.error('Error in processBalanceOperation:', error)

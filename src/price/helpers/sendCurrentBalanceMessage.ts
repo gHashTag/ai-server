@@ -1,9 +1,11 @@
-import bot from '@/core/bot'
+import { Telegraf } from 'telegraf'
+import { MyContext } from '@/interfaces'
 
 export const sendCurrentBalanceMessage = async (
   telegram_id: number,
   isRu: boolean,
-  currentBalance: number
+  currentBalance: number,
+  bot: Telegraf<MyContext>
 ) => {
   await bot.telegram.sendMessage(
     telegram_id,

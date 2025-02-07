@@ -1,11 +1,13 @@
-import bot from '@/core/bot'
+import { Telegraf } from 'telegraf'
+import { MyContext } from '@/interfaces'
 
 export const sendPaymentNotification = async (
   amount: number,
   stars: number,
   telegramId: string,
   language: string,
-  username: string
+  username: string,
+  bot: Telegraf<MyContext>
 ) => {
   try {
     const caption =

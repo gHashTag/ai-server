@@ -31,6 +31,7 @@ export async function generateNeuroImage(
       telegram_id,
       paymentAmount: totalCost,
       is_ru,
+      bot,
     })
     if (!balanceCheck.success) {
       throw new Error(balanceCheck.error)

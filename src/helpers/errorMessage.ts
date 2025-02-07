@@ -1,11 +1,11 @@
-import bot from '@/core/bot'
+import { defaultBot } from '@/config'
 
 export const errorMessage = (
   error: Error,
   telegram_id: string,
   isRu: boolean
 ) => {
-  bot.telegram.sendMessage(
+  defaultBot.telegram.sendMessage(
     telegram_id,
     isRu
       ? `❌ Произошла ошибка.\n\nОшибка: ${error.message}`

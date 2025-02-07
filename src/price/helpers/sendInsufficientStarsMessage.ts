@@ -1,8 +1,10 @@
-import bot from '@/core/bot'
+import { MyContext } from '@/interfaces'
+import { Telegraf } from 'telegraf'
 
 export const sendInsufficientStarsMessage = async (
   telegram_id: number,
-  isRu: boolean
+  isRu: boolean,
+  bot: Telegraf<MyContext>
 ) => {
   const message = isRu
     ? 'Недостаточно звезд для генерации изображения. Пополните баланс вызвав команду /buy.'

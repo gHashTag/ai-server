@@ -1,9 +1,9 @@
 import { isDev } from '@/config'
-import bot from '@/core/bot'
+import { defaultBot } from '@/config'
 
 export const errorMessageAdmin = (error: Error) => {
   !isDev &&
-    bot.telegram.sendMessage(
+    defaultBot.telegram.sendMessage(
       '@neuro_coder_privat',
       `❌ Произошла ошибка.\n\nОшибка: ${error.message}`
     )

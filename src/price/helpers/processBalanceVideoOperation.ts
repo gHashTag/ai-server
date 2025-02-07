@@ -1,15 +1,17 @@
-import bot from '@/core/bot'
 import { getUserBalance, updateUserBalance } from '@/core/supabase'
 
 import { VideoModel } from '@/interfaces/models.interface'
 import { BalanceOperationResult } from '@/interfaces/payments.interface'
 
 import { calculateFinalPrice } from './calculateFinalPrice'
+import { Telegraf } from 'telegraf'
+import { MyContext } from '@/interfaces'
 
 type BalanceOperationProps = {
   videoModel: string
   telegram_id: number
   is_ru: boolean
+  bot: Telegraf<MyContext>
 }
 
 export interface VideoModelConfig {
@@ -45,6 +47,7 @@ export const processBalanceVideoOperation = async ({
   videoModel,
   telegram_id,
   is_ru,
+  bot,
 }: BalanceOperationProps): Promise<BalanceOperationResult> => {
   try {
     // Получаем текущий баланс
