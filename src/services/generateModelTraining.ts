@@ -39,7 +39,7 @@ interface TrainingResponse {
 
 interface ModelTrainingResult {
   model_id: string
-  modelFile: Buffer
+  model_url?: string
 }
 
 const activeTrainings = new Map<string, { cancel: () => void }>()
@@ -66,7 +66,7 @@ export async function generateModelTraining(
   console.log(`currentTraining: ${currentTraining}`)
   const currentBalance = await getUserBalance(Number(telegram_id))
   const trainingCostInStars = calculateTrainingCostInStars(steps)
-
+  console.log(`trainingCostInStars: ${trainingCostInStars}`)
   const balanceCheck = await processBalanceOperation({
     telegram_id: Number(telegram_id),
     paymentAmount: trainingCostInStars,
@@ -227,7 +227,6 @@ export async function generateModelTraining(
       )
       return {
         model_id: currentTraining.id,
-        modelFile: Buffer.from(''),
       }
     }
 
@@ -248,7 +247,7 @@ export async function generateModelTraining(
 
     return {
       model_id: currentTraining.id,
-      modelFile: Buffer.from(''),
+      model_url: currentTraining.urls.get,
     }
   } catch (error) {
     // Возвращаем средства в случае ошибки
