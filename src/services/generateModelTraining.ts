@@ -1,8 +1,8 @@
 import { replicate } from '@/core/replicate'
 import {
-  updateModelTraining,
   supabase,
   updateUserBalance,
+  updateLatestModelTraining,
 } from '@/core/supabase'
 import { errorMessage } from '@/helpers'
 import { errorMessageAdmin } from '@/helpers/errorMessageAdmin'
@@ -39,7 +39,7 @@ interface TrainingResponse {
 
 interface ModelTrainingResult {
   model_id: string
-  modelFile: Buffer // Или другой тип, который вы используете для файла модели
+  modelFile: Buffer
 }
 
 const activeTrainings = new Map<string, { cancel: () => void }>()
@@ -63,6 +63,7 @@ export async function generateModelTraining(
   }
 
   let currentTraining: TrainingResponse | null = null
+  console.log(`currentTraining: ${currentTraining}`)
   const currentBalance = await getUserBalance(Number(telegram_id))
   const trainingCostInStars = calculateTrainingCostInStars(steps)
 
@@ -123,7 +124,7 @@ export async function generateModelTraining(
 
     // Создаем запись о тренировке
     await createModelTraining({
-      user_id: telegram_id,
+      telegram_id: telegram_id,
       model_name: modelName,
       trigger_word: triggerWord,
       zip_url: zipUrl,
@@ -161,7 +162,7 @@ export async function generateModelTraining(
     activeTrainings.set(telegram_id, trainingProcess)
 
     // Обновляем запись с ID тренировки
-    await updateModelTraining(telegram_id, modelName, {
+    await updateLatestModelTraining(telegram_id, modelName, {
       replicate_training_id: currentTraining.id,
     })
 
@@ -186,7 +187,7 @@ export async function generateModelTraining(
       }
 
       // Обновляем статус в базе
-      await updateModelTraining(telegram_id, modelName, { status })
+      await updateLatestModelTraining(telegram_id, modelName, { status })
     }
 
     if (status === 'failed') {
@@ -231,9 +232,9 @@ export async function generateModelTraining(
     }
 
     if (status === 'succeeded') {
-      console.log('CASE: succeeded')
+      console.log('CASE: succeeded, currentTraining:', currentTraining)
       console.log('currentTraining.urls.get', currentTraining.urls.get)
-      await updateModelTraining(telegram_id, modelName, {
+      await updateLatestModelTraining(telegram_id, modelName, {
         status: 'succeeded',
         model_url: currentTraining.urls.get,
       })

@@ -1,7 +1,7 @@
 import { supabase } from '.'
 
 export interface ModelTraining {
-  user_id: string
+  telegram_id: string
   model_name: string
   trigger_word: string
   zip_url: string
