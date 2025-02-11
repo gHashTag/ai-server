@@ -6,13 +6,11 @@ import { GenerationResult } from '@/interfaces'
 import { downloadFile } from '@/helpers/downloadFile'
 
 import { pulse } from '@/helpers/pulse'
-import {
-  imageNeuroGenerationCost,
-  processBalanceOperation,
-} from '@/price/helpers'
+import { processBalanceOperation } from '@/price/helpers'
 import { errorMessageAdmin } from '@/helpers/errorMessageAdmin'
 import { Telegraf } from 'telegraf'
 import { MyContext } from '@/interfaces'
+import { modeCosts, ModeEnum } from '@/price/helpers/modelsCost'
 
 export async function generateNeuroImage(
   prompt: string,
@@ -26,7 +24,7 @@ export async function generateNeuroImage(
   try {
     console.log('CASE: generateNeuroImage', bot)
     // Проверка баланса для всех изображений
-    const totalCost = imageNeuroGenerationCost * num_images
+    const totalCost = modeCosts[ModeEnum.NeuroPhoto] * num_images
     const balanceCheck = await processBalanceOperation({
       telegram_id,
       paymentAmount: totalCost,
@@ -121,12 +119,12 @@ export async function generateNeuroImage(
       telegram_id,
       is_ru
         ? `Ваши изображения сгенерированы!\n\nЕсли хотите сгенерировать еще, то выберите количество изображений в меню 1️⃣, 2️⃣, 3️⃣, 4️⃣.\n\nСтоимость: ${(
-            imageNeuroGenerationCost * num_images
+            modeCosts[ModeEnum.NeuroPhoto] * num_images
           ).toFixed(
             2
           )} ⭐️\nВаш новый баланс: ${balanceCheck.newBalance.toFixed(2)} ⭐️`
         : `Your images have been generated!\n\nGenerate more?\n\nCost: ${(
-            imageNeuroGenerationCost * num_images
+            modeCosts[ModeEnum.NeuroPhoto] * num_images
           ).toFixed(
             2
           )} ⭐️\nYour new balance: ${balanceCheck.newBalance.toFixed(2)} ⭐️`,

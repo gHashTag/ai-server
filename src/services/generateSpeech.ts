@@ -4,14 +4,12 @@ import os from 'os'
 import elevenLabsClient from '@/core/elevenlabs'
 
 import { InputFile } from 'telegraf/typings/core/types/typegram'
-import {
-  processBalanceOperation,
-  sendBalanceMessage,
-  speechGenerationCost,
-} from '@/price/helpers'
+
 import { errorMessageAdmin, errorMessage } from '@/helpers'
 import { Telegraf } from 'telegraf'
 import { MyContext } from '@/interfaces'
+import { modeCosts, ModeEnum } from '@/price/helpers/modelsCost'
+import { processBalanceOperation, sendBalanceMessage } from '@/price/helpers'
 
 export const generateSpeech = async ({
   text,
@@ -29,7 +27,7 @@ export const generateSpeech = async ({
   // Проверка баланса для всех изображений
   const balanceCheck = await processBalanceOperation({
     telegram_id,
-    paymentAmount: speechGenerationCost,
+    paymentAmount: modeCosts[ModeEnum.TextToSpeech],
     is_ru,
     bot,
   })
@@ -77,7 +75,7 @@ export const generateSpeech = async ({
         sendBalanceMessage(
           telegram_id,
           balanceCheck.newBalance,
-          speechGenerationCost,
+          modeCosts[ModeEnum.TextToSpeech],
           is_ru,
           bot
         )

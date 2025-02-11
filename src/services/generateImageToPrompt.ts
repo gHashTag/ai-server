@@ -1,13 +1,10 @@
-import {
-  processBalanceOperation,
-  imageToPromptCost,
-  sendBalanceMessage,
-} from '@/price/helpers'
+import { processBalanceOperation, sendBalanceMessage } from '@/price/helpers'
 import axios from 'axios'
 
 import { errorMessage, errorMessageAdmin } from '@/helpers'
 import { Telegraf } from 'telegraf'
 import { MyContext } from '@/interfaces'
+import { modeCosts, ModeEnum } from '@/price/helpers/modelsCost'
 
 export async function generateImageToPrompt(
   imageUrl: string,
@@ -20,7 +17,7 @@ export async function generateImageToPrompt(
   try {
     const balanceCheck = await processBalanceOperation({
       telegram_id,
-      paymentAmount: imageToPromptCost,
+      paymentAmount: modeCosts[ModeEnum.ImageToPrompt],
       is_ru,
       bot,
     })
@@ -104,7 +101,7 @@ export async function generateImageToPrompt(
             await sendBalanceMessage(
               telegram_id,
               balanceCheck.newBalance,
-              imageToPromptCost,
+              modeCosts[ModeEnum.ImageToPrompt],
               is_ru,
               bot
             )

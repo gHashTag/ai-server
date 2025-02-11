@@ -1,0 +1,56 @@
+// Процент наценки
+export const interestRate = 0.5
+// Стоимость звезды
+export const starCost = 0.016
+// Функция для расчета стоимости в звездах
+export function calculateCostInStars(costInDollars: number): number {
+  return costInDollars / starCost
+}
+
+// Определяем перечисление для режимов
+export enum ModeEnum {
+  NeuroPhoto = 'neuro_photo',
+  ImageToPrompt = 'image_to_prompt',
+  Avatar = 'avatar',
+  ChatWithAvatar = 'chat_with_avatar',
+  SelectModel = 'select_model',
+  Voice = 'voice',
+  TextToSpeech = 'text_to_speech',
+  ImageToVideo = 'image_to_video',
+  TextToVideo = 'text_to_video',
+  TextToImage = 'text_to_image',
+  LipSync = 'lip_sync',
+}
+
+// Интерфейс для конверсий
+interface ConversionRates {
+  costPerStarInDollars: number
+  costPerStepInStars: number
+  rublesToDollarsRate: number
+}
+
+// Определяем конверсии
+export const conversionRates: ConversionRates = {
+  costPerStarInDollars: 0.016,
+  costPerStepInStars: 0.5,
+  rublesToDollarsRate: 100,
+}
+
+// Определяем стоимость для каждого режима
+export const modeCosts: Record<ModeEnum, number> = {
+  [ModeEnum.NeuroPhoto]: calculateCostInStars(0.08),
+  [ModeEnum.ImageToPrompt]: calculateCostInStars(0.03),
+  [ModeEnum.Avatar]: 0,
+  [ModeEnum.ChatWithAvatar]: calculateCostInStars(0),
+  [ModeEnum.SelectModel]: calculateCostInStars(0),
+  [ModeEnum.Voice]: calculateCostInStars(0.9),
+  [ModeEnum.TextToSpeech]: calculateCostInStars(0.12),
+  [ModeEnum.ImageToVideo]: calculateCostInStars(0),
+  [ModeEnum.TextToVideo]: calculateCostInStars(0),
+  [ModeEnum.TextToImage]: calculateCostInStars(0),
+  [ModeEnum.LipSync]: calculateCostInStars(0.9),
+}
+
+// Найдите минимальную и максимальную стоимость среди всех моделей
+export const minCost = Math.min(...Object.values(modeCosts))
+export const maxCost = Math.max(...Object.values(modeCosts))

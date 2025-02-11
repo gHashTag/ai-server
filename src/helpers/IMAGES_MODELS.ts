@@ -9,9 +9,6 @@ interface ModelInfo {
   inputType: ('text' | 'image' | 'dev')[]
 }
 
-// Стоимость одной звезды
-export const starCost = 0.016 // USD
-
 export const IMAGES_MODELS: Record<string, ModelInfo> = {
   'black-forest-labs/flux-1.1-pro': {
     shortName: 'FLUX1.1 [pro]',
