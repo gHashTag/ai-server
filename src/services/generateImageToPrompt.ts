@@ -15,9 +15,15 @@ export async function generateImageToPrompt(
 ): Promise<string> {
   console.log('generateImageToPrompt', imageUrl, telegram_id, username, is_ru)
   try {
+    let costPerImage: number
+    if (typeof modeCosts[ModeEnum.ImageToPrompt] === 'function') {
+      costPerImage = modeCosts[ModeEnum.ImageToPrompt](1)
+    } else {
+      costPerImage = modeCosts[ModeEnum.ImageToPrompt]
+    }
     const balanceCheck = await processBalanceOperation({
       telegram_id,
-      paymentAmount: modeCosts[ModeEnum.ImageToPrompt],
+      paymentAmount: costPerImage,
       is_ru,
       bot,
     })
@@ -101,7 +107,7 @@ export async function generateImageToPrompt(
             await sendBalanceMessage(
               telegram_id,
               balanceCheck.newBalance,
-              modeCosts[ModeEnum.ImageToPrompt],
+              costPerImage,
               is_ru,
               bot
             )

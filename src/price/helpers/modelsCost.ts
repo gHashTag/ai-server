@@ -1,3 +1,5 @@
+import { calculateTrainingCostInStars } from './calculateTrainingCost'
+
 // Процент наценки
 export const interestRate = 0.5
 // Стоимость звезды
@@ -9,6 +11,7 @@ export function calculateCostInStars(costInDollars: number): number {
 
 // Определяем перечисление для режимов
 export enum ModeEnum {
+  DigitalAvatarBody = 'digital_avatar_body',
   NeuroPhoto = 'neuro_photo',
   ImageToPrompt = 'image_to_prompt',
   Avatar = 'avatar',
@@ -35,9 +38,11 @@ export const conversionRates: ConversionRates = {
   costPerStepInStars: 0.5,
   rublesToDollarsRate: 100,
 }
+export type CostValue = number | ((steps: number) => number)
 
 // Определяем стоимость для каждого режима
-export const modeCosts: Record<ModeEnum, number> = {
+export const modeCosts: Record<ModeEnum, CostValue> = {
+  [ModeEnum.DigitalAvatarBody]: calculateTrainingCostInStars,
   [ModeEnum.NeuroPhoto]: calculateCostInStars(0.08),
   [ModeEnum.ImageToPrompt]: calculateCostInStars(0.03),
   [ModeEnum.Avatar]: 0,
@@ -52,5 +57,13 @@ export const modeCosts: Record<ModeEnum, number> = {
 }
 
 // Найдите минимальную и максимальную стоимость среди всех моделей
-export const minCost = Math.min(...Object.values(modeCosts))
-export const maxCost = Math.max(...Object.values(modeCosts))
+export const minCost = Math.min(
+  ...Object.values(modeCosts).map(cost =>
+    typeof cost === 'function' ? cost(1) : cost
+  )
+)
+export const maxCost = Math.max(
+  ...Object.values(modeCosts).map(cost =>
+    typeof cost === 'function' ? cost(1) : cost
+  )
+)

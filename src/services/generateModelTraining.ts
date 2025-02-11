@@ -6,15 +6,12 @@ import {
 } from '@/core/supabase'
 import { errorMessage } from '@/helpers'
 import { errorMessageAdmin } from '@/helpers/errorMessageAdmin'
-import {
-  calculateTrainingCostInStars,
-  processBalanceOperation,
-} from '@/price/helpers'
+import { processBalanceOperation } from '@/price/helpers'
 import { getUserBalance } from '@/core/supabase'
 import { createModelTraining } from '@/core/supabase/'
 import { Telegraf } from 'telegraf'
 import { MyContext } from '@/interfaces'
-
+import { modeCosts, ModeEnum } from '@/price/helpers/modelsCost'
 export interface ApiError extends Error {
   response?: {
     status: number
@@ -65,8 +62,13 @@ export async function generateModelTraining(
   let currentTraining: TrainingResponse | null = null
   console.log(`currentTraining: ${currentTraining}`)
   const currentBalance = await getUserBalance(Number(telegram_id))
-  const trainingCostInStars = calculateTrainingCostInStars(steps)
+  const costPerStep = (
+    modeCosts[ModeEnum.DigitalAvatarBody] as (steps: number) => number
+  )(steps)
+
+  const trainingCostInStars = costPerStep * steps
   console.log(`trainingCostInStars: ${trainingCostInStars}`)
+
   const balanceCheck = await processBalanceOperation({
     telegram_id: Number(telegram_id),
     paymentAmount: trainingCostInStars,
