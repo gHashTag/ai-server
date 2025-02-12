@@ -5,4 +5,4 @@ export { WebhookController } from './webhook.controller'
 export { UserController } from './user.controller'
 export { GameController } from './game.controller'
 export { AiAssistantController } from './aiAssistant.controller'
-
+export { VideoController } from './video.controller'
