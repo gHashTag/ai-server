@@ -11,6 +11,7 @@ type User = {
   username: string
   balance: number
   language: string
+  bot_name: string
 }
 
 export class PaymentService {
@@ -30,7 +31,7 @@ export class PaymentService {
       }
 
       if (stars > 0) {
-        const { user_id, telegram_id, username, language } =
+        const { user_id, telegram_id, username, language, bot_name } =
           await this.getTelegramIdFromInvId(inv_id)
         await incrementBalance({
           telegram_id: telegram_id.toString(),
@@ -51,6 +52,7 @@ export class PaymentService {
           stars,
           currency: 'RUB',
           payment_method: 'Robokassa',
+          bot_name,
         })
       }
     } catch (error) {
@@ -67,7 +69,7 @@ export class PaymentService {
     try {
       const { data } = await supabase
         .from('users')
-        .select('user_id, telegram_id, username, balance, language')
+        .select('user_id, telegram_id, username, balance, language, bot_name')
         .eq('inv_id', inv_id)
         .single()
       if (!data) {

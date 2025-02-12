@@ -46,8 +46,14 @@ export async function generateNeuroImage(
     const input = {
       prompt: `Fashionable: ${prompt}`,
       negative_prompt: 'nsfw, erotic, violence, bad anatomy...',
-      num_inference_steps: 28,
-      guidance_scale: 2,
+      num_inference_steps: 40,
+      guidance_scale: 3,
+      lora_scale: 1,
+      megapixels: '1',
+      output_quality: 80,
+      prompt_strength: 0.8,
+      extra_lora_scale: 1,
+      go_fast: false,
       ...(aspect_ratio === '1:1'
         ? { width: 1024, height: 1024 }
         : aspect_ratio === '16:9'

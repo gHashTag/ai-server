@@ -7,6 +7,7 @@ type Payment = {
   stars: number
   email?: string
   payment_method: 'Robokassa' | 'YooMoney' | 'Telegram' | 'Stripe' | 'Other'
+  bot_name: string
 }
 
 export const setPayments = async ({
@@ -16,6 +17,7 @@ export const setPayments = async ({
   stars,
   email,
   payment_method,
+  bot_name,
 }: Payment) => {
   try {
     const { error } = await supabase.from('payments').insert({
@@ -27,6 +29,7 @@ export const setPayments = async ({
       description: `Purchase and sale:: ${stars}`,
       stars,
       email,
+      bot_name,
     })
     if (error) {
       console.error('Ошибка создания платежа:', error)
