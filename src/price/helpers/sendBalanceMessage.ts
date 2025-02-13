@@ -2,7 +2,7 @@ import { MyContext } from '@/interfaces'
 import { Telegraf } from 'telegraf'
 
 export const sendBalanceMessage = async (
-  telegram_id: number,
+  telegram_id: string,
   newBalance: number,
   cost: number,
   isRu: boolean,

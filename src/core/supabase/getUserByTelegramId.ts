@@ -5,7 +5,7 @@ export async function getUserByTelegramId(telegram_id: string) {
     const { data, error } = await supabase
       .from('users')
       .select('*')
-      .eq('telegram_id', telegram_id)
+      .eq('telegram_id', telegram_id.toString())
       .single()
 
     if (error) {

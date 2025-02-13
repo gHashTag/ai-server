@@ -191,7 +191,7 @@ export const getGeneratedImages = async (telegram_id: number) => {
   return { count: Number(data.count), limit: Number(data.limit) }
 }
 
-export const getAspectRatio = async (telegram_id: number) => {
+export const getAspectRatio = async (telegram_id: string) => {
   const { data, error } = await supabase
     .from('users')
     .select('aspect_ratio')
@@ -327,7 +327,7 @@ export const savePrompt = async (
   prompt: string,
   model_type: string,
   media_url?: string,
-  telegram_id?: number
+  telegram_id?: string
 ): Promise<number | null> => {
   // Проверяем, существует ли уже такой промпт в таблице
   const { data: existingPrompt, error: selectError } = await supabase

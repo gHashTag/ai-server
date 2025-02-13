@@ -4,7 +4,7 @@ import { getAspectRatio, savePrompt } from '@/core/supabase'
 import { downloadFile } from '@/helpers/downloadFile'
 import { processApiResponse } from '@/helpers/processApiResponse'
 import { pulse } from '@/helpers/pulse'
-
+import { getUserByTelegramId, updateUserLevelPlusOne } from '@/core/supabase'
 import { IMAGES_MODELS } from '@/helpers/IMAGES_MODELS'
 
 import { processBalanceOperation } from '@/price/helpers'
@@ -35,7 +35,7 @@ export const generateTextToImage = async (
   prompt: string,
   model_type: string,
   num_images: number,
-  telegram_id: number,
+  telegram_id: string,
   username: string,
   is_ru: boolean,
   bot: Telegraf<MyContext>
@@ -44,6 +44,14 @@ export const generateTextToImage = async (
     const modelKey = model_type.toLowerCase()
     const modelConfig = IMAGES_MODELS[modelKey]
     console.log(modelConfig)
+    const userExists = await getUserByTelegramId(telegram_id)
+    if (!userExists.data) {
+      throw new Error(`User with ID ${telegram_id} does not exist.`)
+    }
+    const level = userExists.data.level
+    if (level === 10) {
+      await updateUserLevelPlusOne(telegram_id, level)
+    }
 
     if (!modelConfig) {
       throw new Error(`Неподдерживаемый тип модели: ${model_type}`)

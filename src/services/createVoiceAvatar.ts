@@ -3,15 +3,24 @@ import { createVoiceElevenLabs } from '@/core/supabase/ai'
 import { errorMessage, errorMessageAdmin } from '@/helpers'
 import { Telegraf } from 'telegraf'
 import { MyContext } from '@/interfaces'
+import { getUserByTelegramId, updateUserLevelPlusOne } from '@/core/supabase'
 
 export async function createVoiceAvatar(
   fileUrl: string,
-  telegram_id: number,
+  telegram_id: string,
   username: string,
   isRu: boolean,
   bot: Telegraf<MyContext>
 ): Promise<{ voiceId: string }> {
   try {
+    const userExists = await getUserByTelegramId(telegram_id)
+    if (!userExists.data) {
+      throw new Error(`User with ID ${telegram_id} does not exist.`)
+    }
+    const level = userExists.data.level
+    if (level === 6) {
+      await updateUserLevelPlusOne(telegram_id, level)
+    }
     console.log('createVoiceAvatar', { fileUrl, telegram_id, username, isRu })
     await bot.telegram.sendMessage(
       telegram_id,

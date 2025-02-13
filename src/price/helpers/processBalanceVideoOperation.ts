@@ -9,7 +9,7 @@ import { MyContext } from '@/interfaces'
 
 type BalanceOperationProps = {
   videoModel: string
-  telegram_id: number
+  telegram_id: string
   is_ru: boolean
   bot: Telegraf<MyContext>
 }

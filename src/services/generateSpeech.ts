@@ -4,7 +4,7 @@ import os from 'os'
 import elevenLabsClient from '@/core/elevenlabs'
 
 import { InputFile } from 'telegraf/typings/core/types/typegram'
-
+import { getUserByTelegramId, updateUserLevelPlusOne } from '@/core/supabase'
 import { errorMessageAdmin, errorMessage } from '@/helpers'
 import { Telegraf } from 'telegraf'
 import { MyContext } from '@/interfaces'
@@ -20,14 +20,22 @@ export const generateSpeech = async ({
 }: {
   text: string
   voice_id: string
-  telegram_id: number
+  telegram_id: string
   is_ru: boolean
   bot: Telegraf<MyContext>
 }): Promise<{ audioUrl: string }> => {
+  const userExists = await getUserByTelegramId(telegram_id)
+  if (!userExists.data) {
+    throw new Error(`User with ID ${telegram_id} does not exist.`)
+  }
+  const level = userExists.data.level
+  if (level === 7) {
+    await updateUserLevelPlusOne(telegram_id, level)
+  }
   // Проверка баланса для всех изображений
   const balanceCheck = await processBalanceOperation({
     telegram_id,
-    paymentAmount: modeCosts[ModeEnum.TextToSpeech],
+    paymentAmount: modeCosts[ModeEnum.TextToSpeech] as number,
     is_ru,
     bot,
   })
@@ -75,7 +83,7 @@ export const generateSpeech = async ({
         sendBalanceMessage(
           telegram_id,
           balanceCheck.newBalance,
-          modeCosts[ModeEnum.TextToSpeech],
+          modeCosts[ModeEnum.TextToSpeech] as number,
           is_ru,
           bot
         )

@@ -5,7 +5,7 @@ import { downloadFile } from '@/helpers/downloadFile'
 import { errorMessageAdmin } from '@/helpers/errorMessageAdmin'
 
 import { processBalanceVideoOperation } from '@/price/helpers'
-
+import { getUserByTelegramId, updateUserLevelPlusOne } from '@/core/supabase'
 import { mkdir, writeFile } from 'fs/promises'
 import path from 'path'
 import { InputFile } from 'telegraf/typings/core/types/typegram'
@@ -23,7 +23,7 @@ export const generateImageToVideo = async (
   imageUrl: string,
   prompt: string,
   videoModel: string,
-  telegram_id: number,
+  telegram_id: string,
   username: string,
   is_ru: boolean,
   bot: Telegraf<MyContext>
@@ -43,6 +43,15 @@ export const generateImageToVideo = async (
     if (!telegram_id) throw new Error('Telegram ID is required')
     if (!username) throw new Error('Username is required')
     if (!is_ru) throw new Error('Is RU is required')
+
+    const userExists = await getUserByTelegramId(telegram_id)
+    if (!userExists.data) {
+      throw new Error(`User with ID ${telegram_id} does not exist.`)
+    }
+    const level = userExists.data.level
+    if (level === 8) {
+      await updateUserLevelPlusOne(telegram_id, level)
+    }
 
     const { newBalance, paymentAmount, success, error } =
       await processBalanceVideoOperation({

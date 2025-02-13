@@ -1,10 +1,10 @@
 import { supabase } from '.'
 
-export const getUserBalance = async (telegram_id: number): Promise<number> => {
+export const getUserBalance = async (telegram_id: string): Promise<number> => {
   const { data, error } = await supabase
     .from('users')
     .select('balance')
-    .eq('telegram_id', telegram_id.toString())
+    .eq('telegram_id', telegram_id)
     .single()
 
   if (error) {

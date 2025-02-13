@@ -8,11 +8,12 @@ import { saveVideoUrlToSupabase } from '@/core/supabase/saveVideoUrlToSupabase'
 import path from 'path'
 import { Telegraf } from 'telegraf'
 import { MyContext } from '@/interfaces'
+import { getUserByTelegramId, updateUserLevelPlusOne } from '@/core/supabase'
 
 export const generateTextToVideo = async (
   prompt: string,
   videoModel: string,
-  telegram_id: number,
+  telegram_id: string,
   username: string,
   is_ru: boolean,
   bot: Telegraf<MyContext>
@@ -23,6 +24,16 @@ export const generateTextToVideo = async (
     if (!telegram_id) throw new Error('Telegram ID is required')
     if (!username) throw new Error('Username is required')
     if (!is_ru) throw new Error('is_ru is required')
+
+    const userExists = await getUserByTelegramId(telegram_id)
+    if (!userExists.data) {
+      throw new Error(`User with ID ${telegram_id} does not exist.`)
+    }
+    const level = userExists.data.level
+    if (level === 9) {
+      await updateUserLevelPlusOne(telegram_id, level)
+    }
+
     // Проверка баланса для всех изображений
     const { newBalance, paymentAmount } = await processBalanceVideoOperation({
       videoModel,

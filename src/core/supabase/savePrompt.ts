@@ -4,7 +4,7 @@ export const savePrompt = async (
   prompt: string,
   model_type: string,
   media_url?: string,
-  telegram_id?: number
+  telegram_id?: string
 ): Promise<number | null> => {
   // Проверяем, существует ли уже такой промпт в таблице
   const { data: existingPrompt, error: selectError } = await supabase

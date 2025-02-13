@@ -4,7 +4,7 @@ import { Telegraf } from 'telegraf'
 import { MyContext } from '@/interfaces'
 
 type BalanceOperationProps = {
-  telegram_id: number
+  telegram_id: string
   paymentAmount: number
   is_ru: boolean
   bot: Telegraf<MyContext>

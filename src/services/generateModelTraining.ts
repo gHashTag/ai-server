@@ -1,8 +1,9 @@
 import { replicate } from '@/core/replicate'
 import {
-  supabase,
+  getUserByTelegramId,
   updateUserBalance,
   updateLatestModelTraining,
+  updateUserLevelPlusOne,
 } from '@/core/supabase'
 import { errorMessage } from '@/helpers'
 import { errorMessageAdmin } from '@/helpers/errorMessageAdmin'
@@ -12,6 +13,7 @@ import { createModelTraining } from '@/core/supabase/'
 import { Telegraf } from 'telegraf'
 import { MyContext } from '@/interfaces'
 import { modeCosts, ModeEnum } from '@/price/helpers/modelsCost'
+
 export interface ApiError extends Error {
   response?: {
     status: number
@@ -50,18 +52,17 @@ export async function generateModelTraining(
   is_ru: boolean,
   bot: Telegraf<MyContext>
 ): Promise<ModelTrainingResult> {
-  const userExists = await supabase
-    .from('users')
-    .select('id')
-    .eq('telegram_id', telegram_id)
-    .single()
+  const userExists = await getUserByTelegramId(telegram_id)
   if (!userExists.data) {
     throw new Error(`User with ID ${telegram_id} does not exist.`)
   }
-
+  const level = userExists.data.level
+  if (level === 0) {
+    await updateUserLevelPlusOne(telegram_id, level)
+  }
   let currentTraining: TrainingResponse | null = null
   console.log(`currentTraining: ${currentTraining}`)
-  const currentBalance = await getUserBalance(Number(telegram_id))
+  const currentBalance = await getUserBalance(telegram_id)
   const costPerStep = (
     modeCosts[ModeEnum.DigitalAvatarBody] as (steps: number) => number
   )(steps)
@@ -70,7 +71,7 @@ export async function generateModelTraining(
   console.log(`trainingCostInStars: ${trainingCostInStars}`)
 
   const balanceCheck = await processBalanceOperation({
-    telegram_id: Number(telegram_id),
+    telegram_id,
     paymentAmount: trainingCostInStars,
     is_ru,
     bot,
@@ -119,10 +120,7 @@ export async function generateModelTraining(
     }
 
     // Обновляем баланс пользователя после успешной проверки
-    await updateUserBalance(
-      Number(telegram_id),
-      currentBalance - trainingCostInStars
-    )
+    await updateUserBalance(telegram_id, currentBalance - trainingCostInStars)
 
     // Создаем запись о тренировке
     await createModelTraining({
@@ -203,10 +201,7 @@ export async function generateModelTraining(
       })
 
       // Возвращаем средства в случае неудачи
-      await updateUserBalance(
-        Number(telegram_id),
-        currentBalance + trainingCostInStars
-      )
+      await updateUserBalance(telegram_id, currentBalance + trainingCostInStars)
 
       throw new Error(
         `Training failed: ${failedTraining.error || 'Unknown error'}`
@@ -216,10 +211,7 @@ export async function generateModelTraining(
     if (status === 'canceled') {
       console.log('CASE: canceled')
       // Возвращаем средства в случае отмены
-      await updateUserBalance(
-        Number(telegram_id),
-        currentBalance + trainingCostInStars
-      )
+      await updateUserBalance(telegram_id, currentBalance + trainingCostInStars)
       bot.telegram.sendMessage(
         telegram_id,
         is_ru ? 'Генерация была отменена.' : 'Generation was canceled.',
@@ -253,10 +245,7 @@ export async function generateModelTraining(
     }
   } catch (error) {
     // Возвращаем средства в случае ошибки
-    await updateUserBalance(
-      Number(telegram_id),
-      currentBalance + trainingCostInStars
-    )
+    await updateUserBalance(telegram_id, currentBalance + trainingCostInStars)
     console.error('Training error details:', {
       error,
       username: process.env.REPLICATE_USERNAME,

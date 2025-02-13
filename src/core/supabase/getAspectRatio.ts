@@ -1,10 +1,10 @@
 import { supabase } from '.'
 
-export const getAspectRatio = async (telegram_id: number) => {
+export const getAspectRatio = async (telegram_id: string) => {
   const { data, error } = await supabase
     .from('users')
     .select('aspect_ratio')
-    .eq('telegram_id', telegram_id.toString())
+    .eq('telegram_id', telegram_id)
     .single()
 
   if (error || !data) {

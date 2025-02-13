@@ -1,6 +1,6 @@
 import { replicate } from '../core/replicate'
 import { getAspectRatio, savePrompt } from '../core/supabase/ai'
-
+import { getUserByTelegramId, updateUserLevelPlusOne } from '@/core/supabase'
 import { processApiResponse } from '@/helpers/processApiResponse'
 import { GenerationResult } from '@/interfaces'
 import { downloadFile } from '@/helpers/downloadFile'
@@ -16,13 +16,20 @@ export async function generateNeuroImage(
   prompt: string,
   model_url: `${string}/${string}` | `${string}/${string}:${string}`,
   num_images: number,
-  telegram_id: number,
+  telegram_id: string,
   username: string,
   is_ru: boolean,
   bot: Telegraf<MyContext>
 ): Promise<GenerationResult | null> {
   try {
-    console.log('CASE: generateNeuroImage', bot)
+    const userExists = await getUserByTelegramId(telegram_id)
+    if (!userExists.data) {
+      throw new Error(`User with ID ${telegram_id} does not exist.`)
+    }
+    const level = userExists.data.level
+    if (level === 1) {
+      await updateUserLevelPlusOne(telegram_id, level)
+    }
     // Проверка баланса для всех изображений
     let costPerImage: number
     if (typeof modeCosts[ModeEnum.NeuroPhoto] === 'function') {

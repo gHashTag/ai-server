@@ -1,6 +1,6 @@
 import { processBalanceOperation, sendBalanceMessage } from '@/price/helpers'
 import axios from 'axios'
-
+import { getUserByTelegramId, updateUserLevelPlusOne } from '@/core/supabase'
 import { errorMessage, errorMessageAdmin } from '@/helpers'
 import { Telegraf } from 'telegraf'
 import { MyContext } from '@/interfaces'
@@ -8,13 +8,21 @@ import { modeCosts, ModeEnum } from '@/price/helpers/modelsCost'
 
 export async function generateImageToPrompt(
   imageUrl: string,
-  telegram_id: number,
+  telegram_id: string,
   username: string,
   is_ru: boolean,
   bot: Telegraf<MyContext>
 ): Promise<string> {
   console.log('generateImageToPrompt', imageUrl, telegram_id, username, is_ru)
   try {
+    const userExists = await getUserByTelegramId(telegram_id)
+    if (!userExists.data) {
+      throw new Error(`User with ID ${telegram_id} does not exist.`)
+    }
+    const level = userExists.data.level
+    if (level === 2) {
+      await updateUserLevelPlusOne(telegram_id, level)
+    }
     let costPerImage: number
     if (typeof modeCosts[ModeEnum.ImageToPrompt] === 'function') {
       costPerImage = modeCosts[ModeEnum.ImageToPrompt](1)

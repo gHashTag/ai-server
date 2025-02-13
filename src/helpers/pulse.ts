@@ -3,7 +3,7 @@ export const pulse = async (
   image: string,
   prompt: string,
   command: string,
-  telegram_id: number,
+  telegram_id: string,
   username: string,
   is_ru: boolean
 ) => {
@@ -28,7 +28,7 @@ export const pulse = async (
     // convert base64 to buffer
     const imageBuffer = Buffer.from(imageToSend, 'base64')
 
-    const chatId = '@neuro_blogger_pulse' as string // string is required!!!!
+    const chatId = '@neuro_blogger_pulse'
 
     // send image as buffer
     await pulseBot.telegram.sendPhoto(

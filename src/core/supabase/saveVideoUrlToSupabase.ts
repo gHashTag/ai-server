@@ -1,7 +1,7 @@
 import { supabase } from '@/core/supabase'
 
 export async function saveVideoUrlToSupabase(
-  telegramId: number,
+  telegramId: string,
   videoUrl: string,
   videoPath: string,
   type: string
