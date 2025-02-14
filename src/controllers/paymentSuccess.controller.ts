@@ -17,12 +17,8 @@ export class PaymentSuccessController {
       const { body } = req // Получаем тело запроса
       console.log('Received body:', body)
 
-      // Декодируем JWS
-      const decoded = Buffer.from(body, 'base64').toString('utf-8')
-      console.log('Decoded JWS:', decoded)
-
-      // Парсим JSON
-      const notification = JSON.parse(decoded)
+      // Если тело запроса уже является объектом, используйте его напрямую
+      const notification = typeof body === 'string' ? JSON.parse(body) : body
       console.log('Parsed notification:', notification)
 
       // Извлекаем данные из уведомления
