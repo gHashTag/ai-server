@@ -11,6 +11,6 @@ export class PaymentRoute {
   }
 
   private initializeRoutes() {
-    this.router.get(this.path, this.paymentSuccessController.paymentSuccess)
+    this.router.post(this.path, this.paymentSuccessController.paymentSuccess)
   }
 }
