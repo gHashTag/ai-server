@@ -1,8 +1,9 @@
 import { supabase } from '.'
 
 type Payment = {
-  user_id: string
-  OutSum: string
+  inv_id: string
+  telegram_id: string
+  roundedIncSum: number
   currency: 'RUB' | 'USD' | 'EUR' | 'STARS'
   stars: number
   email?: string
@@ -11,8 +12,9 @@ type Payment = {
 }
 
 export const setPayments = async ({
-  user_id,
-  OutSum,
+  inv_id,
+  telegram_id,
+  roundedIncSum,
   currency,
   stars,
   email,
@@ -20,23 +22,28 @@ export const setPayments = async ({
   bot_name,
 }: Payment) => {
   try {
-    const { error } = await supabase.from('payments').insert({
-      user_id,
-      amount: parseFloat(OutSum),
-      currency,
-      status: 'COMPLETED',
-      payment_method,
-      description: `Purchase and sale:: ${stars}`,
-      stars,
-      email,
-      bot_name,
-    })
+    // Обновляем существующую запись по inv_id
+    const { error } = await supabase
+      .from('payments')
+      .update({
+        telegram_id,
+        amount: roundedIncSum,
+        currency,
+        status: 'COMPLETED',
+        payment_method,
+        description: `Purchase and sale:: ${stars}`,
+        stars,
+        email,
+        bot_name,
+      })
+      .eq('inv_id', inv_id.toString())
+
     if (error) {
-      console.error('Ошибка создания платежа:', error)
+      console.error('Ошибка обновления платежа:', error)
       throw error
     }
   } catch (error) {
-    console.error('Ошибка создания платежа:', error)
+    console.error('Ошибка обновления платежа:', error)
     throw error
   }
 }

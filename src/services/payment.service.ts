@@ -1,54 +1,61 @@
 import { incrementBalance, setPayments } from '@/core/supabase'
 import { sendPaymentNotification } from '@/price/helpers'
-import { defaultBot } from '@/config'
-import { supabase } from '@/core/supabase'
+import { createBotByName } from '@/config'
+import { getTelegramIdFromInvId } from '@/core/supabase'
 import { errorMessageAdmin } from '@/helpers/errorMessageAdmin'
 import { errorMessage } from '@/helpers'
 
-type User = {
-  user_id: string
-  telegram_id: string
-  username: string
-  balance: number
-  language: string
-  bot_name: string
-}
-
 export class PaymentService {
-  public async processPayment(OutSum: string, inv_id: string): Promise<void> {
+  public async processPayment(
+    roundedIncSum: number,
+    inv_id: string
+  ): Promise<void> {
     try {
-      console.log('PaymentService: OutSum', OutSum)
+      console.log('PaymentService: roundedIncSum', roundedIncSum)
       console.log('PaymentService: Email', inv_id)
       let stars = 0
-      if (OutSum === '1999') {
+      if (roundedIncSum === 1999) {
         stars = 1249
-      } else if (OutSum === '5000') {
-        stars = 3040
-      } else if (OutSum === '10000') {
-        stars = 6080
-      } else if (OutSum === '10') {
+      } else if (roundedIncSum === 5000) {
+        stars = 3125
+      } else if (roundedIncSum === 10000) {
+        stars = 6250
+      } else if (roundedIncSum === 10) {
         stars = 6
+      } else if (roundedIncSum === 4800) {
+        stars = 3000
+      } else if (roundedIncSum === 9999) {
+        stars = 1000
+      } else if (roundedIncSum === 49999) {
+        stars = 5000
+      } else if (roundedIncSum === 99999) {
+        stars = 7500
       }
 
       if (stars > 0) {
-        const { user_id, telegram_id, username, language, bot_name } =
-          await this.getTelegramIdFromInvId(inv_id)
+        const { telegram_id, username, language, bot_name } =
+          await getTelegramIdFromInvId(inv_id)
+
+        const { bot, groupId } = createBotByName(bot_name)
+
         await incrementBalance({
           telegram_id: telegram_id.toString(),
           amount: stars,
         })
 
         await sendPaymentNotification(
-          Number(OutSum),
+          roundedIncSum,
           stars,
           telegram_id,
           language,
           username,
-          defaultBot
+          groupId,
+          bot
         )
         await setPayments({
-          user_id,
-          OutSum,
+          inv_id,
+          telegram_id,
+          roundedIncSum,
           stars,
           currency: 'RUB',
           payment_method: 'Robokassa',
@@ -56,28 +63,9 @@ export class PaymentService {
         })
       }
     } catch (error) {
-      const { telegram_id, language } = await this.getTelegramIdFromInvId(
-        inv_id
-      )
+      const { telegram_id, language } = await getTelegramIdFromInvId(inv_id)
       errorMessage(error as Error, telegram_id, language === 'ru')
       errorMessageAdmin(error as Error)
-      throw error
-    }
-  }
-
-  private async getTelegramIdFromInvId(inv_id: string): Promise<User> {
-    try {
-      const { data } = await supabase
-        .from('users')
-        .select('user_id, telegram_id, username, balance, language, bot_name')
-        .eq('inv_id', inv_id)
-        .single()
-      if (!data) {
-        throw new Error('User not found')
-      }
-      return data
-    } catch (error) {
-      console.error('Ошибка получения Telegram ID пользователя:', error)
       throw error
     }
   }

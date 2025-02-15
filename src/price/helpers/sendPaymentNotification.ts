@@ -7,6 +7,7 @@ export const sendPaymentNotification = async (
   telegramId: string,
   language: string,
   username: string,
+  groupId: string,
   bot: Telegraf<MyContext>
 ) => {
   try {
@@ -19,7 +20,7 @@ export const sendPaymentNotification = async (
             username || 'User without username'
           } (Telegram ID: ${telegramId}) paid ${amount} RUB and received ${stars} stars.`
 
-    await bot.telegram.sendMessage('-4166575919', caption)
+    await bot.telegram.sendMessage(groupId, caption)
   } catch (error) {
     console.error('Ошибка при отправке уведомления об оплате:', error)
     throw new Error('Ошибка при отправке уведомления об оплате')

@@ -76,6 +76,20 @@ const BOT_TOKENS_TEST = [
   process.env.BOT_TOKEN_TEST_2,
 ]
 
+export const BOT_NAMES = {
+  ['neuro_blogger_bot']: process.env.BOT_TOKEN_1,
+  ['MetaMuse_Manifest_bot']: process.env.BOT_TOKEN_2,
+  ['ZavaraBot']: process.env.BOT_TOKEN_3,
+  ['ai_koshey_bot']: process.env.BOT_TOKEN_TEST_1,
+  ['clip_maker_neuro_bot']: process.env.BOT_TOKEN_TEST_2,
+}
+
+export const AVATARS_GROUP_ID = {
+  ['neuro_blogger_bot']: '@neuro_blogger_group',
+  ['MetaMuse_Manifest_bot']: '@MetaMuse_AI_Influencer',
+  ['ZavaraBot']: '@NeuroLuna',
+}
+
 export const BOT_TOKENS =
   NODE_ENV === 'production' ? BOT_TOKENS_PROD : BOT_TOKENS_TEST
 
@@ -85,3 +99,43 @@ export const defaultBot = new Telegraf<MyContext>(DEFAULT_BOT_TOKEN)
 export const PULSE_BOT_TOKEN = process.env.BOT_TOKEN_1
 
 export const pulseBot = new Telegraf<MyContext>(PULSE_BOT_TOKEN)
+
+export const DEFAULT_BOT_NAME = 'neuro_blogger_bot'
+
+export function getBotNameByToken(token: string): { bot_name: string } {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const entry = Object.entries(BOT_NAMES).find(([_, value]) => value === token)
+  if (!entry) {
+    return { bot_name: DEFAULT_BOT_NAME }
+  }
+
+  const [bot_name] = entry
+  return { bot_name }
+}
+
+export function getTokenByBotName(botName: string): string | undefined {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const entry = Object.entries(BOT_NAMES).find(([name, _]) => name === botName)
+  if (!entry) {
+    console.warn(`Bot name ${botName} not found.`)
+    return undefined
+  }
+
+  const [, token] = entry
+  return token
+}
+
+export function createBotByName(
+  botName: string
+): { bot: Telegraf<MyContext>; groupId: string } | undefined {
+  const token = getTokenByBotName(botName)
+  if (!token) {
+    console.error(`Token for bot name ${botName} not found.`)
+    return undefined
+  }
+  const groupId = AVATARS_GROUP_ID[botName]
+  return {
+    bot: new Telegraf<MyContext>(token),
+    groupId,
+  }
+}
