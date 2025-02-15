@@ -34,7 +34,13 @@ export class GameService {
     console.log('userInfo', userInfo)
     const language_code = userInfo.language_code
     const result = await getLastStep(telegram_id, language_code)
-
+    if (!result) {
+      console.error(
+        'Ошибка: Не удалось получить последний шаг для пользователя',
+        telegram_id
+      )
+      throw new Error('Не удалось получить последний шаг для пользователя')
+    }
     let newLoka = result.loka + roll
     let direction: GameStep['direction']
     let new_consecutive_sixes: number

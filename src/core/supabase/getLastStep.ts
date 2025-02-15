@@ -1,4 +1,5 @@
 import { supabase } from '.'
+import { startNewGame } from './startNewGame'
 
 export const DIRECTION_OPTIONS = [
   'snake 🐍',
@@ -25,7 +26,7 @@ export async function getLastStep(
     throw new Error('user_id is undefined or invalid')
   }
 
-  console.log('Fetching last step for telegram_id:', telegram_id)
+  console.log('🔍 Получение последнего шага для telegram_id:', telegram_id)
 
   const { data: userExists, error: userExistsError } = await supabase
     .from('game')
@@ -37,22 +38,9 @@ export async function getLastStep(
 
   console.log('userExists', userExists)
 
-  if (userExistsError) {
-    console.log(userExistsError, 'userExistsError')
-    if (!userExists) {
-      const lastStep = {
-        loka: 68,
-        direction: isRu ? 'Стоп 🛑' : 'Stop 🛑',
-        consecutive_sixes: 0,
-        position_before_three_sixes: 0,
-        is_finished: true,
-      }
-      await supabase.from('game').insert({
-        telegram_id,
-        ...lastStep,
-      })
-      return lastStep
-    }
+  if (userExistsError || !userExists) {
+    console.log('⚠️ Ошибка или пользователь не найден, начинаем новую игру')
+    return await startNewGame(telegram_id, isRu)
   }
 
   const { data: lastStepData, error: lastStepError } = await supabase
@@ -66,16 +54,10 @@ export async function getLastStep(
     throw new Error(lastStepError.message)
   }
 
-  console.log('Last step data:', lastStepData)
+  console.log('📊 Данные последнего шага:', lastStepData)
 
   if (!lastStepData || lastStepData.length === 0) {
-    return {
-      loka: 68,
-      direction: isRu ? 'Стоп 🛑' : 'Stop 🛑',
-      consecutive_sixes: 0,
-      position_before_three_sixes: 0,
-      is_finished: true,
-    }
+    return await startNewGame(telegram_id, isRu)
   }
 
   return lastStepData[0]
