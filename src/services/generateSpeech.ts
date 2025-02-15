@@ -24,11 +24,13 @@ export const generateSpeech = async ({
   is_ru: boolean
   bot: Telegraf<MyContext>
 }): Promise<{ audioUrl: string }> => {
+  console.log('telegram_id', telegram_id)
   const userExists = await getUserByTelegramId(telegram_id)
-  if (!userExists.data) {
+  console.log('userExists', userExists)
+  if (!userExists) {
     throw new Error(`User with ID ${telegram_id} does not exist.`)
   }
-  const level = userExists.data.level
+  const level = userExists.level
   if (level === 7) {
     await updateUserLevelPlusOne(telegram_id, level)
   }

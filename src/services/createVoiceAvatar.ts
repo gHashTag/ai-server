@@ -14,10 +14,10 @@ export async function createVoiceAvatar(
 ): Promise<{ voiceId: string }> {
   try {
     const userExists = await getUserByTelegramId(telegram_id)
-    if (!userExists.data) {
+    if (!userExists) {
       throw new Error(`User with ID ${telegram_id} does not exist.`)
     }
-    const level = userExists.data.level
+    const level = userExists.level
     if (level === 6) {
       await updateUserLevelPlusOne(telegram_id, level)
     }

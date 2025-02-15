@@ -16,10 +16,10 @@ export async function generateImageToPrompt(
   console.log('generateImageToPrompt', imageUrl, telegram_id, username, is_ru)
   try {
     const userExists = await getUserByTelegramId(telegram_id)
-    if (!userExists.data) {
+    if (!userExists) {
       throw new Error(`User with ID ${telegram_id} does not exist.`)
     }
-    const level = userExists.data.level
+    const level = userExists.level
     if (level === 2) {
       await updateUserLevelPlusOne(telegram_id, level)
     }

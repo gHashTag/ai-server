@@ -53,10 +53,10 @@ export async function generateModelTraining(
   bot: Telegraf<MyContext>
 ): Promise<ModelTrainingResult> {
   const userExists = await getUserByTelegramId(telegram_id)
-  if (!userExists.data) {
+  if (!userExists) {
     throw new Error(`User with ID ${telegram_id} does not exist.`)
   }
-  const level = userExists.data.level
+  const level = userExists.level
   if (level === 0) {
     await updateUserLevelPlusOne(telegram_id, level)
   }

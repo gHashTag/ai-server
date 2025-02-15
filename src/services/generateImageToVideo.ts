@@ -45,10 +45,10 @@ export const generateImageToVideo = async (
     if (!is_ru) throw new Error('Is RU is required')
 
     const userExists = await getUserByTelegramId(telegram_id)
-    if (!userExists.data) {
+    if (!userExists) {
       throw new Error(`User with ID ${telegram_id} does not exist.`)
     }
-    const level = userExists.data.level
+    const level = userExists.level
     if (level === 8) {
       await updateUserLevelPlusOne(telegram_id, level)
     }
