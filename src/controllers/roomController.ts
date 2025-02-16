@@ -3,13 +3,35 @@ import { createOrFetchRoom } from '../services/roomService'
 
 export const handleRoomRequest = async (req: Request, res: Response) => {
   try {
-    const { name, type, telegram_id } = req.body
+    const {
+      name,
+      type,
+      telegram_id,
+      chat_id,
+      workspace_id,
+      token,
+      language_code,
+    } = req.body
 
-    if (!name || !type || !telegram_id) {
+    if (
+      !name ||
+      !type ||
+      !telegram_id ||
+      !chat_id ||
+      !workspace_id ||
+      !token ||
+      !language_code
+    ) {
       return res.status(400).json({ message: 'Missing required fields' })
     }
 
-    const rooms = await createOrFetchRoom(name, type, telegram_id)
+    const rooms = await createOrFetchRoom({
+      name,
+      type,
+      telegram_id,
+      chat_id,
+      token,
+    })
 
     res.status(200).json(rooms)
   } catch (error) {

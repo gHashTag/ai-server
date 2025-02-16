@@ -6,8 +6,8 @@ import {
   setPassport,
   updateUser,
 } from '@/core/supabase'
-import { createOrFetchRoom } from '@/utils/100ms/helpers'
-
+import { createOrFetchRoom } from './roomService'
+import { v4 as uuidv4 } from 'uuid'
 export type CreateUserT = {
   id: number
   username: string
@@ -88,14 +88,11 @@ export const createUserService = async (userData: CreateUserT) => {
   console.log('workspace_id', workspace_id)
 
   const rooms = await createOrFetchRoom({
-    username,
-    first_name,
-    last_name: last_name || '',
-    language_code,
-    user_id,
-    chat_id: telegram_id,
-    workspace_id,
-    bot_name: bot_name,
+    name: `${username}:${uuidv4()}:${language_code}`,
+    type: 'video-space',
+    telegram_id: telegram_id.toString(),
+    token: bot_name,
+    chat_id: telegram_id.toString(),
   })
 
   console.log('rooms', rooms)

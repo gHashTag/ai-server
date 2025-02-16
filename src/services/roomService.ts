@@ -2,12 +2,55 @@ import { createCodes } from '../core/100ms/create-codes'
 import { setMyWorkspace } from '../core/supabase/setMyWorkspace'
 import { myHeaders } from '../core/100ms/my-headers'
 import { supabase } from '../core/supabase'
+import { transliterate } from '@/helpers'
+import { v4 as uuidv4 } from 'uuid'
+import jwt from 'jsonwebtoken'
 
-export const createOrFetchRoom = async (
-  name: string,
-  type: string,
+const createToken100ms = () => {
+  return new Promise((resolve, reject) => {
+    const { APP_ACCESS_KEY, APP_SECRET } = process.env
+    const payload = {
+      access_key: APP_ACCESS_KEY,
+      type: 'management',
+      version: 2,
+      iat: Math.floor(Date.now() / 1000),
+      nbf: Math.floor(Date.now() / 1000),
+    }
+
+    jwt.sign(
+      payload,
+      APP_SECRET,
+      {
+        algorithm: 'HS256',
+        expiresIn: '24h',
+        jwtid: uuidv4(),
+      },
+      (err: any, token: string) => {
+        if (err) {
+          reject(err)
+        } else {
+          resolve(token)
+        }
+      }
+    )
+  })
+}
+
+type CreateOrFetchRoomProps = {
+  name: string
+  type: string
   telegram_id: string
-) => {
+  token: string
+  chat_id: string
+}
+
+export const createOrFetchRoom = async ({
+  name,
+  type,
+  telegram_id,
+  token,
+  chat_id,
+}: CreateOrFetchRoomProps) => {
   const { data } = await supabase
     .from('users')
     .select('*')
@@ -35,11 +78,14 @@ export const createOrFetchRoom = async (
     )
     return existingRoom
   }
-
+  const transliterateName = transliterate(name)
   const roomData = {
-    name,
-    description: telegram_id,
-    template_id: '65efdfab48b3dd31b94ff0dc',
+    name: `${transliterateName}`,
+    description: workspace_id,
+    template_id:
+      type === 'audio-space'
+        ? '65e84b5148b3dd31b94ff005'
+        : '65efdfab48b3dd31b94ff0dc',
     enabled: true,
   }
 
@@ -82,8 +128,7 @@ export const createOrFetchRoom = async (
     codes,
     type_additional: null,
     language_code: data[0].language_code,
-    chat_id: null,
-    bot_name: null,
+    chat_id,
     username: data[0].username,
     original_name: name,
     public: false,
@@ -92,6 +137,7 @@ export const createOrFetchRoom = async (
     template: newRoom.template,
     room_id: newRoom.id,
     telegram_id,
+    token,
   }
 
   console.log('Inserting room:', rooms)
