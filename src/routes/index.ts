@@ -6,7 +6,7 @@ import { UserRoute } from './user.route'
 import { GameRoute } from './leelagame.route'
 import { AiAssistantRoute } from './ai.assistant.route'
 import { VideoRoute } from './video.route'
-
+import { RoomRoute } from './room.route'
 export const routes = [
   new UploadRoute(),
   new WebhookRoute(),
@@ -16,4 +16,5 @@ export const routes = [
   new GameRoute(),
   new AiAssistantRoute(),
   new VideoRoute(),
+  new RoomRoute(),
 ]

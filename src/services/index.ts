@@ -1,4 +1,3 @@
-
 export * from './createVoiceAvatar'
 export * from './generateImageToPrompt'
 export * from './generateImageToVideo'
@@ -9,3 +8,4 @@ export * from './generateTextToImage'
 export * from './generateTextToVideo'
 export * from './payment.service'
 export * from './user.service'
+export * from './roomService'
