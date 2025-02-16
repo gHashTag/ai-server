@@ -20,6 +20,7 @@ export interface GameStep {
 
 export async function getLastStep(
   telegram_id: string,
+  username: string,
   isRu: boolean
 ): Promise<GameStep> {
   if (!telegram_id) {
@@ -40,7 +41,7 @@ export async function getLastStep(
 
   if (userExistsError || !userExists) {
     console.log('⚠️ Ошибка или пользователь не найден, начинаем новую игру')
-    return await startNewGame(telegram_id, isRu)
+    return await startNewGame(telegram_id, username, isRu)
   }
 
   const { data: lastStepData, error: lastStepError } = await supabase
@@ -57,7 +58,7 @@ export async function getLastStep(
   console.log('📊 Данные последнего шага:', lastStepData)
 
   if (!lastStepData || lastStepData.length === 0) {
-    return await startNewGame(telegram_id, isRu)
+    return await startNewGame(telegram_id, username, isRu)
   }
 
   return lastStepData[0]

@@ -33,7 +33,11 @@ export class GameService {
     const userInfo = await getUserByTelegramId(telegram_id)
     console.log('userInfo', userInfo)
     const language_code = userInfo.language_code
-    const result = await getLastStep(telegram_id, language_code)
+    const result = await getLastStep(
+      telegram_id,
+      userInfo.username,
+      language_code
+    )
     if (!result) {
       console.error(
         'Ошибка: Не удалось получить последний шаг для пользователя',
