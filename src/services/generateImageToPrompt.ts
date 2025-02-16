@@ -16,6 +16,7 @@ export async function generateImageToPrompt(
   console.log('generateImageToPrompt', imageUrl, telegram_id, username, is_ru)
   try {
     const userExists = await getUserByTelegramId(telegram_id)
+    console.log('userExists', userExists)
     if (!userExists) {
       throw new Error(`User with ID ${telegram_id} does not exist.`)
     }

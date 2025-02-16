@@ -56,7 +56,8 @@ export const costDetails = stepOptions.map(steps => {
 
 // Функция для расчета стоимости в звездах
 export function calculateTrainingCostInStars(steps: number): number {
-  return steps * conversionRates.costPerStepInStars // Умножаем количество шагов на стоимость за шаг в звездах
+  const totalCostInStars = conversionRates.costPerStepInStars * steps // Умножаем количество шагов на стоимость за шаг в звездах
+  return parseFloat(totalCostInStars.toFixed(2))
 }
 
 // Функция для расчета стоимости в рублях

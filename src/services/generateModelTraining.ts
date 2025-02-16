@@ -63,16 +63,13 @@ export async function generateModelTraining(
   let currentTraining: TrainingResponse | null = null
   console.log(`currentTraining: ${currentTraining}`)
   const currentBalance = await getUserBalance(telegram_id)
-  const costPerStep = (
+  const paymentAmount = (
     modeCosts[ModeEnum.DigitalAvatarBody] as (steps: number) => number
   )(steps)
 
-  const trainingCostInStars = costPerStep * steps
-  console.log(`trainingCostInStars: ${trainingCostInStars}`)
-
   const balanceCheck = await processBalanceOperation({
     telegram_id,
-    paymentAmount: trainingCostInStars,
+    paymentAmount,
     is_ru,
     bot,
   })
@@ -120,7 +117,7 @@ export async function generateModelTraining(
     }
 
     // Обновляем баланс пользователя после успешной проверки
-    await updateUserBalance(telegram_id, currentBalance - trainingCostInStars)
+    await updateUserBalance(telegram_id, currentBalance - paymentAmount)
 
     // Создаем запись о тренировке
     await createModelTraining({
@@ -201,7 +198,7 @@ export async function generateModelTraining(
       })
 
       // Возвращаем средства в случае неудачи
-      await updateUserBalance(telegram_id, currentBalance + trainingCostInStars)
+      await updateUserBalance(telegram_id, currentBalance + paymentAmount)
 
       throw new Error(
         `Training failed: ${failedTraining.error || 'Unknown error'}`
@@ -211,7 +208,7 @@ export async function generateModelTraining(
     if (status === 'canceled') {
       console.log('CASE: canceled')
       // Возвращаем средства в случае отмены
-      await updateUserBalance(telegram_id, currentBalance + trainingCostInStars)
+      await updateUserBalance(telegram_id, currentBalance + paymentAmount)
       bot.telegram.sendMessage(
         telegram_id,
         is_ru ? 'Генерация была отменена.' : 'Generation was canceled.',
@@ -245,7 +242,7 @@ export async function generateModelTraining(
     }
   } catch (error) {
     // Возвращаем средства в случае ошибки
-    await updateUserBalance(telegram_id, currentBalance + trainingCostInStars)
+    await updateUserBalance(telegram_id, currentBalance + paymentAmount)
     console.error('Training error details:', {
       error,
       username: process.env.REPLICATE_USERNAME,
