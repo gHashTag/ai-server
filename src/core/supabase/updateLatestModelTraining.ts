@@ -22,7 +22,7 @@ export const updateLatestModelTraining = async (
     .order('created_at', { ascending: false })
     .limit(1)
     .single()
-  console.log(`updateLatestModelTraining: ${data}`)
+  console.log(`updateLatestModelTraining: ${JSON.stringify(data)}`)
 
   if (selectError) {
     throw new Error(

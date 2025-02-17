@@ -68,9 +68,10 @@ export async function generateImageToPrompt(
       }
     )
 
-    console.log(initResponse.data)
+    console.log('Init response data:', initResponse.data)
 
     const eventId = initResponse.data?.event_id || initResponse.data
+    console.log('eventId', eventId)
     if (!eventId) {
       throw new Error('No event ID in response')
     }
@@ -83,7 +84,7 @@ export async function generateImageToPrompt(
       }
     )
 
-    console.log(resultResponse.data)
+    console.log('Result response data:', resultResponse.data)
 
     if (!resultResponse.data) {
       throw new Error('Image to prompt: No data in response')
@@ -96,6 +97,7 @@ export async function generateImageToPrompt(
       if (line.startsWith('data: ')) {
         try {
           const data = JSON.parse(line.slice(6))
+          console.log('Parsed data:', data)
           if (Array.isArray(data) && data.length > 1) {
             const caption = data[1]
             await bot.telegram.sendMessage(

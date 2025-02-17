@@ -43,6 +43,27 @@ interface ModelTrainingResult {
 
 const activeTrainings = new Map<string, { cancel: () => void }>()
 
+async function getLatestModelUrl(modelName: string): Promise<string> {
+  const response = await fetch(
+    `https://api.replicate.com/v1/models/ghashtag/${modelName}`,
+    {
+      method: 'GET',
+      headers: {
+        Authorization: `Bearer ${process.env.REPLICATE_API_TOKEN}`,
+        'Content-Type': 'application/json',
+      },
+    }
+  )
+
+  if (!response.ok) {
+    throw new Error('Failed to fetch latest version id')
+  }
+
+  const data = await response.json()
+  const model_url = `ghashtag/${modelName}:${data.latest_version.id}`
+  return model_url
+}
+
 export async function generateModelTraining(
   zipUrl: string,
   triggerWord: string,
@@ -84,7 +105,7 @@ export async function generateModelTraining(
     }
 
     const destination: `${string}/${string}` = `${process.env.REPLICATE_USERNAME}/${modelName}`
-
+    console.log('destination', destination)
     // Проверяем, существует ли модель
     let modelExists = false
     try {
@@ -224,9 +245,12 @@ export async function generateModelTraining(
     if (status === 'succeeded') {
       console.log('CASE: succeeded, currentTraining:', currentTraining)
       console.log('currentTraining.urls.get', currentTraining.urls.get)
+      // Извлекаем модель и версию
+      const model_url = await getLatestModelUrl(destination)
+
       await updateLatestModelTraining(telegram_id, modelName, {
         status: 'succeeded',
-        model_url: currentTraining.urls.get,
+        model_url,
       })
       bot.telegram.sendMessage(
         telegram_id,
