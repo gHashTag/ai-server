@@ -12,35 +12,7 @@ import { generateLipSync } from '@/services/generateLipSync'
 import { API_URL } from '@/config'
 import { deleteFile } from '@/helpers'
 import path from 'path'
-import { Telegraf } from 'telegraf'
-import { MyContext } from '@/interfaces'
-
-const BOT_NAMES = {
-  ['neuro_blogger_bot']: process.env.BOT_TOKEN_1,
-  ['MetaMuse_Manifest_bot']: process.env.BOT_TOKEN_2,
-  ['ZavaraBot']: process.env.BOT_TOKEN_3,
-  ['ai_koshey_bot']: process.env.BOT_TOKEN_TEST_1,
-  ['clip_maker_neuro_bot']: process.env.BOT_TOKEN_TEST_2,
-}
-
-const bots = Object.values(BOT_NAMES).map(
-  token => new Telegraf<MyContext>(token)
-)
-
-export function getBotByName(bot_name: string) {
-  console.log('CASE: getBotByName', bot_name)
-  const token = BOT_NAMES[bot_name]
-  if (!token) {
-    return { error: 'Unauthorized' }
-  }
-
-  const bot = bots.find(bot => bot.telegram.token === token)
-  if (!bot) {
-    return { error: 'Unauthorized' }
-  }
-
-  return { bot }
-}
+import { getBotByName } from '@/core/bot'
 export class GenerationController {
   public textToImage = async (
     req: Request,

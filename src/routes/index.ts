@@ -7,6 +7,8 @@ import { GameRoute } from './leelagame.route'
 import { AiAssistantRoute } from './ai.assistant.route'
 import { VideoRoute } from './video.route'
 import { RoomRoute } from './room.route'
+import { CreateTasksRoute } from './create-tasks.route'
+
 export const routes = [
   new UploadRoute(),
   new WebhookRoute(),
@@ -17,4 +19,5 @@ export const routes = [
   new AiAssistantRoute(),
   new VideoRoute(),
   new RoomRoute(),
+  new CreateTasksRoute(),
 ]

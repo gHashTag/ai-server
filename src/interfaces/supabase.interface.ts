@@ -15,10 +15,9 @@ export type TSupabaseUser = {
   inviter?: string | null
   is_bot?: boolean | null
   language_code?: string | null
-  telegram_id?: number | null
   email?: string | null
   created_at?: Date
-  user_id?: string
+  telegram_id?: string
   aggregateverifier?: string | null
   admin_email?: string | null
   role?: string | null
@@ -40,7 +39,7 @@ export type SupabaseUser = TUser & TSupabaseUser
 
 export type CreateUserReturn = {
   userData: SupabaseUser[]
-  user_id: string
+  telegram_id: string
   isUserExist: boolean
   error: any
 }
@@ -87,7 +86,6 @@ export interface UserType {
   telegram_id?: bigint | null
   email?: string | null
   photo_url?: string | null
-  user_id: string // UUID
   role?: string | null
   display_name?: string | null
   user_timezone?: string | null
@@ -111,4 +109,65 @@ export interface UserType {
   subscription?: string | null
   token?: string | null
   is_leela_start?: boolean | null
+}
+
+export interface PassportUser {
+  telegram_id: string
+  workspace_id: string
+  room_id: string
+  username: string
+  first_name: string
+  last_name: string
+  chat_id: number
+  type: 'room'
+  is_owner: boolean
+  photo_url: string | null
+  rooms?: { chat_id: string }
+}
+
+export interface RoomAsset {
+  account_id: string
+  app_id: string
+  duration: number
+  metadata_id: string
+  metadata_timestamp: string
+  recording_id: string
+  room_id: string
+  room_name: string
+  session_id: string
+  summary_json_asset_id: string
+  summary_json_path: string
+  summary_json_presigned_url: string
+  transcript_json_asset_id: string
+  transcript_json_path: string
+  transcript_json_presigned_url: string
+  transcript_srt_asset_id: string
+  transcript_srt_path: string
+  transcript_srt_presigned_url: string
+  transcript_txt_asset_id: string
+  transcript_txt_path: string
+  transcript_txt_presigned_url: string
+  transcription_id: string
+}
+
+export interface TranscriptionAsset extends RoomAsset {
+  title: string
+  summary_short: string
+  transcription: string
+  telegram_id: string
+  workspace_id: string
+}
+
+// WORKSPACES
+
+export interface WorkspaceNode {
+  background: string
+  colors: string[][]
+  created_at: string
+  id: string
+  title: string
+  type: string
+  updated_at: string
+  telegram_id: string
+  workspace_id: string
 }
