@@ -5,6 +5,7 @@ import { errorMessage, errorMessageAdmin } from '@/helpers'
 import { Telegraf } from 'telegraf'
 import { MyContext } from '@/interfaces'
 import { modeCosts, ModeEnum } from '@/price/helpers/modelsCost'
+import { levels } from '@/helpers/levels'
 
 export async function generateImageToPrompt(
   imageUrl: string,
@@ -107,7 +108,23 @@ export async function generateImageToPrompt(
                 parse_mode: 'MarkdownV2',
                 reply_markup: {
                   keyboard: [
-                    [{ text: is_ru ? '🏠 Главное меню' : '🏠 Main menu' }],
+                    [
+                      {
+                        text: is_ru ? levels[2].title_ru : levels[2].title_en,
+                      },
+                    ],
+                    [
+                      {
+                        text: is_ru ? levels[11].title_ru : levels[11].title_en,
+                      },
+                    ],
+                    [
+                      {
+                        text: is_ru
+                          ? levels[104].title_ru
+                          : levels[104].title_en,
+                      },
+                    ],
                   ],
                   resize_keyboard: true,
                   one_time_keyboard: false,
