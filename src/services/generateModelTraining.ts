@@ -44,24 +44,31 @@ interface ModelTrainingResult {
 const activeTrainings = new Map<string, { cancel: () => void }>()
 
 async function getLatestModelUrl(modelName: string): Promise<string> {
-  const response = await fetch(
-    `https://api.replicate.com/v1/models/ghashtag/${modelName}`,
-    {
-      method: 'GET',
-      headers: {
-        Authorization: `Bearer ${process.env.REPLICATE_API_TOKEN}`,
-        'Content-Type': 'application/json',
-      },
+  try {
+    const response = await fetch(
+      `https://api.replicate.com/v1/models/ghashtag/${modelName}`,
+      {
+        method: 'GET',
+        headers: {
+          Authorization: `Bearer ${process.env.REPLICATE_API_TOKEN}`,
+          'Content-Type': 'application/json',
+        },
+      }
+    )
+
+    if (!response.ok) {
+      throw new Error('Failed to fetch latest version id')
     }
-  )
 
-  if (!response.ok) {
-    throw new Error('Failed to fetch latest version id')
+    const data = await response.json()
+    console.log('data:', data)
+    const model_url = `ghashtag/${modelName}:${data.latest_version.id}`
+    console.log('model_url:', model_url)
+    return model_url
+  } catch (error) {
+    console.error('Error fetching latest model url:', error)
+    throw error
   }
-
-  const data = await response.json()
-  const model_url = `ghashtag/${modelName}:${data.latest_version.id}`
-  return model_url
 }
 
 export async function generateModelTraining(
@@ -180,9 +187,9 @@ export async function generateModelTraining(
     activeTrainings.set(telegram_id, trainingProcess)
 
     // Обновляем запись с ID тренировки
-    await updateLatestModelTraining(telegram_id, modelName, {
-      replicate_training_id: currentTraining.id,
-    })
+    // await updateLatestModelTraining(telegram_id, modelName, {
+    //   replicate_training_id: currentTraining.id,
+    // })
 
     // Ждем завершения тренировки
     let status = currentTraining.status
@@ -246,8 +253,8 @@ export async function generateModelTraining(
       console.log('CASE: succeeded, currentTraining:', currentTraining)
       console.log('currentTraining.urls.get', currentTraining.urls.get)
       // Извлекаем модель и версию
-      const model_url = await getLatestModelUrl(destination)
-
+      const model_url = await getLatestModelUrl(modelName)
+      console.log('model_url:', model_url)
       await updateLatestModelTraining(telegram_id, modelName, {
         status: 'succeeded',
         model_url,
