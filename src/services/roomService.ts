@@ -62,10 +62,10 @@ export const createOrFetchRoom = async ({
       }
     )
     console.log('response:', response)
-    const data = await response.json()
-    console.log('data:', data)
+    const roomData = await response.json()
+    console.log('roomData:', roomData)
 
-    const roomId = data.roomId
+    const roomId = roomData.data.roomId
 
     const rooms = {
       workspace_id,
