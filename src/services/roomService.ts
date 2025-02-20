@@ -22,6 +22,7 @@ export const createOrFetchRoom = async ({
     .from('users')
     .select('*')
     .eq('telegram_id', telegram_id.toString())
+    .single()
 
   if (!userData) {
     throw new Error(`User not found: ${telegram_id}`)
@@ -65,22 +66,21 @@ export const createOrFetchRoom = async ({
     const roomData = await response.json()
     console.log('roomData:', roomData)
 
-    const roomId = roomData.data.roomId
-
     const rooms = {
       workspace_id,
       type,
       name: transliterateName,
       enabled: true,
       chat_id,
-      username: '',
+      username: userData.username,
       original_name: name,
       public: false,
       created_at: new Date(),
       updated_at: new Date(),
-      room_id: roomId,
+      room_id: transliterateName,
       telegram_id,
       token,
+      room_code: roomData.data.roomCode,
     }
 
     console.log('Inserting room:', rooms)
