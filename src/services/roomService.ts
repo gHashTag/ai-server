@@ -73,7 +73,6 @@ export const createOrFetchRoom = async ({
       enabled: true,
       chat_id,
       username: userData.username,
-      original_name: name,
       public: false,
       created_at: new Date(),
       updated_at: new Date(),
