@@ -8,6 +8,7 @@ import { AiAssistantRoute } from './ai.assistant.route'
 import { VideoRoute } from './video.route'
 import { RoomRoute } from './room.route'
 import { CreateTasksRoute } from './create-tasks.route'
+import { BroadcastRoute } from './broadcast.route'
 
 export const routes = [
   new UploadRoute(),
@@ -20,4 +21,5 @@ export const routes = [
   new VideoRoute(),
   new RoomRoute(),
   new CreateTasksRoute(),
+  new BroadcastRoute(),
 ]
