@@ -80,7 +80,7 @@ export const createOrFetchRoom = async ({
       room_id: transliterateName,
       telegram_id,
       token,
-      room_code: roomData.data.roomCode,
+      room_code: roomData.data.roomId,
     }
 
     console.log('Inserting room:', rooms)
