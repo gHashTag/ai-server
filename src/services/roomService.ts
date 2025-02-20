@@ -21,7 +21,7 @@ export const createOrFetchRoom = async ({
   const { data: userData } = await supabase
     .from('users')
     .select('*')
-    .eq('telegram_id', telegram_id)
+    .eq('telegram_id', telegram_id.toString())
 
   if (!userData) {
     throw new Error(`User not found: ${telegram_id}`)
