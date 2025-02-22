@@ -13,6 +13,14 @@ import { createModelTraining } from '@/core/supabase/'
 import { Telegraf } from 'telegraf'
 import { MyContext } from '@/interfaces'
 import { modeCosts, ModeEnum } from '@/price/helpers/modelsCost'
+import axios from 'axios'
+
+if (!process.env.BFL_API_KEY) {
+  throw new Error('BFL_API_KEY is not set')
+}
+if (!process.env.BFL_WEBHOOK_URL) {
+  throw new Error('BFL_WEBHOOK_URL is not set')
+}
 
 export interface ApiError extends Error {
   response?: {
@@ -28,6 +36,12 @@ interface TrainingResponse {
 }
 
 const activeTrainings = new Map<string, { cancel: () => void }>()
+
+async function encodeFileToBase64(url: string): Promise<string> {
+  const response = await axios.get(url, { responseType: 'arraybuffer' })
+  const buffer = Buffer.from(response.data)
+  return buffer.toString('base64')
+}
 
 export async function generateModelTraining(
   zipUrl: string,
@@ -80,6 +94,8 @@ export async function generateModelTraining(
       steps,
     })
 
+    const encodedZip = await encodeFileToBase64(zipUrl)
+
     // Создаем тренировку с использованием нового API
     const response = await fetch('https://api.us1.bfl.ai/v1/finetune', {
       method: 'POST',
@@ -88,12 +104,12 @@ export async function generateModelTraining(
         'X-Key': process.env.BFL_API_KEY,
       },
       body: JSON.stringify({
-        file_data: zipUrl,
+        file_data: encodedZip,
         finetune_comment: telegram_id,
         trigger_word: triggerWord,
         mode: 'general',
         iterations: steps,
-        learning_rate: 0.00001,
+        learning_rate: 0.0001,
         captioning: true,
         priority: 'high_res_only',
         finetune_type: 'full',
