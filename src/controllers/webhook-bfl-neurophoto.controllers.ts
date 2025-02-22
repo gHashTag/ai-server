@@ -10,13 +10,13 @@ export class WebhookBFLNeurophotoController {
     res: Response
   ): Promise<void> {
     try {
-      const { id, result } = req.body
+      const { task_id, result } = req.body
       console.log('Webhook received:', req.body)
 
       const imageUrl = await processApiResponse(result.sample)
 
       const { telegram_id, username, bot_name, language_code } =
-        await updatePrompt(id, result.sample)
+        await updatePrompt(task_id, result.sample)
 
       const { bot } = getBotByName(bot_name)
 

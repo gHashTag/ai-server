@@ -334,11 +334,11 @@ export const saveNeuroPhotoPrompt = async (
     const { data: newPrompt, error } = await supabase
       .from('prompts_history')
       .insert({
-        id,
+        task_id: id,
         prompt,
         telegram_id,
         status,
-        model_type: 'neurophoto', // Убедитесь, что вы передаете все необходимые поля
+        model_type: 'neurophoto',
       })
       .select()
       .single()

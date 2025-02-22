@@ -1,7 +1,7 @@
 import { supabase } from '.'
 
 export const updatePrompt = async (
-  promptId: number,
+  task_id: number,
   mediaUrl: string
 ): Promise<{
   telegram_id: string
@@ -14,7 +14,7 @@ export const updatePrompt = async (
     const { data: existingData, error: selectError } = await supabase
       .from('prompts_history')
       .select('telegram_id, users(bot_name, language_code, username)')
-      .eq('id', promptId)
+      .eq('task_id', task_id)
       .single()
     console.log('existingData', existingData)
     if (selectError || !existingData) {
@@ -26,7 +26,7 @@ export const updatePrompt = async (
     const { error: updateError } = await supabase
       .from('prompts_history')
       .update({ media_url: mediaUrl })
-      .eq('id', promptId)
+      .eq('task_id', task_id)
 
     if (updateError) {
       console.error(
