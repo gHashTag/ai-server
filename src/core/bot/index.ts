@@ -39,6 +39,7 @@ export function getBotByName(bot_name: string) {
 
   return { bot }
 }
+
 export const supportRequest = async (title: string, data: any) => {
   try {
     await pulseBot.telegram.sendMessage(

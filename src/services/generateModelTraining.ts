@@ -99,7 +99,7 @@ export async function generateModelTraining(
         trigger_word: triggerWord,
         mode: 'general',
         iterations: steps,
-        learning_rate: 0.0001,
+        learning_rate: 0.00001,
         captioning: true,
         priority: 'high_res_only',
         finetune_type: 'full',

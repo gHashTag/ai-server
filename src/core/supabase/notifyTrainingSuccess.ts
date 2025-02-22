@@ -2,7 +2,7 @@ import { supabase } from '@/core/supabase'
 import { getBotByName } from '@/core/bot'
 import { Telegraf } from 'telegraf'
 import { MyContext } from '@/interfaces'
-
+import { getModelTrainingData } from '@/core/supabase'
 export async function notifyTrainingSuccess(
   finetuneId: string,
   status: string,
@@ -11,17 +11,7 @@ export async function notifyTrainingSuccess(
   try {
     // Выполняем запрос с соединением таблиц для получения telegram_id и bot_name
     console.log(`finetuneId: ${finetuneId}`)
-    const { data, error } = await supabase
-      .from('model_trainings')
-      .select('telegram_id, users(bot_name, language_code)')
-      .eq('finetune_id', finetuneId)
-      .single()
-
-    if (error || !data) {
-      console.error('Ошибка при получении данных о тренировке:', error)
-      return
-    }
-
+    const data = await getModelTrainingData(finetuneId)
     const { telegram_id } = data
 
     //@ts-ignore
