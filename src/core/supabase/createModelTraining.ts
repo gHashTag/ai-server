@@ -1,6 +1,7 @@
 import { supabase } from '.'
 
 export interface ModelTraining {
+  finetune_id: string
   telegram_id: string
   model_name: string
   trigger_word: string

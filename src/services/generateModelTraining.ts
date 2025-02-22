@@ -2,7 +2,6 @@ import { replicate } from '@/core/replicate'
 import {
   getUserByTelegramId,
   updateUserBalance,
-  updateLatestModelTraining,
   updateUserLevelPlusOne,
 } from '@/core/supabase'
 import { errorMessage } from '@/helpers'
@@ -85,15 +84,6 @@ export async function generateModelTraining(
     // Обновляем баланс пользователя после успешной проверки
     await updateUserBalance(telegram_id, currentBalance - paymentAmount)
 
-    // Создаем запись о тренировке
-    await createModelTraining({
-      telegram_id: telegram_id,
-      model_name: modelName,
-      trigger_word: triggerWord,
-      zip_url: zipUrl,
-      steps,
-    })
-
     const encodedZip = await encodeFileToBase64(zipUrl)
 
     // Создаем тренировку с использованием нового API
@@ -125,6 +115,16 @@ export async function generateModelTraining(
     }
 
     const currentTraining = await response.json()
+
+    // Создаем запись о тренировке
+    await createModelTraining({
+      finetune_id: currentTraining.finetune_id,
+      telegram_id: telegram_id,
+      model_name: modelName,
+      trigger_word: triggerWord,
+      zip_url: zipUrl,
+      steps,
+    })
     console.log('🎉 Training initiated successfully:', currentTraining)
 
     return {
