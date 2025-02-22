@@ -3,6 +3,7 @@ import { updatePrompt } from '@/core/supabase/'
 import { pulse } from '@/helpers/pulse'
 import { processApiResponse } from '@/helpers/processApiResponse'
 import { getBotByName } from '@/core/bot'
+import { errorMessageAdmin } from '@/helpers'
 
 export class WebhookBFLNeurophotoController {
   public async handleWebhookNeurophoto(
@@ -11,16 +12,14 @@ export class WebhookBFLNeurophotoController {
   ): Promise<void> {
     try {
       const { task_id, status, result } = req.body
+      const imageUrl = await processApiResponse(result.sample)
 
+      const { telegram_id, username, bot_name, language_code } =
+        await updatePrompt(task_id, result.sample)
+      const is_ru = language_code === 'ru'
+      const { bot } = getBotByName(bot_name)
       if (status === 'SUCCESS') {
         console.log('Webhook received:', req.body)
-
-        const imageUrl = await processApiResponse(result.sample)
-
-        const { telegram_id, username, bot_name, language_code } =
-          await updatePrompt(task_id, result.sample)
-
-        const { bot } = getBotByName(bot_name)
 
         console.log('Sending image:', imageUrl)
 
@@ -30,8 +29,6 @@ export class WebhookBFLNeurophotoController {
         // Отправляем в pulse
         const pulseImage = imageUrl
         console.log('pulseImage', pulseImage)
-
-        const is_ru = language_code === 'ru'
 
         await pulse(
           pulseImage,
@@ -67,7 +64,18 @@ export class WebhookBFLNeurophotoController {
         )
 
         res.status(200).json({ message: 'Webhook processed successfully' })
+      } else if (status === 'Content Moderated') {
+        await bot.telegram.sendMessage(
+          telegram_id,
+          is_ru
+            ? `🚫 Содержимое отклонено модерацией. Попробуйте другой промпт или еще раз.`
+            : `🚫 Content rejected by moderation. Try another prompt or try again.`
+        )
+        res.status(200).json({ message: 'Webhook processed successfully' })
       } else {
+        errorMessageAdmin(
+          new Error(`🚫 Webhook received: ${JSON.stringify(req.body)}`)
+        )
         res.status(200).json({ message: 'Webhook processed successfully' })
       }
     } catch (error) {

@@ -15,7 +15,6 @@ import { modeCosts, ModeEnum } from '@/price/helpers/modelsCost'
 
 export async function generateNeuroImage(
   prompt: string,
-  model_url: `${string}/${string}` | `${string}/${string}:${string}`,
   num_images: number,
   telegram_id: string,
   username: string,
