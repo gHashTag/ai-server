@@ -9,20 +9,26 @@ import { GenerationResult } from '@/interfaces'
 
 import { processBalanceOperation } from '@/price/helpers'
 import { errorMessageAdmin } from '@/helpers/errorMessageAdmin'
-import { Telegraf } from 'telegraf'
-import { MyContext } from '@/interfaces'
+
 import { modeCosts, ModeEnum } from '@/price/helpers/modelsCost'
+import { getBotByName } from '@/core/bot'
 
 export async function generateNeuroImage(
   prompt: string,
   num_images: number,
   telegram_id: string,
-  username: string,
   is_ru: boolean,
-  bot: Telegraf<MyContext>
+  bot_name: string
 ): Promise<GenerationResult | null> {
   try {
+    console.log('telegram_id', telegram_id)
+    console.log('is_ru', is_ru)
+    console.log('bot_name', bot_name)
+    console.log('prompt', prompt)
+    console.log('num_images', num_images)
+    const { bot } = getBotByName(bot_name)
     const userExists = await getUserByTelegramId(telegram_id)
+    console.log('userExists', userExists)
     if (!userExists) {
       throw new Error(`User with ID ${telegram_id} does not exist.`)
     }

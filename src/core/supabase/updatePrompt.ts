@@ -16,7 +16,7 @@ export const updatePrompt = async (
       .select('telegram_id, users(bot_name, language_code, username)')
       .eq('task_id', task_id)
       .single()
-    console.log('existingData', existingData)
+
     if (selectError || !existingData) {
       console.error('Ошибка при получении данных промпта:', selectError)
       return null
