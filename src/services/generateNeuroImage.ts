@@ -53,6 +53,7 @@ export async function generateNeuroImage(
     const results: GenerationResult[] = []
 
     const finetuneId = await getFineTuneIdByTelegramId(telegram_id)
+    console.log('finetuneId', finetuneId)
     const input = {
       finetune_id: finetuneId,
       finetune_strength: 0.5,
@@ -100,10 +101,9 @@ export async function generateNeuroImage(
       const { id, status } = await response.json()
       console.log('id:', id, 'status:', status)
 
-      const prompt_id = await saveNeuroPhotoPrompt(id, prompt, telegram_id)
-      console.log(prompt_id)
+      await saveNeuroPhotoPrompt(id, prompt, telegram_id, status)
     }
-    return results[0] || null
+    return
   } catch (error) {
     console.error(`Error:`, error)
 

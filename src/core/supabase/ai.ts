@@ -330,6 +330,7 @@ export const saveNeuroPhotoPrompt = async (
   status?: string
 ): Promise<number | null> => {
   try {
+    console.log('saveNeuroPhotoPrompt', id, prompt, telegram_id, status)
     const { data: newPrompt, error } = await supabase
       .from('prompts_history')
       .insert({
@@ -337,6 +338,7 @@ export const saveNeuroPhotoPrompt = async (
         prompt,
         telegram_id,
         status,
+        model_type: 'neurophoto', // Убедитесь, что вы передаете все необходимые поля
       })
       .select()
       .single()
@@ -346,7 +348,12 @@ export const saveNeuroPhotoPrompt = async (
       return null
     }
 
-    return newPrompt.id
+    if (!newPrompt) {
+      console.error('Вставка не вернула данные')
+      return null
+    }
+
+    return newPrompt.prompt_id
   } catch (error) {
     console.error('Ошибка при сохранении промпта:', error)
     return null
