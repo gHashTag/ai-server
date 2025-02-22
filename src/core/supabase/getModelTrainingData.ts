@@ -7,6 +7,7 @@ export async function getModelTrainingData(finetuneId: string) {
       .select('telegram_id, users(bot_name, language_code)')
       .eq('finetune_id', finetuneId)
       .single()
+    console.log('getModelTrainingData', data)
 
     if (error || !data) {
       console.error('Ошибка при получении данных о тренировке:', error)

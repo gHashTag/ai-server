@@ -50,7 +50,6 @@ export async function generateNeuroImage(
     }
 
     const aspect_ratio = await getAspectRatio(telegram_id)
-    const results: GenerationResult[] = []
 
     const finetuneId = await getFineTuneIdByTelegramId(telegram_id)
     console.log('finetuneId', finetuneId)
@@ -63,8 +62,8 @@ export async function generateNeuroImage(
       output_format: 'jpeg',
       prompt_upsampling: true,
       webhook_url:
-        'https://ai-server-new-u14194.vm.elestio.app/webhooks/webhook-bfl',
-      webhook_secret: '12345dfis!67890',
+        'https://ai-server-new-u14194.vm.elestio.app/webhooks/webhook-bfl-neurophoto',
+      webhook_secret: process.env.BFL_WEBHOOK_SECRET as string,
     }
 
     // Цикл генерации изображений

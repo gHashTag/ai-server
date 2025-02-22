@@ -3,6 +3,7 @@ import { getBotByName } from '@/core/bot'
 import { Telegraf } from 'telegraf'
 import { MyContext } from '@/interfaces'
 import { getModelTrainingData } from '@/core/supabase'
+
 export async function notifyTrainingSuccess(
   finetuneId: string,
   status: string,
