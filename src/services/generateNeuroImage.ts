@@ -53,10 +53,11 @@ export async function generateNeuroImage(
 
     const finetuneId = await getFineTuneIdByTelegramId(telegram_id)
     console.log('finetuneId', finetuneId)
+    //
     const input = {
       finetune_id: finetuneId,
       finetune_strength: 0.5,
-      prompt,
+      prompt: `${prompt}. Cinematic Lighting, realistic, intricate details, extremely detailed, incredible details, full colored, complex details, insanely detailed and intricate, hypermaximalist, extremely detailed with rich colors. Masterpiece, best quality, aerial view, HDR, UHD, unreal engine, Representative, fair skin, beautiful face, Rich in details, high quality, gorgeous, glamorous, 8K, super detail, gorgeous light and shadow, detailed decoration, detailed lines.`,
       aspect_ratio,
       safety_tolerance: 2,
       output_format: 'jpeg',
