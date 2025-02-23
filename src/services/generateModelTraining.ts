@@ -210,9 +210,6 @@ export async function generateModelTraining(
           id: updatedTraining.id,
         })
       }
-
-      // Обновляем статус в базе
-      await updateLatestModelTraining(telegram_id, modelName, { status })
     }
 
     if (status === 'failed') {
@@ -256,7 +253,7 @@ export async function generateModelTraining(
       const model_url = await getLatestModelUrl(modelName)
       console.log('model_url:', model_url)
       await updateLatestModelTraining(telegram_id, modelName, {
-        status: 'succeeded',
+        status: 'SUCCESS',
         model_url,
       })
       bot.telegram.sendMessage(

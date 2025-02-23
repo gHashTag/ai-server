@@ -1,10 +1,8 @@
-import { replicate } from '@/core/replicate'
 import {
   getUserByTelegramId,
   updateUserBalance,
   updateUserLevelPlusOne,
 } from '@/core/supabase'
-import { errorMessage } from '@/helpers'
 import { errorMessageAdmin } from '@/helpers/errorMessageAdmin'
 import { processBalanceOperation } from '@/price/helpers'
 import { getUserBalance } from '@/core/supabase'
@@ -13,18 +11,13 @@ import { Telegraf } from 'telegraf'
 import { MyContext } from '@/interfaces'
 import { modeCosts, ModeEnum } from '@/price/helpers/modelsCost'
 import axios from 'axios'
+import ApiError from '@/utils/ApiError'
 
 if (!process.env.BFL_API_KEY) {
   throw new Error('BFL_API_KEY is not set')
 }
 if (!process.env.BFL_WEBHOOK_URL) {
   throw new Error('BFL_WEBHOOK_URL is not set')
-}
-
-export interface ApiError extends Error {
-  response?: {
-    status: number
-  }
 }
 
 interface TrainingResponse {

@@ -10,6 +10,8 @@ import { generateModelTraining } from '@/services/generateModelTraining'
 import { validateUserParams } from '@/middlewares/validateUserParams'
 import { generateNeuroImageV2 } from '@/services/generateNeuroImageV2'
 import { generateLipSync } from '@/services/generateLipSync'
+import { generateModelTrainingV2 } from '@/services/generateModelTrainingV2'
+
 import { API_URL } from '@/config'
 import { deleteFile } from '@/helpers'
 import path from 'path'
@@ -406,7 +408,7 @@ export class GenerationController {
       // Создаем URL для доступа к файлу
       const zipUrl = `https://${req.headers.host}/uploads/${telegram_id}/${type}/${zipFile.filename}`
       const { bot } = getBotByName(bot_name)
-      await generateModelTraining(
+      await generateModelTrainingV2(
         zipUrl,
         triggerWord,
         modelName,
