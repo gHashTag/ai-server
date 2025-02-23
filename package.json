@@ -14,7 +14,8 @@
     "lint:fix": "npm run lint -- --fix",
     "deploy:prod": "npm run build && pm2 start ecosystem.config.js --only prod",
     "deploy:dev": "pm2 start ecosystem.config.js --only dev",
-    "format": "prettier --write ."
+    "format": "prettier --write .",
+    "ngrok": "ngrok http 3000"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.47.10",

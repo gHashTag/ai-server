@@ -1,34 +1,29 @@
-import { getAspectRatio, saveNeuroPhotoPrompt } from '../core/supabase/ai'
-import {
-  getUserByTelegramId,
-  updateUserLevelPlusOne,
-  getFineTuneIdByTelegramId,
-} from '@/core/supabase'
-
+import { replicate } from '../core/replicate'
+import { getAspectRatio } from '../core/supabase/ai'
+import { getUserByTelegramId, updateUserLevelPlusOne } from '@/core/supabase'
+import { processApiResponse } from '@/helpers/processApiResponse'
 import { GenerationResult } from '@/interfaces'
+import { downloadFile } from '@/helpers/downloadFile'
 
+import { pulse } from '@/helpers/pulse'
 import { processBalanceOperation } from '@/price/helpers'
 import { errorMessageAdmin } from '@/helpers/errorMessageAdmin'
-
+import { Telegraf } from 'telegraf'
+import { MyContext } from '@/interfaces'
 import { modeCosts, ModeEnum } from '@/price/helpers/modelsCost'
-import { getBotByName } from '@/core/bot'
+import { savePrompt } from '@/core/supabase/savePrompt'
 
 export async function generateNeuroImage(
   prompt: string,
+  model_url: `${string}/${string}` | `${string}/${string}:${string}`,
   num_images: number,
   telegram_id: string,
+  username: string,
   is_ru: boolean,
-  bot_name: string
+  bot: Telegraf<MyContext>
 ): Promise<GenerationResult | null> {
   try {
-    console.log('telegram_id', telegram_id)
-    console.log('is_ru', is_ru)
-    console.log('bot_name', bot_name)
-    console.log('prompt', prompt)
-    console.log('num_images', num_images)
-    const { bot } = getBotByName(bot_name)
     const userExists = await getUserByTelegramId(telegram_id)
-    console.log('userExists', userExists)
     if (!userExists) {
       throw new Error(`User with ID ${telegram_id} does not exist.`)
     }
@@ -55,21 +50,28 @@ export async function generateNeuroImage(
     }
 
     const aspect_ratio = await getAspectRatio(telegram_id)
-
-    const finetuneId = await getFineTuneIdByTelegramId(telegram_id)
-    console.log('finetuneId', finetuneId)
-    //
+    const results: GenerationResult[] = []
     const input = {
-      finetune_id: finetuneId,
-      finetune_strength: 0.5,
-      prompt: `${prompt}. Cinematic Lighting, realistic, intricate details, extremely detailed, incredible details, full colored, complex details, insanely detailed and intricate, hypermaximalist, extremely detailed with rich colors. Masterpiece, best quality, aerial view, HDR, UHD, unreal engine, Representative, fair skin, beautiful face, Rich in details, high quality, gorgeous, glamorous, 8K, super detail, gorgeous light and shadow, detailed decoration, detailed lines.`,
+      prompt: `Fashionable: ${prompt}. Cinematic Lighting, realistic, intricate details, extremely detailed, incredible details, full colored, complex details, insanely detailed and intricate, hypermaximalist, extremely detailed with rich colors. Masterpiece, best quality, aerial view, HDR, UHD, unreal engine, Representative, fair skin, beautiful face, Rich in details, high quality, gorgeous, glamorous, 8K, super detail, gorgeous light and shadow, detailed decoration, detailed lines.`,
+      negative_prompt: 'nsfw, erotic, violence, bad anatomy...',
+      num_inference_steps: 40,
+      guidance_scale: 5,
+      lora_scale: 1,
+      megapixels: '1',
+      output_quality: 80,
+      prompt_strength: 0.8,
+      extra_lora_scale: 1,
+      go_fast: false,
+      ...(aspect_ratio === '1:1'
+        ? { width: 1024, height: 1024 }
+        : aspect_ratio === '16:9'
+        ? { width: 1368, height: 768 }
+        : aspect_ratio === '9:16'
+        ? { width: 768, height: 1368 }
+        : { width: 1024, height: 1024 }),
+      sampler: 'flowmatch',
+      num_outputs: 1,
       aspect_ratio,
-      safety_tolerance: 2,
-      output_format: 'jpeg',
-      prompt_upsampling: true,
-      webhook_url:
-        'https://ai-server-new-u14194.vm.elestio.app/webhooks/webhook-bfl-neurophoto',
-      webhook_secret: process.env.BFL_WEBHOOK_SECRET as string,
     }
 
     // Цикл генерации изображений
@@ -91,24 +93,78 @@ export async function generateNeuroImage(
         )
       }
 
-      const response = await fetch(
-        'https://api.us1.bfl.ai/v1/flux-pro-1.1-ultra-finetuned',
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'X-Key': process.env.BFL_API_KEY as string,
-          },
-          body: JSON.stringify(input),
-        }
+      const output = await replicate.run(model_url, { input })
+      const imageUrl = await processApiResponse(output)
+
+      if (!imageUrl || imageUrl.endsWith('empty.zip')) {
+        console.error(`Failed to generate image ${i + 1}`)
+        continue
+      }
+
+      const image = await downloadFile(imageUrl)
+      const prompt_id = await savePrompt(
+        prompt,
+        model_url,
+        imageUrl,
+        telegram_id
       )
 
-      const { id, status } = await response.json()
-      console.log('id:', id, 'status:', status)
+      if (prompt_id === null) {
+        console.error(`Failed to save prompt for image ${i + 1}`)
+        continue
+      }
 
-      await saveNeuroPhotoPrompt(id, prompt, telegram_id, status)
+      // Отправляем каждое изображение
+      const imageBuffer = Buffer.isBuffer(image) ? image : Buffer.from(image)
+      await bot.telegram.sendPhoto(telegram_id, { source: imageBuffer })
+
+      // Сохраняем результат
+      results.push({ image, prompt_id })
+
+      // Отправляем в pulse
+      const pulseImage = Buffer.isBuffer(image)
+        ? `data:image/jpeg;base64,${image.toString('base64')}`
+        : image
+      await pulse(
+        pulseImage,
+        prompt,
+        `/${model_url}`,
+        telegram_id,
+        username,
+        is_ru
+      )
     }
-    return
+
+    await bot.telegram.sendMessage(
+      telegram_id,
+      is_ru
+        ? `Ваши изображения сгенерированы!\n\nЕсли хотите сгенерировать еще, то выберите количество изображений в меню 1️⃣, 2️⃣, 3️⃣, 4️⃣.\n\nСтоимость: ${(
+            costPerImage * num_images
+          ).toFixed(
+            2
+          )} ⭐️\nВаш новый баланс: ${balanceCheck.newBalance.toFixed(2)} ⭐️`
+        : `Your images have been generated!\n\nGenerate more?\n\nCost: ${(
+            costPerImage * num_images
+          ).toFixed(
+            2
+          )} ⭐️\nYour new balance: ${balanceCheck.newBalance.toFixed(2)} ⭐️`,
+      {
+        reply_markup: {
+          keyboard: [
+            [{ text: '1️⃣' }, { text: '2️⃣' }, { text: '3️⃣' }, { text: '4️⃣' }],
+            [
+              { text: is_ru ? '⬆️ Улучшить промпт' : '⬆️ Improve prompt' },
+              { text: is_ru ? '📐 Изменить размер' : '📐 Change size' },
+            ],
+            [{ text: is_ru ? '🏠 Главное меню' : '🏠 Main menu' }],
+          ],
+          resize_keyboard: true,
+          one_time_keyboard: false,
+        },
+      }
+    )
+
+    return results[0] || null
   } catch (error) {
     console.error(`Error:`, error)
 

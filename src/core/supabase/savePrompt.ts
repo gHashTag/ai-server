@@ -2,7 +2,7 @@ import { supabase } from '.'
 
 export const savePrompt = async (
   prompt: string,
-  model_type?: string,
+  model_type: string,
   media_url?: string,
   telegram_id?: string
 ): Promise<number | null> => {

@@ -13,7 +13,10 @@ import { API_URL } from '@/config'
 import { deleteFile } from '@/helpers'
 import path from 'path'
 import { getBotByName } from '@/core/bot'
-export class GenerationController {
+import { generateNeuroImageV2 } from '@/services/generateNeuroImageV2'
+import { generateModelTrainingV2 } from '@/services/generateModelTrainingV2'
+
+export class GenerationControllerV2 {
   public textToImage = async (
     req: Request,
     res: Response,
@@ -69,39 +72,25 @@ export class GenerationController {
     next: NextFunction
   ): Promise<void> => {
     try {
-      const {
-        prompt,
-        model_url,
-        num_images,
-        telegram_id,
-        username,
-        is_ru,
-        bot_name,
-      } = req.body
+      const { prompt, num_images, telegram_id, is_ru, bot_name } = req.body
       if (!prompt) {
         res.status(400).json({ message: 'prompt is required' })
         return
       }
-      if (!model_url) {
-        res.status(400).json({ message: 'model_url is required' })
-        return
-      }
+
       if (!num_images) {
         res.status(400).json({ message: 'num_images is required' })
         return
       }
-      validateUserParams(req)
+
       res.status(200).json({ message: 'Processing started' })
 
-      const { bot } = getBotByName(bot_name)
-      generateNeuroImage(
+      generateNeuroImageV2(
         prompt,
-        model_url,
         num_images,
         telegram_id,
-        username,
         is_ru,
-        bot
+        bot_name
       ).catch(error => {
         console.error('Ошибка при генерации изображения:', error)
       })
@@ -262,7 +251,7 @@ export class GenerationController {
     }
   }
 
-  public createModelTraining = async (
+  public createModelTrainingV2 = async (
     req: Request,
     res: Response,
     next: NextFunction

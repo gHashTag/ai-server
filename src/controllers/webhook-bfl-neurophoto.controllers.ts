@@ -12,15 +12,14 @@ export class WebhookBFLNeurophotoController {
   ): Promise<void> {
     try {
       const { task_id, status, result } = req.body
-      const imageUrl = await processApiResponse(result.sample)
-
-      const { telegram_id, username, bot_name, language_code } =
-        await updatePrompt(task_id, result.sample)
-      const is_ru = language_code === 'ru'
-      const { bot } = getBotByName(bot_name)
+      console.log('Webhook received:', req.body)
       if (status === 'SUCCESS') {
+        const imageUrl = await processApiResponse(result.sample)
         console.log('Webhook received:', req.body)
-
+        const { telegram_id, username, bot_name, language_code } =
+          await updatePrompt(task_id, result.sample)
+        const is_ru = language_code === 'ru'
+        const { bot } = getBotByName(bot_name)
         console.log('Sending image:', imageUrl)
 
         // Отправляем URL напрямую, без преобразования в буфер
@@ -65,6 +64,12 @@ export class WebhookBFLNeurophotoController {
 
         res.status(200).json({ message: 'Webhook processed successfully' })
       } else if (status === 'Content Moderated') {
+        const { telegram_id, bot_name, language_code } = await updatePrompt(
+          task_id,
+          result.sample
+        )
+        const is_ru = language_code === 'ru'
+        const { bot } = getBotByName(bot_name)
         await bot.telegram.sendMessage(
           telegram_id,
           is_ru

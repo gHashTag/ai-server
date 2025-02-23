@@ -1,6 +1,7 @@
 import { supabase } from '.'
 
-export interface ModelTraining {
+export interface ModelTrainingV2 {
+  finetune_id: string
   telegram_id: string
   model_name: string
   trigger_word: string
@@ -12,7 +13,7 @@ export interface ModelTraining {
   steps?: number
 }
 
-export const createModelTraining = async (training: ModelTraining) => {
+export const createModelTrainingV2 = async (training: ModelTrainingV2) => {
   const { error } = await supabase.from('model_trainings').insert(training)
   if (error)
     throw new Error(`Ошибка при создании записи о тренировке: ${error.message}`)
