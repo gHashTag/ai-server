@@ -11,6 +11,7 @@ export interface ModelTrainingV2 {
   status?: string
   error?: string
   steps?: number
+  api: string
 }
 
 export const createModelTrainingV2 = async (training: ModelTrainingV2) => {

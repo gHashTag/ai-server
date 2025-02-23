@@ -117,6 +117,7 @@ export async function generateModelTrainingV2(
       trigger_word: triggerWord,
       zip_url: zipUrl,
       steps,
+      api: 'bfl',
     })
     console.log('🎉 Training initiated successfully:', currentTraining)
 

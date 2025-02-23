@@ -252,10 +252,15 @@ export async function generateModelTraining(
       // Извлекаем модель и версию
       const model_url = await getLatestModelUrl(modelName)
       console.log('model_url:', model_url)
-      await updateLatestModelTraining(telegram_id, modelName, {
-        status: 'SUCCESS',
-        model_url,
-      })
+      await updateLatestModelTraining(
+        telegram_id,
+        modelName,
+        {
+          status: 'SUCCESS',
+          model_url,
+        },
+        'replicate'
+      )
       bot.telegram.sendMessage(
         telegram_id,
         is_ru

@@ -23,7 +23,7 @@ export async function notifyTrainingSuccess(
     // Обновляем статус тренировки в базе данных
     const { error: updateError } = await supabase
       .from('model_trainings')
-      .update({ status, result })
+      .update({ status, result, api: 'bfl' })
       .eq('finetune_id', finetuneId)
 
     if (updateError) {

@@ -32,7 +32,7 @@ export class WebhookBFLNeurophotoController {
         await pulse(
           pulseImage,
           result.prompt,
-          'neurophoto',
+          'neurophoto V2',
           telegram_id,
           username,
           is_ru

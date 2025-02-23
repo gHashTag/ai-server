@@ -11,7 +11,8 @@ export type UpdateLatestModelTraining = {
 export const updateLatestModelTraining = async (
   telegram_id: string,
   modelName: string,
-  updates: UpdateLatestModelTraining
+  updates: UpdateLatestModelTraining,
+  api: string
 ) => {
   // Сначала выбираем последнюю запись по дате
   const { data, error: selectError } = await supabase
@@ -37,7 +38,7 @@ export const updateLatestModelTraining = async (
   // Обновляем последнюю запись
   const { error: updateError } = await supabase
     .from('model_trainings')
-    .update(updates)
+    .update({ ...updates, api })
     .eq('id', data.id)
 
   if (updateError) {
