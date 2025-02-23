@@ -1,5 +1,5 @@
 import { replicate } from '../core/replicate'
-import { getAspectRatio, savePrompt } from '../core/supabase/ai'
+import { getAspectRatio } from '../core/supabase/ai'
 import { getUserByTelegramId, updateUserLevelPlusOne } from '@/core/supabase'
 import { processApiResponse } from '@/helpers/processApiResponse'
 import { GenerationResult } from '@/interfaces'
@@ -11,6 +11,7 @@ import { errorMessageAdmin } from '@/helpers/errorMessageAdmin'
 import { Telegraf } from 'telegraf'
 import { MyContext } from '@/interfaces'
 import { modeCosts, ModeEnum } from '@/price/helpers/modelsCost'
+import { savePrompt } from '@/core/supabase/savePrompt'
 
 export async function generateNeuroImage(
   prompt: string,

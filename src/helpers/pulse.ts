@@ -1,4 +1,5 @@
 import { pulseBot } from '@/config'
+
 export const pulse = async (
   image: string,
   prompt: string,

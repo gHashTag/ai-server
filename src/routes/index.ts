@@ -9,7 +9,8 @@ import { VideoRoute } from './video.route'
 import { RoomRoute } from './room.route'
 import { CreateTasksRoute } from './create-tasks.route'
 import { BroadcastRoute } from './broadcast.route'
-
+import { WebhookBFLRoute } from './webhook-bfl.route'
+import { WebhookBFLNeurophotoRoute } from './webhook-bfl-neurophoto.route'
 export const routes = [
   new UploadRoute(),
   new WebhookRoute(),
@@ -22,4 +23,6 @@ export const routes = [
   new RoomRoute(),
   new CreateTasksRoute(),
   new BroadcastRoute(),
+  new WebhookBFLRoute(),
+  new WebhookBFLNeurophotoRoute(),
 ]
