@@ -2,8 +2,8 @@ import { supabase } from '@/core/supabase'
 import { getBotByName } from '@/core/bot'
 import { Telegraf } from 'telegraf'
 import { MyContext } from '@/interfaces'
-import { getModelTrainingData } from '@/core/supabase'
 
+import { getTelegramIdFromFinetune } from '@/core/bfl'
 export async function notifyTrainingSuccess(
   finetuneId: string,
   status: string,
@@ -12,9 +12,8 @@ export async function notifyTrainingSuccess(
   try {
     // Выполняем запрос с соединением таблиц для получения telegram_id и bot_name
     console.log(`finetuneId: ${finetuneId}`)
-    const data = await getModelTrainingData(finetuneId)
-    console.log(`getModelTrainingData data: ${JSON.stringify(data)}`)
-    const { telegram_id } = data
+    const telegram_id = await getTelegramIdFromFinetune(finetuneId)
+    console.log(`telegramId: ${telegram_id}`)
 
     //@ts-ignore
     const bot_name = data.users.bot_name

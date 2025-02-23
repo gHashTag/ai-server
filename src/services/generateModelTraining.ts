@@ -165,14 +165,14 @@ export async function generateModelTraining(
         destination,
         input: {
           steps,
-          lora_rank: 20,
+          lora_rank: 128,
           optimizer: 'adamw8bit',
           batch_size: 1,
           resolution: '512,768,1024',
           autocaption: true,
           input_images: zipUrl,
           trigger_word: triggerWord,
-          learning_rate: 0.0004,
+          learning_rate: 0.0001,
           wandb_project: 'flux_train_replicate',
         } as TrainingInput,
       }
