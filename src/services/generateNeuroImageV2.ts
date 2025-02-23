@@ -58,15 +58,22 @@ export async function generateNeuroImageV2(
 
     const finetune_id = await getFineTuneIdByTelegramId(telegram_id)
     console.log('finetuneId', finetune_id)
-    //
+
     const input = {
       finetune_id,
       finetune_strength: 2,
-      prompt: `${prompt}. Cinematic Lighting, realistic, intricate details, extremely detailed, incredible details, full colored, complex details, insanely detailed and intricate, hypermaximalist, extremely detailed with rich colors. Masterpiece, best quality, aerial view, HDR, UHD, unreal engine, Representative, fair skin, beautiful face, Rich in details, high quality, gorgeous, glamorous, 8K, super detail, gorgeous light and shadow, detailed decoration, detailed lines.`,
+      prompt: `${prompt}.`,
       aspect_ratio,
+      ...(aspect_ratio === '1:1'
+        ? { width: 1024, height: 1024 }
+        : aspect_ratio === '16:9'
+        ? { width: 1368, height: 768 }
+        : aspect_ratio === '9:16'
+        ? { width: 768, height: 1368 }
+        : { width: 1024, height: 1024 }),
       safety_tolerance: 0,
       output_format: 'jpeg',
-      prompt_upsampling: false,
+      prompt_upsampling: true,
       webhook_url: `${API_URL}/webhooks/webhook-bfl-neurophoto`,
       webhook_secret: process.env.BFL_WEBHOOK_SECRET as string,
     }
@@ -89,6 +96,8 @@ export async function generateNeuroImageV2(
           }
         )
       }
+      //flux-pro-finetuned
+      //flux-pro-1.1-ultra-finetuned
 
       const response = await fetch(
         'https://api.us1.bfl.ai/v1/flux-pro-1.1-ultra-finetuned',
@@ -102,10 +111,10 @@ export async function generateNeuroImageV2(
         }
       )
 
-      const { id, status } = await response.json()
-      console.log('id:', id, 'status:', status)
+      const data = await response.json()
+      console.log('response V2 data:', data)
 
-      await saveNeuroPhotoPrompt(id, prompt, telegram_id, status)
+      await saveNeuroPhotoPrompt(data.id, prompt, telegram_id, data.status)
     }
     return
   } catch (error) {

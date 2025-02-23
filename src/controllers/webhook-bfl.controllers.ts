@@ -6,8 +6,9 @@ export class WebhookBFLController {
     try {
       const { task_id, status, result } = req.body
       console.log('Webhook received:', req.body)
-
-      await notifyTrainingSuccess(task_id, status, result)
+      if (status === 'SUCCESS') {
+        await notifyTrainingSuccess(task_id, status, result)
+      }
 
       res.status(200).json({ message: 'Webhook processed successfully' })
     } catch (error) {

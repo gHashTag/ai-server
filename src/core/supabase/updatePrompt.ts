@@ -10,12 +10,13 @@ export const updatePrompt = async (
   language_code: string
 } | null> => {
   try {
-    // Сначала получаем данные по prompt_id
+    // Сначала получаем данные по task_id
     const { data: existingData, error: selectError } = await supabase
       .from('prompts_history')
       .select('telegram_id, users(bot_name, language_code, username)')
       .eq('task_id', task_id)
       .single()
+    console.log('updatePrompt: existingData', existingData)
 
     if (selectError || !existingData) {
       console.error('Ошибка при получении данных промпта:', selectError)

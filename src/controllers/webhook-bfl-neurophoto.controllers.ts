@@ -12,10 +12,10 @@ export class WebhookBFLNeurophotoController {
   ): Promise<void> {
     try {
       const { task_id, status, result } = req.body
-      console.log('Webhook received:', req.body)
+      console.log('🛰 Webhook received:', req.body)
       if (status === 'SUCCESS') {
         const imageUrl = await processApiResponse(result.sample)
-        console.log('Webhook received:', req.body)
+
         const { telegram_id, username, bot_name, language_code } =
           await updatePrompt(task_id, result.sample)
         const is_ru = language_code === 'ru'
@@ -75,6 +75,29 @@ export class WebhookBFLNeurophotoController {
           is_ru
             ? `🚫 Содержимое отклонено модерацией. Попробуйте другой промпт или еще раз.`
             : `🚫 Content rejected by moderation. Try another prompt or try again.`
+        )
+        res.status(200).json({ message: 'Webhook processed successfully' })
+      } else if (status === 'GENERATED CONTENT MODERATED') {
+        const { telegram_id, bot_name, language_code } = await updatePrompt(
+          task_id,
+          result.sample
+        )
+        const is_ru = language_code === 'ru'
+        const { bot } = getBotByName(bot_name)
+        await bot.telegram.sendMessage(
+          telegram_id,
+          is_ru
+            ? `🚫 Содержимое отклонено модерацией. Попробуйте другой промпт или еще раз.`
+            : `🚫 Content rejected by moderation. Try another prompt or try again.`,
+          {
+            reply_markup: {
+              keyboard: [
+                [{ text: is_ru ? '🏠 Главное меню' : '🏠 Main menu' }],
+              ],
+              resize_keyboard: true,
+              one_time_keyboard: false,
+            },
+          }
         )
         res.status(200).json({ message: 'Webhook processed successfully' })
       } else {
