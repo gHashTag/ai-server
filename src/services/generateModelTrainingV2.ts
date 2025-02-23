@@ -8,7 +8,7 @@ import { errorMessage } from '@/helpers'
 import { errorMessageAdmin } from '@/helpers/errorMessageAdmin'
 import { processBalanceOperation } from '@/price/helpers'
 import { getUserBalance } from '@/core/supabase'
-import { createModelTraining } from '@/core/supabase/'
+import { createModelTrainingV2 } from '@/core/supabase/createModelTrainingV2'
 import { Telegraf } from 'telegraf'
 import { MyContext } from '@/interfaces'
 import { modeCosts, ModeEnum } from '@/price/helpers/modelsCost'
@@ -117,7 +117,7 @@ export async function generateModelTrainingV2(
     const currentTraining = await response.json()
 
     // Создаем запись о тренировке
-    await createModelTraining({
+    await createModelTrainingV2({
       finetune_id: currentTraining.finetune_id,
       telegram_id: telegram_id,
       model_name: modelName,

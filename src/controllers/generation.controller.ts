@@ -8,6 +8,7 @@ import { generateNeuroImage } from '@/services/generateNeuroImage'
 import { createVoiceAvatar } from '@/services/createVoiceAvatar'
 import { generateModelTraining } from '@/services/generateModelTraining'
 import { validateUserParams } from '@/middlewares/validateUserParams'
+import { generateNeuroImageV2 } from '@/services/generateNeuroImageV2'
 import { generateLipSync } from '@/services/generateLipSync'
 import { API_URL } from '@/config'
 import { deleteFile } from '@/helpers'
@@ -102,6 +103,39 @@ export class GenerationController {
         username,
         is_ru,
         bot
+      ).catch(error => {
+        console.error('Ошибка при генерации изображения:', error)
+      })
+    } catch (error) {
+      next(error)
+    }
+  }
+
+  public neuroPhotoV2 = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> => {
+    try {
+      const { prompt, num_images, telegram_id, is_ru, bot_name } = req.body
+      if (!prompt) {
+        res.status(400).json({ message: 'prompt is required' })
+        return
+      }
+
+      if (!num_images) {
+        res.status(400).json({ message: 'num_images is required' })
+        return
+      }
+
+      res.status(200).json({ message: 'Processing started' })
+
+      generateNeuroImageV2(
+        prompt,
+        num_images,
+        telegram_id,
+        is_ru,
+        bot_name
       ).catch(error => {
         console.error('Ошибка при генерации изображения:', error)
       })
@@ -263,6 +297,69 @@ export class GenerationController {
   }
 
   public createModelTraining = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> => {
+    try {
+      const {
+        type,
+        telegram_id,
+        triggerWord,
+        modelName,
+        steps,
+        is_ru,
+        bot_name,
+      } = req.body
+      if (!type) {
+        res.status(400).json({ message: 'type is required' })
+        return
+      }
+      if (!triggerWord) {
+        res.status(400).json({ message: 'triggerWord is required' })
+        return
+      }
+      if (!modelName) {
+        res.status(400).json({ message: 'modelName is required' })
+        return
+      }
+      if (!steps) {
+        res.status(400).json({ message: 'steps is required' })
+        return
+      }
+      if (!telegram_id) {
+        res.status(400).json({ message: 'telegram_id is required' })
+        return
+      }
+      if (!is_ru) {
+        res.status(400).json({ message: 'is_ru is required' })
+        return
+      }
+      const zipFile = req.files?.find(file => file.fieldname === 'zipUrl')
+      if (!zipFile) {
+        res.status(400).json({ message: 'zipFile is required' })
+        return
+      }
+      // Создаем URL для доступа к файлу
+      const zipUrl = `https://${req.headers.host}/uploads/${telegram_id}/${type}/${zipFile.filename}`
+      const { bot } = getBotByName(bot_name)
+      await generateModelTraining(
+        zipUrl,
+        triggerWord,
+        modelName,
+        steps,
+        telegram_id,
+        is_ru,
+        bot
+      )
+
+      res.status(200).json({ message: 'Model training started' })
+    } catch (error) {
+      console.error('Ошибка при обработке запроса:', error)
+      next(error)
+    }
+  }
+  public createModelTrainingV2 = async (
     req: Request,
     res: Response,
     next: NextFunction

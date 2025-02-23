@@ -1,5 +1,6 @@
 import { replicate } from '../core/replicate'
 import { getAspectRatio } from '../core/supabase/ai'
+import { savePrompt } from '../core/supabase/savePrompt'
 import { getUserByTelegramId, updateUserLevelPlusOne } from '@/core/supabase'
 import { processApiResponse } from '@/helpers/processApiResponse'
 import { GenerationResult } from '@/interfaces'
@@ -11,7 +12,6 @@ import { errorMessageAdmin } from '@/helpers/errorMessageAdmin'
 import { Telegraf } from 'telegraf'
 import { MyContext } from '@/interfaces'
 import { modeCosts, ModeEnum } from '@/price/helpers/modelsCost'
-import { savePrompt } from '@/core/supabase/savePrompt'
 
 export async function generateNeuroImage(
   prompt: string,
@@ -55,7 +55,7 @@ export async function generateNeuroImage(
       prompt: `Fashionable: ${prompt}. Cinematic Lighting, realistic, intricate details, extremely detailed, incredible details, full colored, complex details, insanely detailed and intricate, hypermaximalist, extremely detailed with rich colors. Masterpiece, best quality, aerial view, HDR, UHD, unreal engine, Representative, fair skin, beautiful face, Rich in details, high quality, gorgeous, glamorous, 8K, super detail, gorgeous light and shadow, detailed decoration, detailed lines.`,
       negative_prompt: 'nsfw, erotic, violence, bad anatomy...',
       num_inference_steps: 40,
-      guidance_scale: 5,
+      guidance_scale: 3,
       lora_scale: 1,
       megapixels: '1',
       output_quality: 80,

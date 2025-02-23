@@ -1,13 +1,11 @@
 import { Router } from 'express'
 import { GenerationController } from '@controllers/generation.controller'
-import { GenerationControllerV2 } from '@controllers/generation.controllerV2'
 import { Routes } from '@interfaces/routes.interface'
 
 export class GenerationRoute implements Routes {
   public path = '/generate'
   public router: Router
   public generationController = new GenerationController()
-  public generationControllerV2 = new GenerationControllerV2()
 
   constructor() {
     this.router = Router()
@@ -40,6 +38,10 @@ export class GenerationRoute implements Routes {
       this.generationController.neuroPhoto
     )
     this.router.post(
+      `${this.path}/neuro-photo-v2`,
+      this.generationController.neuroPhotoV2
+    )
+    this.router.post(
       `${this.path}/create-avatar-voice`,
       this.generationController.createAvatarVoice
     )
@@ -49,7 +51,7 @@ export class GenerationRoute implements Routes {
     )
     this.router.post(
       `${this.path}/create-model-training-v2`,
-      this.generationControllerV2.createModelTrainingV2
+      this.generationController.createModelTrainingV2
     )
     this.router.post(
       `${this.path}/create-lip-sync`,
