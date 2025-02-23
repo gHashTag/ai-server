@@ -13,6 +13,7 @@ export async function notifyTrainingSuccess(
     // Выполняем запрос с соединением таблиц для получения telegram_id и bot_name
     console.log(`finetuneId: ${finetuneId}`)
     const data = await getModelTrainingData(finetuneId)
+    console.log(`getModelTrainingData data: ${JSON.stringify(data)}`)
     const { telegram_id } = data
 
     //@ts-ignore
