@@ -56,12 +56,12 @@ export async function generateNeuroImageV2(
 
     const aspect_ratio = await getAspectRatio(telegram_id)
 
-    const finetuneId = await getFineTuneIdByTelegramId(telegram_id)
-    console.log('finetuneId', finetuneId)
+    const finetune_id = await getFineTuneIdByTelegramId(telegram_id)
+    console.log('finetuneId', finetune_id)
     //
     const input = {
-      finetune_id: 'd343ae83-b7d8-4e76-838d-a0ae3010ded5',
-      finetune_strength: 1.2,
+      finetune_id,
+      finetune_strength: 2,
       prompt: `${prompt}. Cinematic Lighting, realistic, intricate details, extremely detailed, incredible details, full colored, complex details, insanely detailed and intricate, hypermaximalist, extremely detailed with rich colors. Masterpiece, best quality, aerial view, HDR, UHD, unreal engine, Representative, fair skin, beautiful face, Rich in details, high quality, gorgeous, glamorous, 8K, super detail, gorgeous light and shadow, detailed decoration, detailed lines.`,
       aspect_ratio,
       safety_tolerance: 0,
