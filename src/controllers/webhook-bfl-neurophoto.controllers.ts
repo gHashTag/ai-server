@@ -1,6 +1,6 @@
 import { Request, Response } from 'express'
 import { updatePrompt } from '@/core/supabase/'
-import { pulse } from '@/helpers/pulse'
+import { pulseNeuroImageV2 } from '@/helpers'
 import { processApiResponse } from '@/helpers/processApiResponse'
 import { getBotByName } from '@/core/bot'
 import { errorMessageAdmin } from '@/helpers'
@@ -25,19 +25,6 @@ export class WebhookBFLNeurophotoController {
         // Отправляем URL напрямую, без преобразования в буфер
         await bot.telegram.sendPhoto(telegram_id, imageUrl)
 
-        // Отправляем в pulse
-        const pulseImage = imageUrl
-        console.log('pulseImage', pulseImage)
-
-        await pulse(
-          pulseImage,
-          result.prompt,
-          'neurophoto V2',
-          telegram_id,
-          username,
-          is_ru
-        )
-
         await bot.telegram.sendMessage(
           telegram_id,
           is_ru ? `📸 Нейрофото готово!` : `📸 Neurophoto is ready!`,
@@ -60,6 +47,15 @@ export class WebhookBFLNeurophotoController {
               one_time_keyboard: false,
             },
           }
+        )
+
+        await pulseNeuroImageV2(
+          imageUrl,
+          result.prompt,
+          'neurophoto V2',
+          telegram_id,
+          username,
+          is_ru
         )
 
         res.status(200).json({ message: 'Webhook processed successfully' })

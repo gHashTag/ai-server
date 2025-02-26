@@ -18,6 +18,7 @@
     "ngrok": "ngrok http 3000"
   },
   "dependencies": {
+    "@nexrender/server": "^1.60.10",
     "@supabase/supabase-js": "^2.47.10",
     "@types/multer": "^1.4.12",
     "axios": "^1.7.9",

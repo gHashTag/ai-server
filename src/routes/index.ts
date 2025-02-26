@@ -11,6 +11,8 @@ import { CreateTasksRoute } from './create-tasks.route'
 import { BroadcastRoute } from './broadcast.route'
 import { WebhookBFLRoute } from './webhook-bfl.route'
 import { WebhookBFLNeurophotoRoute } from './webhook-bfl-neurophoto.route'
+import { NexrenderRoute } from './nexrender.route'
+
 export const routes = [
   new UploadRoute(),
   new WebhookRoute(),
@@ -25,4 +27,5 @@ export const routes = [
   new BroadcastRoute(),
   new WebhookBFLRoute(),
   new WebhookBFLNeurophotoRoute(),
+  new NexrenderRoute(),
 ]
