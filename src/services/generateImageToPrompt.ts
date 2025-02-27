@@ -108,16 +108,16 @@ export async function generateImageToPrompt(
                 parse_mode: 'MarkdownV2',
                 reply_markup: {
                   keyboard: [
-                    [
-                      {
-                        text: is_ru ? levels[2].title_ru : levels[2].title_en,
-                      },
-                    ],
-                    [
-                      {
-                        text: is_ru ? levels[11].title_ru : levels[11].title_en,
-                      },
-                    ],
+                    // [
+                    //   {
+                    //     text: is_ru ? levels[2].title_ru : levels[2].title_en,
+                    //   },
+                    // ],
+                    // [
+                    //   {
+                    //     text: is_ru ? levels[11].title_ru : levels[11].title_en,
+                    //   },
+                    // ],
                     [
                       {
                         text: is_ru
