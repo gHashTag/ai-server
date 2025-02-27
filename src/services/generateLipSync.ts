@@ -73,7 +73,6 @@ export async function generateLipSync(
       }
     )
 
-    console.log(response.data, 'response.data')
     if (response.data?.id) {
       const videoId = response.data.id
       await setSyncLabsVideo(telegram_id, videoId, is_ru)

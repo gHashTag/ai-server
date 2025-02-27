@@ -31,8 +31,6 @@ export const getTelegramIdFromInvId = async (inv_id: string): Promise<User> => {
       .eq('inv_id', inv_id)
       .single()
 
-    console.log('getTelegramIdFromInvId data', data)
-
     if (error) {
       console.error('Ошибка получения данных:', error)
       throw error

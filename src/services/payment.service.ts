@@ -4,6 +4,7 @@ import { createBotByName } from '@/config'
 import { getTelegramIdFromInvId } from '@/core/supabase'
 import { errorMessageAdmin } from '@/helpers/errorMessageAdmin'
 import { errorMessage } from '@/helpers'
+import { updateUserSubscription } from '@/core/supabase'
 
 export class PaymentService {
   public async processPayment(
@@ -14,8 +15,21 @@ export class PaymentService {
       console.log('PaymentService: roundedIncSum', roundedIncSum)
       console.log('PaymentService: Email', inv_id)
       let stars = 0
+      let subscription = ''
       if (roundedIncSum === 1999) {
-        stars = 1249
+        stars = 1250
+        subscription = 'neurophoto'
+      } else if (roundedIncSum === 9999) {
+        stars = 1000
+        subscription = 'neurobase'
+      } else if (roundedIncSum === 49999) {
+        stars = 5000
+        subscription = 'neuromeeting'
+      } else if (roundedIncSum === 99999) {
+        stars = 7500
+        subscription = 'neuroblogger'
+      } else if (roundedIncSum === 2000) {
+        stars = 1250
       } else if (roundedIncSum === 5000) {
         stars = 3125
       } else if (roundedIncSum === 10000) {
@@ -24,12 +38,6 @@ export class PaymentService {
         stars = 6
       } else if (roundedIncSum === 4800) {
         stars = 3000
-      } else if (roundedIncSum === 9999) {
-        stars = 1000
-      } else if (roundedIncSum === 49999) {
-        stars = 5000
-      } else if (roundedIncSum === 99999) {
-        stars = 7500
       }
 
       if (stars > 0) {
@@ -61,6 +69,10 @@ export class PaymentService {
           payment_method: 'Robokassa',
           bot_name,
         })
+
+        if ([1999, 9999, 49999, 99999].includes(roundedIncSum)) {
+          await updateUserSubscription(telegram_id, subscription)
+        }
       }
     } catch (error) {
       const { telegram_id, language } = await getTelegramIdFromInvId(inv_id)

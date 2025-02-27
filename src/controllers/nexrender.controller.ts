@@ -1,43 +1,140 @@
 import { Request, Response } from 'express'
+import axios from 'axios'
+import { join } from 'path'
+import { existsSync } from 'fs'
+import { config } from '../template/neuronews/config'
+import { createRenderJob } from '../services/createRenderJob.service'
+import { NEXRENDER_PORT } from '../config'
+
+const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms))
+
+const processRenderJob = async (templateName: string): Promise<void> => {
+  try {
+    console.log('\nПроверка сервера...')
+    let serverAvailable = false
+
+    await Array.from({ length: 3 }).reduce(async (promise, _, index) => {
+      await promise
+      if (serverAvailable) return
+
+      try {
+        const healthCheck = await axios.get(
+          `http://localhost:${NEXRENDER_PORT}/api/v1/jobs`,
+          {
+            headers: {
+              'nexrender-secret': process.env.NEXRENDER_SECRET || 'myapisecret',
+            },
+            timeout: 2000,
+          }
+        )
+        if (healthCheck.status === 200) {
+          serverAvailable = true
+          console.log('Сервер доступен')
+        }
+      } catch (error) {
+        console.log(
+          `Попытка ${
+            index + 1
+          }: Сервер недоступен, повторная попытка через 2 секунды...`
+        )
+        await sleep(2000)
+      }
+    }, Promise.resolve())
+
+    if (!serverAvailable) {
+      console.error('Сервер недоступен после нескольких попыток')
+      return
+    }
+
+    console.log('\nСоздание задания...')
+    const job = await createRenderJob(templateName)
+    console.log('Задание создано')
+
+    console.log('\nОтправка задания на сервер...')
+    const response = await axios.post(
+      `http://localhost:${NEXRENDER_PORT}/api/v1/jobs`,
+      job,
+      {
+        headers: {
+          'Content-Type': 'application/json',
+          'nexrender-secret': process.env.NEXRENDER_SECRET || 'myapisecret',
+        },
+      }
+    )
+
+    const jobId = response.data.uid
+    console.log(`Задание принято, ID: ${jobId}`)
+
+    const checkProgress = async (jobId: string): Promise<void> => {
+      const statusResponse = await axios.get(
+        `http://localhost:${NEXRENDER_PORT}/api/v1/jobs/${jobId}`,
+        {
+          headers: {
+            'nexrender-secret': process.env.NEXRENDER_SECRET || 'myapisecret',
+          },
+        }
+      )
+
+      const { state, renderProgress, error, template } = statusResponse.data
+      console.log(
+        `[${new Date().toLocaleTimeString()}] Статус: ${state}, Прогресс: ${
+          renderProgress || '0'
+        }%`
+      )
+      if (state === 'started') {
+        console.log('Детали задания:', {
+          template: statusResponse.data.template,
+          assets: statusResponse.data.assets,
+          renderProgress: statusResponse.data.renderProgress,
+        })
+      }
+
+      if (state === 'finished') {
+        console.log('\nРендеринг успешно завершен!', statusResponse.data)
+        const outputPath =
+          template?.output ||
+          join(process.cwd(), 'output', `${config.name}.mp4`)
+        console.log('Результат доступен в:', outputPath)
+
+        if (existsSync(outputPath)) {
+          console.log('Файл успешно создан!')
+        } else {
+          console.warn('Внимание: Файл не найден по указанному пути')
+        }
+        return
+      }
+
+      if (state === 'error' || error) {
+        console.error('\nОшибка рендеринга:', error)
+        const aerenderLog = statusResponse.data.aerenderLog
+        if (aerenderLog) {
+          console.error('Лог aerender:', aerenderLog)
+        }
+        return
+      }
+
+      await sleep(5000)
+      return checkProgress(jobId)
+    }
+
+    await checkProgress(jobId)
+  } catch (error) {
+    console.error('\nОшибка:', error)
+    process.exit(1)
+  }
+}
 
 export class NexrenderController {
-  public getJobs(req: Request, res: Response): void {
-    // Logic to get all jobs
-    res.json({ message: 'Get all jobs' })
-  }
-
-  public getJobById(req: Request, res: Response): void {
-    // Logic to get a job by ID
-    res.json({ message: `Get job with ID: ${req.params.id}` })
-  }
-
-  public createJob(req: Request, res: Response): void {
-    // Logic to create a new job
-    res.json({ message: 'Create a new job' })
-  }
-
-  public updateJob(req: Request, res: Response): void {
-    // Logic to update a job by ID
-    res.json({ message: `Update job with ID: ${req.params.id}` })
-  }
-
-  public deleteJob(req: Request, res: Response): void {
-    // Logic to delete a job by ID
-    res.json({ message: `Delete job with ID: ${req.params.id}` })
-  }
-
-  public pickupJob(req: Request, res: Response): void {
-    // Logic to pick up a random job
-    res.json({ message: 'Pick up a random job' })
-  }
-
-  public pickupJobWithTags(req: Request, res: Response): void {
-    // Logic to pick up a random job with specific tags
-    res.json({ message: `Pick up a random job with tags: ${req.params.tags}` })
-  }
-
-  public healthCheck(req: Request, res: Response): void {
-    // Health check logic
-    res.status(200).json({ status: 'OK', timestamp: new Date().toISOString() })
+  public async createRenderJob(req: Request, res: Response): Promise<void> {
+    try {
+      console.log('Request body:', req.body)
+      console.log('Headers:', req.headers)
+      const templateName = req.body.templateName
+      await processRenderJob(templateName)
+      res.status(200).json({ message: 'Job created and sent to server' })
+    } catch (error) {
+      console.error('Ошибка при создании задания:', error)
+      res.status(500).json({ message: 'Error creating job', error })
+    }
   }
 }

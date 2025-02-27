@@ -21,8 +21,6 @@ export async function updateHistory({
     .order('created_at', { ascending: false })
     .limit(1)
 
-  console.log(data, 'data')
-
   if (error) {
     throw new Error(error.message)
   }

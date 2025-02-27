@@ -139,3 +139,31 @@ export function createBotByName(
     groupId,
   }
 }
+
+if (!process.env.NEXRENDER_PORT) {
+  throw new Error('NEXRENDER_PORT is not set')
+}
+export const NEXRENDER_PORT = process.env.NEXRENDER_PORT
+
+export const CONFIG = {
+  server: {
+    port: process.env.NEXRENDER_PORT,
+    secret: process.env.NEXRENDER_SECRET,
+    baseUrl: `http://localhost:${process.env.NEXRENDER_PORT}`,
+  },
+  paths: {
+    base: process.cwd(),
+    templates: 'template',
+    output: 'output',
+  },
+  render: {
+    retries: 3,
+    timeout: 2000,
+    interval: 5000,
+  },
+}
+
+if (!process.env.AERENDER_PATH) {
+  throw new Error('AERENDER_PATH is not set')
+}
+export const AERENDER_PATH = process.env.AERENDER_PATH

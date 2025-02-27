@@ -41,8 +41,6 @@ export async function createHistory({
     position_before_three_sixes,
   })
 
-  console.log(data, 'CreateHistory data')
-
   if (error) {
     throw new Error(error.message)
   }

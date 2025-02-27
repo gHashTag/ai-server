@@ -8,7 +8,6 @@ export class UploadRoute {
   private uploadController = new UploadController()
 
   constructor() {
-    console.log('CASE: UploadRoute')
     this.initializeRoutes()
   }
 

@@ -5,17 +5,33 @@ import cookieParser from 'cookie-parser'
 import cors from 'cors'
 import helmet from 'helmet'
 import hpp from 'hpp'
-import { Server } from '@nexrender/server'
+const server = require('@nexrender/server')
+const { start } = require('@nexrender/worker')
 import swaggerJSDoc from 'swagger-jsdoc'
 import swaggerUi from 'swagger-ui-express'
-import { NODE_ENV, PORT, LOG_FORMAT, ORIGIN, CREDENTIALS } from '@config'
+import {
+  NODE_ENV,
+  PORT,
+  LOG_FORMAT,
+  ORIGIN,
+  CREDENTIALS,
+  NEXRENDER_PORT,
+} from '@config'
 import { Routes } from '@interfaces/routes.interface'
 import { getDynamicLogger, logger } from '@utils/logger'
-// import { Server } from 'http'
+
+import { Server } from 'http'
 import path from 'path'
 import morgan from 'morgan'
 import { checkSecretKey } from './utils/checkSecretKey'
 import { fileUpload } from './utils/fileUpload'
+
+const nexrenderPort = NEXRENDER_PORT
+const secret = process.env.NEXRENDER_SECRET
+
+server.listen(nexrenderPort, secret, () => {
+  console.log(`🚀 Nexrender Server listening on port ${nexrenderPort}`)
+})
 
 export class App {
   public app: Application
@@ -26,7 +42,7 @@ export class App {
   constructor(routes: Routes[]) {
     this.app = express()
     this.env = NODE_ENV || 'development'
-    this.port = PORT || 3000
+    this.port = PORT || 4000
 
     this.initializeMiddlewares()
     this.initializeRoutes(routes)

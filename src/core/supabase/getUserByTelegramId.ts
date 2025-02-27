@@ -7,7 +7,7 @@ export async function getUserByTelegramId(telegram_id: string) {
       .select('*')
       .eq('telegram_id', telegram_id.toString())
       .single()
-    console.log('data', data)
+
     if (error) {
       console.error('Error fetching user by Telegram ID:', error)
       return null

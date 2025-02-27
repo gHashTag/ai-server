@@ -6,7 +6,7 @@ export const getPrompt = async (prompt_id: string) => {
     .select('*')
     .eq('prompt_id', prompt_id)
     .single()
-  console.log(data, 'data')
+
   if (error || !data) {
     console.error('Ошибка при получении промпта по prompt_id:', error)
     return null
