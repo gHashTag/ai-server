@@ -13,6 +13,7 @@ export enum ModeEnum {
   DigitalAvatarBody = 'digital_avatar_body',
   DigitalAvatarBodyV2 = 'digital_avatar_body_v2',
   NeuroPhoto = 'neuro_photo',
+  NeuroPhotoV2 = 'neuro_photo_v2',
   ImageToPrompt = 'image_to_prompt',
   Avatar = 'avatar',
   ChatWithAvatar = 'chat_with_avatar',
@@ -38,6 +39,7 @@ export const modeCosts: Record<ModeEnum, CostValue> = {
     return cost.stars
   },
   [ModeEnum.NeuroPhoto]: calculateCostInStars(0.08),
+  [ModeEnum.NeuroPhotoV2]: calculateCostInStars(0.14),
   [ModeEnum.ImageToPrompt]: calculateCostInStars(0.03),
   [ModeEnum.Avatar]: 0,
   [ModeEnum.ChatWithAvatar]: calculateCostInStars(0),

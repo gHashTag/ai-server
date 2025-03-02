@@ -28,7 +28,7 @@ export async function generateNeuroImageV2(
     console.log('num_images', num_images)
     const { bot } = getBotByName(bot_name)
     const userExists = await getUserByTelegramId(telegram_id)
-    console.log('userExists', userExists)
+
     if (!userExists) {
       throw new Error(`User with ID ${telegram_id} does not exist.`)
     }
@@ -38,10 +38,10 @@ export async function generateNeuroImageV2(
     }
     // Проверка баланса для всех изображений
     let costPerImage: number
-    if (typeof modeCosts[ModeEnum.NeuroPhoto] === 'function') {
-      costPerImage = modeCosts[ModeEnum.NeuroPhoto](num_images)
+    if (typeof modeCosts[ModeEnum.NeuroPhotoV2] === 'function') {
+      costPerImage = modeCosts[ModeEnum.NeuroPhotoV2](num_images)
     } else {
-      costPerImage = modeCosts[ModeEnum.NeuroPhoto]
+      costPerImage = modeCosts[ModeEnum.NeuroPhotoV2]
     }
 
     const balanceCheck = await processBalanceOperation({
@@ -62,7 +62,7 @@ export async function generateNeuroImageV2(
     const input = {
       finetune_id,
       finetune_strength: 2,
-      prompt: `${prompt}.`,
+      prompt: `Fashionable: ${prompt}. Cinematic Lighting, realistic, intricate details, extremely detailed, incredible details, full colored, complex details, insanely detailed and intricate, hypermaximalist, extremely detailed with rich colors. Masterpiece, best quality, aerial view, HDR, UHD, unreal engine, Representative, fair skin, beautiful face, Rich in details, high quality, gorgeous, glamorous, 8K, super detail, gorgeous light and shadow, detailed decoration, detailed lines.`,
       aspect_ratio,
       ...(aspect_ratio === '1:1'
         ? { width: 1024, height: 1024 }
