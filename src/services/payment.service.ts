@@ -16,17 +16,17 @@ export class PaymentService {
       console.log('PaymentService: Email', inv_id)
       let stars = 0
       let subscription = ''
-      if (roundedIncSum === 1999) {
-        stars = 1250
+      if (roundedIncSum === 1110) {
+        stars = 693
         subscription = 'neurophoto'
-      } else if (roundedIncSum === 9999) {
-        stars = 1000
+      } else if (roundedIncSum === 1999) {
+        stars = 1250
         subscription = 'neurobase'
       } else if (roundedIncSum === 49999) {
         stars = 5000
         subscription = 'neuromeeting'
-      } else if (roundedIncSum === 99999) {
-        stars = 7500
+      } else if (roundedIncSum === 75000) {
+        stars = 46875
         subscription = 'neuroblogger'
       } else if (roundedIncSum === 2000) {
         stars = 1250
