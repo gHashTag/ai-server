@@ -14,9 +14,9 @@
     "lint:fix": "npm run lint -- --fix",
     "deploy:prod": "npm run build && pm2 start ecosystem.config.js --only prod",
     "deploy:dev": "pm2 start ecosystem.config.js --only dev",
-    "dev:worker": "NODE_OPTIONS='--no-warnings' npx @nexrender/worker --binary=\"/Applications/Adobe After Effects 2025/aerender\" --host=http://localhost:3001 --secret=myapisecret",
+    "dev:worker": "NODE_OPTIONS='--no-warnings' npx @nexrender/worker --binary=\"/Applications/Adobe After Effects 2025/aerender\" --host=http://localhost:4001 --secret=myapisecret",
     "format": "prettier --write .",
-    "ngrok": "ngrok http 3000"
+    "ngrok": "ngrok http 4000"
   },
   "dependencies": {
     "@nexrender/server": "^1.60.10",
