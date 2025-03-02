@@ -26,6 +26,7 @@ export async function generateNeuroImageV2(
     console.log('bot_name', bot_name)
     console.log('prompt', prompt)
     console.log('num_images', num_images)
+
     const { bot } = getBotByName(bot_name)
     const userExists = await getUserByTelegramId(telegram_id)
 

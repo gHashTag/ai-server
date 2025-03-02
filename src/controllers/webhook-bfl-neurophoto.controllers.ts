@@ -59,6 +59,10 @@ export class WebhookBFLNeurophotoController {
         )
 
         res.status(200).json({ message: 'Webhook processed successfully' })
+      } else if (status === 'processing') {
+        res.status(200).json({
+          message: 'Webhook processed successfully: processing',
+        })
       } else if (status === 'Content Moderated') {
         const { telegram_id, bot_name, language_code } = await updatePrompt(
           task_id,
