@@ -1,11 +1,15 @@
 import { Request, Response } from 'express'
 import { updatePrompt } from '@/core/supabase/'
-import { pulseNeuroImageV2 } from '@/helpers'
-
+import { pulseNeuroImageV2, saveFileLocally } from '@/helpers'
+import { API_URL } from '@/config'
 import { getBotByName } from '@/core/bot'
 import { errorMessageAdmin } from '@/helpers'
 
+import fs from 'fs'
+import path from 'path'
+
 const processedTasks = new Set()
+
 export class WebhookBFLNeurophotoController {
   public async handleWebhookNeurophoto(
     req: Request,
@@ -14,6 +18,7 @@ export class WebhookBFLNeurophotoController {
     try {
       const { task_id, status, result } = req.body
       console.log('🛰 Webhook received:', req.body)
+
       // Проверяем, был ли уже обработан этот task_id
       if (processedTasks.has(task_id)) {
         res
@@ -29,22 +34,34 @@ export class WebhookBFLNeurophotoController {
 
         processedTasks.add(task_id)
 
-        const imageUrl = result.sample
-
+        // Сохраняем фотографию на сервере
         const { telegram_id, username, bot_name, language_code } =
-          await updatePrompt(task_id, imageUrl)
+          await updatePrompt(task_id, result.sample)
         const is_ru = language_code === 'ru'
-        console.log('bot_name', bot_name)
         const { bot } = getBotByName(bot_name)
+
+        const imageLocalPath = await saveFileLocally(
+          telegram_id,
+          result.sample,
+          'neuro-photo-v2',
+          '.jpeg'
+        )
+
+        // Генерируем URL для доступа к изображению
+        const imageUrl = `${API_URL}/uploads/${telegram_id}/neuro-photo-v2/${path.basename(
+          imageLocalPath
+        )}`
+
+        // Сохраняем URL в базу данных
+        await updatePrompt(task_id, imageUrl)
 
         console.log('Sending image:', imageUrl)
 
-        // Отправляем URL напрямую, без преобразования в буфер
-        await bot.telegram.sendPhoto(telegram_id, imageUrl)
-
-        await bot.telegram.sendMessage(
+        await bot.telegram.sendPhoto(
           telegram_id,
-          is_ru ? `📸 Нейрофото готово!` : `📸 Neurophoto is ready!`,
+          {
+            source: fs.createReadStream(imageLocalPath),
+          },
           {
             reply_markup: {
               keyboard: [
@@ -65,10 +82,9 @@ export class WebhookBFLNeurophotoController {
             },
           }
         )
-
         await pulseNeuroImageV2(
           imageUrl,
-          result.prompt,
+          null,
           'neurophoto V2',
           telegram_id,
           username,
@@ -80,27 +96,17 @@ export class WebhookBFLNeurophotoController {
         res.status(200).json({
           message: 'Webhook processed successfully: processing',
         })
-      } else if (status === 'Content Moderated') {
+      } else if (
+        status === 'Content Moderated' ||
+        status === 'GENERATED CONTENT MODERATED'
+      ) {
         const { telegram_id, bot_name, language_code } = await updatePrompt(
           task_id,
           result.sample
         )
         const is_ru = language_code === 'ru'
         const { bot } = getBotByName(bot_name)
-        await bot.telegram.sendMessage(
-          telegram_id,
-          is_ru
-            ? `🚫 Содержимое отклонено модерацией. Попробуйте другой промпт или еще раз.`
-            : `🚫 Content rejected by moderation. Try another prompt or try again.`
-        )
-        res.status(200).json({ message: 'Webhook processed successfully' })
-      } else if (status === 'GENERATED CONTENT MODERATED') {
-        const { telegram_id, bot_name, language_code } = await updatePrompt(
-          task_id,
-          result.sample
-        )
-        const is_ru = language_code === 'ru'
-        const { bot } = getBotByName(bot_name)
+
         await bot.telegram.sendMessage(
           telegram_id,
           is_ru
@@ -116,6 +122,7 @@ export class WebhookBFLNeurophotoController {
             },
           }
         )
+
         res.status(200).json({ message: 'Webhook processed successfully' })
       } else {
         errorMessageAdmin(
