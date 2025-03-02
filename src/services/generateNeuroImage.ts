@@ -108,7 +108,7 @@ export async function generateNeuroImage(
       const imageLocalPath = await saveFileLocally(
         telegram_id,
         imageUrl,
-        'neuro-photo-v2',
+        'neuro-photo',
         '.jpeg'
       )
 
@@ -141,7 +141,7 @@ export async function generateNeuroImage(
 
       // Отправляем в pulse
       await pulse(
-        imageLocalUrl,
+        imageLocalPath,
         prompt,
         `/${model_url}`,
         telegram_id,

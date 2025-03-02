@@ -12,6 +12,10 @@ import { errorMessageAdmin } from '@/helpers/errorMessageAdmin'
 import { errorMessage } from '@/helpers'
 import { Telegraf } from 'telegraf'
 import { MyContext } from '@/interfaces'
+import { saveFileLocally } from '@/helpers/saveFileLocally'
+import { API_URL } from '@/config'
+import path from 'path'
+import fs from 'fs'
 
 const supportedSizes = [
   '1024x1024',
@@ -123,18 +127,34 @@ export const generateTextToImage = async (
           input,
         })) as ApiImageResponse
         const imageUrl = await processApiResponse(output)
+
+        // Сохраняем изображение на сервере
+        const imageLocalPath = await saveFileLocally(
+          telegram_id,
+          imageUrl,
+          'text-to-image',
+          '.jpeg'
+        )
+
+        // Генерируем URL для доступа к изображению
+        const imageLocalUrl = `${API_URL}/uploads/${telegram_id}/text-to-image/${path.basename(
+          imageLocalPath
+        )}`
+
         const prompt_id = await savePrompt(
           prompt,
           modelKey,
           ModeEnum.TextToImage,
-          imageUrl,
+          imageLocalUrl,
           telegram_id,
           'SUCCESS'
         )
+
         const image = await downloadFile(imageUrl)
 
-        const imageBuffer = Buffer.isBuffer(image) ? image : Buffer.from(image)
-        await bot.telegram.sendPhoto(telegram_id, { source: imageBuffer })
+        await bot.telegram.sendPhoto(telegram_id, {
+          source: fs.createReadStream(imageLocalPath),
+        })
         await bot.telegram.sendMessage(
           telegram_id,
           is_ru
@@ -164,11 +184,9 @@ export const generateTextToImage = async (
             },
           }
         )
-        const pulseImage = Buffer.isBuffer(image)
-          ? `data:image/jpeg;base64,${image.toString('base64')}`
-          : image
+
         await pulse(
-          pulseImage,
+          imageLocalPath,
           prompt,
           `/${model_type}`,
           telegram_id,
