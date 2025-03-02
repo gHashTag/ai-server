@@ -56,9 +56,9 @@ export async function generateModelTrainingV2(
   console.log(`currentTraining: ${currentTraining}`)
   const currentBalance = await getUserBalance(telegram_id)
   const paymentAmount = (
-    modeCosts[ModeEnum.DigitalAvatarBody] as (steps: number) => number
+    modeCosts[ModeEnum.DigitalAvatarBodyV2] as (steps: number) => number
   )(steps)
-
+  console.log(`paymentAmount: ${paymentAmount}`)
   const balanceCheck = await processBalanceOperation({
     telegram_id,
     paymentAmount,

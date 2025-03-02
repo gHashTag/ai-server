@@ -11,6 +11,12 @@ export const conversionRates: ConversionRates = {
   rublesToDollarsRate: 100,
 }
 
+export const conversionRatesV2: ConversionRates = {
+  costPerStepInStars: 2.1,
+  costPerStarInDollars: 0.016,
+  rublesToDollarsRate: 100,
+}
+
 export function calculateCostInStars(
   steps: number,
   rates: { costPerStepInStars: number }
@@ -44,43 +50,34 @@ export function calculateCostInRubles(
   return parseFloat(totalCostInRubles.toFixed(2))
 }
 
-const stepOptions = [
-  1000, 1500, 2000, 2500, 3000, 3500, 4000, 4500, 5000, 5500, 6000,
-]
+export const stepOptions = {
+  v1: [1000, 1500, 2000, 2500, 3000, 3500, 4000, 4500, 5000, 5500, 6000],
+  v2: [100, 200, 300, 400, 500, 600, 700, 800, 1000],
+}
 
-export const costDetails = stepOptions.map(steps => {
-  const costInRubles = calculateTrainingCostInRubles(steps)
-  const costInStars = calculateTrainingCostInStars(steps)
-  const costInDollars = calculateTrainingCostInDollars(steps)
+export const costDetails = {
+  v1: stepOptions.v1.map(steps => calculateCost(steps, 'v1')),
+  v2: stepOptions.v2.map(steps => calculateCost(steps, 'v2')),
+}
+
+export interface CostDetails {
+  steps: number
+  stars: number
+  rubles: number
+  dollars: number
+}
+
+export function calculateCost(
+  steps: number,
+  version: 'v1' | 'v2' = 'v1'
+): CostDetails {
+  const rates = version === 'v1' ? conversionRates : conversionRatesV2
+  const baseCost = steps * rates.costPerStepInStars
 
   return {
     steps,
-    stars: costInStars.toFixed(0), // Форматируем до двух знаков после запятой
-    rubles: costInRubles.toFixed(0), // Форматируем до двух знаков после запятой
-    dollars: costInDollars.toFixed(0), // Форматируем до двух знаков после запятой
+    stars: baseCost,
+    dollars: baseCost * rates.costPerStarInDollars,
+    rubles: baseCost * rates.costPerStarInDollars * rates.rublesToDollarsRate,
   }
-})
-
-// Функция для расчета стоимости в звездах
-export function calculateTrainingCostInStars(steps: number): number {
-  const totalCostInStars = conversionRates.costPerStepInStars * steps // Умножаем количество шагов на стоимость за шаг в звездах
-  return parseFloat(totalCostInStars.toFixed(2))
-}
-
-// Функция для расчета стоимости в рублях
-export function calculateTrainingCostInRubles(steps: number): number {
-  return (
-    steps *
-    conversionRates.costPerStepInStars *
-    conversionRates.costPerStarInDollars *
-    conversionRates.rublesToDollarsRate
-  ) // Умножаем количество шагов на стоимость за шаг в рублях
-}
-
-export function calculateTrainingCostInDollars(steps: number): number {
-  return (
-    steps *
-    conversionRates.costPerStepInStars *
-    conversionRates.costPerStarInDollars
-  ) // Умножаем количество шагов на стоимость за шаг в долларах
 }

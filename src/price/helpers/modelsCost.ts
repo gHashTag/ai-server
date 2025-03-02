@@ -1,5 +1,4 @@
-import { calculateTrainingCostInStars } from './calculateTrainingCost'
-
+import { calculateCost } from './calculateTrainingCost'
 // Процент наценки
 export const interestRate = 0.5
 // Стоимость звезды
@@ -12,6 +11,7 @@ export function calculateCostInStars(costInDollars: number): number {
 // Определяем перечисление для режимов
 export enum ModeEnum {
   DigitalAvatarBody = 'digital_avatar_body',
+  DigitalAvatarBodyV2 = 'digital_avatar_body_v2',
   NeuroPhoto = 'neuro_photo',
   ImageToPrompt = 'image_to_prompt',
   Avatar = 'avatar',
@@ -25,24 +25,18 @@ export enum ModeEnum {
   LipSync = 'lip_sync',
 }
 
-// Интерфейс для конверсий
-interface ConversionRates {
-  costPerStarInDollars: number
-  costPerStepInStars: number
-  rublesToDollarsRate: number
-}
-
-// Определяем конверсии
-export const conversionRates: ConversionRates = {
-  costPerStarInDollars: 0.016,
-  costPerStepInStars: 0.5,
-  rublesToDollarsRate: 100,
-}
 export type CostValue = number | ((steps: number) => number)
 
 // Определяем стоимость для каждого режима
 export const modeCosts: Record<ModeEnum, CostValue> = {
-  [ModeEnum.DigitalAvatarBody]: calculateTrainingCostInStars,
+  [ModeEnum.DigitalAvatarBody]: (steps: number) => {
+    const cost = calculateCost(steps, 'v1')
+    return cost.stars
+  },
+  [ModeEnum.DigitalAvatarBodyV2]: (steps: number) => {
+    const cost = calculateCost(steps, 'v2')
+    return cost.stars
+  },
   [ModeEnum.NeuroPhoto]: calculateCostInStars(0.08),
   [ModeEnum.ImageToPrompt]: calculateCostInStars(0.03),
   [ModeEnum.Avatar]: 0,
