@@ -1,4 +1,5 @@
 import { pulseBot } from '@/config'
+import fs from 'fs'
 
 export const pulse = async (
   image: string,
@@ -20,21 +21,12 @@ export const pulse = async (
           username || 'User without username'
         } Telegram ID: ${telegram_id} generated an image with a prompt: ${truncatedPrompt} \n\n Command: ${command}`
 
-    // if image starts with data:image/, get only base64
-    let imageToSend = image
-    if (image.startsWith('data:image/')) {
-      imageToSend = image.split(',')[1]
-    }
-
-    // convert base64 to buffer
-    const imageBuffer = Buffer.from(imageToSend, 'base64')
-
     const chatId = '@neuro_blogger_pulse'
 
     // send image as buffer
     await pulseBot.telegram.sendPhoto(
       chatId,
-      { source: imageBuffer },
+      { source: fs.createReadStream(image) },
       { caption }
     )
   } catch (error) {
