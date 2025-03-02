@@ -1,10 +1,11 @@
 import { Request, Response } from 'express'
 import { updatePrompt } from '@/core/supabase/'
 import { pulseNeuroImageV2 } from '@/helpers'
-import { processApiResponse } from '@/helpers/processApiResponse'
+
 import { getBotByName } from '@/core/bot'
 import { errorMessageAdmin } from '@/helpers'
 
+const processedTasks = new Set()
 export class WebhookBFLNeurophotoController {
   public async handleWebhookNeurophoto(
     req: Request,
@@ -13,13 +14,29 @@ export class WebhookBFLNeurophotoController {
     try {
       const { task_id, status, result } = req.body
       console.log('🛰 Webhook received:', req.body)
+      // Проверяем, был ли уже обработан этот task_id
+      if (processedTasks.has(task_id)) {
+        res
+          .status(200)
+          .json({ message: 'Webhook already processed for task_id:', task_id })
+        return
+      }
+
       if (status === 'SUCCESS') {
-        const imageUrl = await processApiResponse(result.sample)
+        if (!result?.sample) {
+          throw new Error('Invalid result: sample is missing')
+        }
+
+        processedTasks.add(task_id)
+
+        const imageUrl = result.sample
 
         const { telegram_id, username, bot_name, language_code } =
-          await updatePrompt(task_id, result.sample)
+          await updatePrompt(task_id, imageUrl)
         const is_ru = language_code === 'ru'
+        console.log('bot_name', bot_name)
         const { bot } = getBotByName(bot_name)
+
         console.log('Sending image:', imageUrl)
 
         // Отправляем URL напрямую, без преобразования в буфер
@@ -112,3 +129,10 @@ export class WebhookBFLNeurophotoController {
     }
   }
 }
+
+setInterval(() => {
+  if (processedTasks.size > 0) {
+    processedTasks.clear()
+    console.log('Cleared processedTasks')
+  }
+}, 24 * 60 * 60 * 1000)
