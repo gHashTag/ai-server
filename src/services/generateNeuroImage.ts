@@ -5,13 +5,16 @@ import { getUserByTelegramId, updateUserLevelPlusOne } from '@/core/supabase'
 import { processApiResponse } from '@/helpers/processApiResponse'
 import { GenerationResult } from '@/interfaces'
 import { downloadFile } from '@/helpers/downloadFile'
-
+import { saveFileLocally } from '@/helpers'
 import { pulse } from '@/helpers/pulse'
 import { processBalanceOperation } from '@/price/helpers'
 import { errorMessageAdmin } from '@/helpers/errorMessageAdmin'
 import { Telegraf } from 'telegraf'
 import { MyContext } from '@/interfaces'
 import { modeCosts, ModeEnum } from '@/price/helpers/modelsCost'
+import path from 'path'
+import { API_URL } from '@/config'
+import fs from 'fs'
 
 export async function generateNeuroImage(
   prompt: string,
@@ -101,12 +104,26 @@ export async function generateNeuroImage(
         continue
       }
 
-      const image = await downloadFile(imageUrl)
+      // Сохраняем изображение на сервере
+      const imageLocalPath = await saveFileLocally(
+        telegram_id,
+        imageUrl,
+        'neuro-photo-v2',
+        '.jpeg'
+      )
+
+      // Генерируем URL для доступа к изображению
+      const imageLocalUrl = `${API_URL}/uploads/${telegram_id}/neuro-photo/${path.basename(
+        imageLocalPath
+      )}`
+
       const prompt_id = await savePrompt(
         prompt,
         model_url,
-        imageUrl,
-        telegram_id
+        ModeEnum.NeuroPhoto,
+        imageLocalUrl,
+        telegram_id,
+        'SUCCESS'
       )
 
       if (prompt_id === null) {
@@ -114,19 +131,17 @@ export async function generateNeuroImage(
         continue
       }
 
-      // Отправляем каждое изображение
-      const imageBuffer = Buffer.isBuffer(image) ? image : Buffer.from(image)
-      await bot.telegram.sendPhoto(telegram_id, { source: imageBuffer })
+      // Отправляем изображение пользователю
+      await bot.telegram.sendPhoto(telegram_id, {
+        source: fs.createReadStream(imageLocalPath),
+      })
 
       // Сохраняем результат
-      results.push({ image, prompt_id })
+      results.push({ image: imageLocalUrl, prompt_id })
 
       // Отправляем в pulse
-      const pulseImage = Buffer.isBuffer(image)
-        ? `data:image/jpeg;base64,${image.toString('base64')}`
-        : image
       await pulse(
-        pulseImage,
+        imageLocalUrl,
         prompt,
         `/${model_url}`,
         telegram_id,

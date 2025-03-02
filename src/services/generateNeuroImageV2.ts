@@ -12,6 +12,8 @@ import { errorMessageAdmin } from '@/helpers/errorMessageAdmin'
 
 import { modeCosts, ModeEnum } from '@/price/helpers/modelsCost'
 import { getBotByName } from '@/core/bot'
+import { MyContext } from '@/interfaces'
+import { Telegraf } from 'telegraf'
 
 export async function generateNeuroImageV2(
   prompt: string,
@@ -20,6 +22,7 @@ export async function generateNeuroImageV2(
   is_ru: boolean,
   bot_name: string
 ): Promise<GenerationResult | null> {
+  let bot: Telegraf<MyContext>
   try {
     console.log('telegram_id', telegram_id)
     console.log('is_ru', is_ru)
@@ -27,7 +30,8 @@ export async function generateNeuroImageV2(
     console.log('prompt', prompt)
     console.log('num_images', num_images)
 
-    const { bot } = getBotByName(bot_name)
+    bot = getBotByName(bot_name).bot
+
     const userExists = await getUserByTelegramId(telegram_id)
 
     if (!userExists) {
@@ -115,7 +119,13 @@ export async function generateNeuroImageV2(
       const data = await response.json()
       console.log('response V2 data:', data)
 
-      await saveNeuroPhotoPrompt(data.id, prompt, telegram_id, data.status)
+      await saveNeuroPhotoPrompt(
+        data.id,
+        prompt,
+        ModeEnum.NeuroPhotoV2,
+        telegram_id,
+        data.status
+      )
     }
     return
   } catch (error) {
@@ -140,7 +150,12 @@ export async function generateNeuroImageV2(
         : '❌ An error occurred. Please try again.'
     }
 
+    // Отправляем сообщение об ошибке пользователю
+    await bot.telegram.sendMessage(telegram_id, errorMessageToUser)
+
+    // Логируем ошибку для администратора
     errorMessageAdmin(error as Error)
+
     throw error
   }
 }

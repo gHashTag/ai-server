@@ -6,7 +6,7 @@ import { processApiResponse } from '@/helpers/processApiResponse'
 import { pulse } from '@/helpers/pulse'
 import { getUserByTelegramId, updateUserLevelPlusOne } from '@/core/supabase'
 import { IMAGES_MODELS } from '@/helpers/IMAGES_MODELS'
-
+import { ModeEnum } from '@/price/helpers/modelsCost'
 import { processBalanceOperation } from '@/price/helpers'
 import { errorMessageAdmin } from '@/helpers/errorMessageAdmin'
 import { errorMessage } from '@/helpers'
@@ -126,8 +126,10 @@ export const generateTextToImage = async (
         const prompt_id = await savePrompt(
           prompt,
           modelKey,
+          ModeEnum.TextToImage,
           imageUrl,
-          telegram_id
+          telegram_id,
+          'SUCCESS'
         )
         const image = await downloadFile(imageUrl)
 

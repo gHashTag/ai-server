@@ -5,7 +5,7 @@ import os from 'os'
 import path from 'path'
 import { v4 as uuidv4 } from 'uuid'
 import FormData from 'form-data'
-
+import { ModeEnum } from '@/price/helpers/modelsCost'
 // Удалите старый импорт
 // import fetch from "node-fetch";
 
@@ -326,6 +326,7 @@ export async function createVoiceSyncLabs({
 export const saveNeuroPhotoPrompt = async (
   id: string,
   prompt: string,
+  mode: ModeEnum,
   telegram_id?: string,
   status?: string
 ): Promise<number | null> => {
@@ -339,6 +340,7 @@ export const saveNeuroPhotoPrompt = async (
         telegram_id,
         status,
         model_type: 'neurophoto',
+        mode,
       })
       .select()
       .single()

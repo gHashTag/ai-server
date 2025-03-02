@@ -2,7 +2,8 @@ import { supabase } from '.'
 
 export const updatePrompt = async (
   task_id: number,
-  mediaUrl: string
+  mediaUrl: string,
+  status?: string
 ): Promise<{
   telegram_id: string
   username: string
@@ -26,7 +27,7 @@ export const updatePrompt = async (
     // Обновляем запись, если она существует
     const { error: updateError } = await supabase
       .from('prompts_history')
-      .update({ media_url: mediaUrl })
+      .update({ media_url: mediaUrl, status: status })
       .eq('task_id', task_id)
 
     if (updateError) {

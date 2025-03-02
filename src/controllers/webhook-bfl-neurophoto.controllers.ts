@@ -53,7 +53,7 @@ export class WebhookBFLNeurophotoController {
         )}`
 
         // Сохраняем URL в базу данных
-        await updatePrompt(task_id, imageUrl)
+        await updatePrompt(task_id, imageUrl, 'SUCCESS')
 
         console.log('Sending image:', imageUrl)
 

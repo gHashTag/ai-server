@@ -1,10 +1,13 @@
 import { supabase } from '.'
+import { ModeEnum } from '@/price/helpers/modelsCost'
 
 export const savePrompt = async (
   prompt: string,
   model_type: string,
+  mode: ModeEnum,
   media_url?: string,
-  telegram_id?: string
+  telegram_id?: string,
+  status?: string
 ): Promise<number | null> => {
   // Проверяем, существует ли уже такой промпт в таблице
   const { data: existingPrompt, error: selectError } = await supabase
@@ -33,6 +36,8 @@ export const savePrompt = async (
       model_type: model_type,
       media_url: media_url,
       telegram_id: telegram_id,
+      status: status,
+      mode,
     })
     .select()
     .single()
