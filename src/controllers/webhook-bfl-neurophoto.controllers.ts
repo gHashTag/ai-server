@@ -125,6 +125,16 @@ export class WebhookBFLNeurophotoController {
           {
             reply_markup: {
               keyboard: [
+                [
+                  { text: '1️⃣' },
+                  { text: '2️⃣' },
+                  { text: '3️⃣' },
+                  { text: '4️⃣' },
+                ],
+                [
+                  { text: is_ru ? '⬆️ Улучшить промпт' : '⬆️ Improve prompt' },
+                  { text: is_ru ? '📐 Изменить размер' : '📐 Change size' },
+                ],
                 [{ text: is_ru ? '🏠 Главное меню' : '🏠 Main menu' }],
               ],
               resize_keyboard: true,
@@ -135,8 +145,25 @@ export class WebhookBFLNeurophotoController {
 
         res.status(200).json({ message: 'Webhook processed successfully' })
       } else {
-        const { telegram_id } = await updatePrompt(task_id, result.sample)
-        await bot.telegram.sendMessage(telegram_id, `🚫 ${status}`)
+        const { telegram_id, language_code } = await updatePrompt(
+          task_id,
+          result.sample
+        )
+        const is_ru = language_code === 'ru'
+        await bot.telegram.sendMessage(telegram_id, `🚫 ${status}`, {
+          reply_markup: {
+            keyboard: [
+              [{ text: '1️⃣' }, { text: '2️⃣' }, { text: '3️⃣' }, { text: '4️⃣' }],
+              [
+                { text: is_ru ? '⬆️ Улучшить промпт' : '⬆️ Improve prompt' },
+                { text: is_ru ? '📐 Изменить размер' : '📐 Change size' },
+              ],
+              [{ text: is_ru ? '🏠 Главное меню' : '🏠 Main menu' }],
+            ],
+            resize_keyboard: true,
+            one_time_keyboard: false,
+          },
+        })
         errorMessageAdmin(
           new Error(`🚫 Webhook received: ${JSON.stringify(req.body)}`)
         )
