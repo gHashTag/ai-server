@@ -1,4 +1,4 @@
-import { openai } from '.'
+import { openai, model } from '.'
 
 type UserData = {
   username: string
@@ -61,7 +61,7 @@ export async function translateText(
         content: systemPrompt,
       },
     ],
-    model: 'gpt-4o',
+    model,
     stream: false,
     temperature: 0.1,
   })
@@ -84,7 +84,7 @@ export async function createChatCompletionJson(
         content: systemPrompt,
       },
     ],
-    model: 'gpt-4o',
+    model,
     stream: false,
     temperature: 0.1,
     response_format: { type: 'json_object' },
@@ -107,7 +107,7 @@ export async function createEmoji(prompt: string) {
         content: systemPrompt,
       },
     ],
-    model: 'gpt-4o',
+    model,
     stream: false,
     temperature: 0.1,
   })
