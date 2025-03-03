@@ -97,7 +97,7 @@ export const AVATARS_GROUP_ID = {
   ['neuro_blogger_bot']: '@neuro_blogger_group',
   ['MetaMuse_Manifest_bot']: '@MetaMuse_AI_Influencer',
   ['ZavaraBot']: '@NeuroLuna',
-  ['LeeSolarbot']: '@LeeSolarbot',
+  ['LeeSolarbot']: '@SolarNeuroBlogger1',
 }
 
 export const BOT_TOKENS =
