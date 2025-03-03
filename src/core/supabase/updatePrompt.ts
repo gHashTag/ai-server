@@ -9,12 +9,13 @@ export const updatePrompt = async (
   username: string
   bot_name: string
   language_code: string
+  prompt: string
 } | null> => {
   try {
     // Сначала получаем данные по task_id
     const { data: existingData, error: selectError } = await supabase
       .from('prompts_history')
-      .select('telegram_id, users(bot_name, language_code, username)')
+      .select('telegram_id, prompt, users(bot_name, language_code, username)')
       .eq('task_id', task_id)
       .single()
     console.log('updatePrompt: existingData', existingData)
@@ -46,11 +47,14 @@ export const updatePrompt = async (
     // @ts-ignore
     const language_code = existingData.users.language_code
 
+    const prompt = existingData.prompt
+
     return {
       telegram_id,
       username,
       bot_name,
       language_code,
+      prompt,
     }
   } catch (error) {
     console.error('Ошибка при обновлении промпта с изображением:', error)

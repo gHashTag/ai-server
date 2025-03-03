@@ -1,14 +1,13 @@
 import { Request, Response } from 'express'
-import { updatePrompt } from '@/core/supabase/'
+import { updatePrompt, getTaskData } from '@/core/supabase/'
 import { pulseNeuroImageV2, saveFileLocally } from '@/helpers'
 import { API_URL } from '@/config'
 import { getBotByName } from '@/core/bot'
 import { errorMessageAdmin } from '@/helpers'
-
 import fs from 'fs'
 import path from 'path'
 
-const processedTasks = new Set()
+const processedTasks = new Set<string>()
 
 export class WebhookBFLNeurophotoController {
   public async handleWebhookNeurophoto(
@@ -27,6 +26,15 @@ export class WebhookBFLNeurophotoController {
         return
       }
 
+      // Получаем бота
+      const taskData = await getTaskData(task_id)
+      if (!taskData) {
+        throw new Error(`Task data not found for task_id: ${task_id}`)
+      }
+      const { bot_name } = taskData
+      console.log('🛰 Bot name:', bot_name)
+      const { bot } = getBotByName(bot_name)
+
       if (status === 'SUCCESS') {
         if (!result?.sample) {
           throw new Error('Invalid result: sample is missing')
@@ -35,7 +43,7 @@ export class WebhookBFLNeurophotoController {
         processedTasks.add(task_id)
 
         // Сохраняем фотографию на сервере
-        const { telegram_id, username, bot_name, language_code } =
+        const { telegram_id, username, bot_name, language_code, prompt } =
           await updatePrompt(task_id, result.sample)
         const is_ru = language_code === 'ru'
         const { bot } = getBotByName(bot_name)
@@ -57,6 +65,7 @@ export class WebhookBFLNeurophotoController {
 
         console.log('Sending image:', imageUrl)
 
+        // Отправляем изображение пользователю
         await bot.telegram.sendPhoto(
           telegram_id,
           {
@@ -82,9 +91,11 @@ export class WebhookBFLNeurophotoController {
             },
           }
         )
+
+        // Отправляем изображение в pulse
         await pulseNeuroImageV2(
           imageUrl,
-          null,
+          prompt,
           'neurophoto V2',
           telegram_id,
           username,
@@ -100,12 +111,11 @@ export class WebhookBFLNeurophotoController {
         status === 'Content Moderated' ||
         status === 'GENERATED CONTENT MODERATED'
       ) {
-        const { telegram_id, bot_name, language_code } = await updatePrompt(
+        const { telegram_id, language_code } = await updatePrompt(
           task_id,
           result.sample
         )
         const is_ru = language_code === 'ru'
-        const { bot } = getBotByName(bot_name)
 
         await bot.telegram.sendMessage(
           telegram_id,
@@ -125,6 +135,8 @@ export class WebhookBFLNeurophotoController {
 
         res.status(200).json({ message: 'Webhook processed successfully' })
       } else {
+        const { telegram_id } = await updatePrompt(task_id, result.sample)
+        await bot.telegram.sendMessage(telegram_id, `🚫 ${status}`)
         errorMessageAdmin(
           new Error(`🚫 Webhook received: ${JSON.stringify(req.body)}`)
         )

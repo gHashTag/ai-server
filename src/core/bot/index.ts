@@ -1,4 +1,4 @@
-// import { BOT_TOKEN } from '@/config'
+import { BOT_NAMES } from '@/config'
 import { config } from 'dotenv'
 import { pulseBot } from '@/config'
 config({ path: `.env.${process.env.NODE_ENV || 'development'}.local` })
@@ -13,20 +13,14 @@ config({ path: `.env.${process.env.NODE_ENV || 'development'}.local` })
 import { Telegraf } from 'telegraf'
 import { MyContext } from '@/interfaces'
 
-export const BOT_NAMES = {
-  ['neuro_blogger_bot']: process.env.BOT_TOKEN_1,
-  ['MetaMuse_Manifest_bot']: process.env.BOT_TOKEN_2,
-  ['ZavaraBot']: process.env.BOT_TOKEN_3,
-  ['LeeSolarbot']: process.env.BOT_TOKEN_4,
-  ['ai_koshey_bot']: process.env.BOT_TOKEN_TEST_1,
-  ['clip_maker_neuro_bot']: process.env.BOT_TOKEN_TEST_2,
-}
-
 export const bots = Object.values(BOT_NAMES).map(
   token => new Telegraf<MyContext>(token)
 )
 
-export function getBotByName(bot_name: string) {
+export function getBotByName(bot_name: string): {
+  bot?: Telegraf<MyContext>
+  error?: string | null
+} {
   console.log('CASE: getBotByName', bot_name)
   const token = BOT_NAMES[bot_name]
   if (!token) {

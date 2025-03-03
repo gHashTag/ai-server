@@ -9,11 +9,16 @@ export const pulseNeuroImageV2 = async (
   is_ru: boolean
 ) => {
   try {
-    if (process.env.NODE_ENV === 'development') return
-    // Проверяем, что data и data.result существуют
+    // if (process.env.NODE_ENV === 'development') return
+
     if (!image) {
       throw new Error('Invalid data received in pulseNeuroImageV2')
     }
+
+    if (!prompt) {
+      throw new Error('Invalid prompt received in pulseNeuroImageV2')
+    }
+
     const truncatedPrompt = prompt.length > 800 ? prompt.slice(0, 800) : prompt
     const caption = is_ru
       ? `@${
