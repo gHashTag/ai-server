@@ -65,12 +65,20 @@ export const WEBHOOK_URL = `${API_URL}/webhooks/synclabs-video`
 
 if (!process.env.BOT_TOKEN_1) throw new Error('BOT_TOKEN_1 is not set')
 if (!process.env.BOT_TOKEN_2) throw new Error('BOT_TOKEN_2 is not set')
+if (!process.env.BOT_TOKEN_3) throw new Error('BOT_TOKEN_3 is not set')
+if (!process.env.BOT_TOKEN_4) throw new Error('BOT_TOKEN_4 is not set')
+
 if (!process.env.BOT_TOKEN_TEST_1)
   throw new Error('BOT_TOKEN_TEST_1 is not set')
 if (!process.env.BOT_TOKEN_TEST_2)
   throw new Error('BOT_TOKEN_TEST_2 is not set')
 
-const BOT_TOKENS_PROD = [process.env.BOT_TOKEN_1, process.env.BOT_TOKEN_2]
+const BOT_TOKENS_PROD = [
+  process.env.BOT_TOKEN_1,
+  process.env.BOT_TOKEN_2,
+  process.env.BOT_TOKEN_3,
+  process.env.BOT_TOKEN_4,
+]
 const BOT_TOKENS_TEST = [
   process.env.BOT_TOKEN_TEST_1,
   process.env.BOT_TOKEN_TEST_2,
@@ -80,6 +88,7 @@ export const BOT_NAMES = {
   ['neuro_blogger_bot']: process.env.BOT_TOKEN_1,
   ['MetaMuse_Manifest_bot']: process.env.BOT_TOKEN_2,
   ['ZavaraBot']: process.env.BOT_TOKEN_3,
+  ['LeeSolarbot']: process.env.BOT_TOKEN_4,
   ['ai_koshey_bot']: process.env.BOT_TOKEN_TEST_1,
   ['clip_maker_neuro_bot']: process.env.BOT_TOKEN_TEST_2,
 }
@@ -88,6 +97,7 @@ export const AVATARS_GROUP_ID = {
   ['neuro_blogger_bot']: '@neuro_blogger_group',
   ['MetaMuse_Manifest_bot']: '@MetaMuse_AI_Influencer',
   ['ZavaraBot']: '@NeuroLuna',
+  ['LeeSolarbot']: '@LeeSolarbot',
 }
 
 export const BOT_TOKENS =
