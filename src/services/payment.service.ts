@@ -6,35 +6,80 @@ import { errorMessageAdmin } from '@/helpers/errorMessageAdmin'
 import { errorMessage } from '@/helpers'
 import { updateUserSubscription } from '@/core/supabase'
 
+// Константы для вариантов оплаты
+const PAYMENT_OPTIONS = [
+  { amount: 500, stars: 217 },
+  { amount: 1000, stars: 434 },
+  { amount: 2000, stars: 869 },
+  { amount: 5000, stars: 2173 },
+  { amount: 10000, stars: 4347 },
+  { amount: 10, stars: 6 },
+]
+
+// Константы для тарифов
+const SUBSCRIPTION_PLANS = [
+  {
+    row: 0,
+    text: '🎨 NeuroPhoto',
+    en_price: 10,
+    ru_price: 1110,
+    description: 'Creating photos using neural networks.',
+    stars_price: 476,
+    callback_data: 'neurophoto',
+  },
+  {
+    row: 1,
+    text: '📚 NeuroBase',
+    en_price: 33,
+    ru_price: 2999,
+    description: 'Self-study using neural networks with an AI avatar.',
+    stars_price: 1303,
+    callback_data: 'neurobase',
+  },
+  {
+    row: 2,
+    text: '🤖 NeuroBlogger',
+    en_price: 833,
+    ru_price: 75000,
+    description: 'Training on neural networks with a mentor.',
+    stars_price: 32608,
+    callback_data: 'neuroblogger',
+  },
+]
+
+// Группируем суммы подписок для более удобного использования
+const SUBSCRIPTION_AMOUNTS = SUBSCRIPTION_PLANS.reduce((acc, plan) => {
+  acc[plan.ru_price] = plan.callback_data
+  return acc
+}, {})
+
 export class PaymentService {
   public async processPayment(
     roundedIncSum: number,
     inv_id: string
   ): Promise<void> {
     try {
-      console.log('PaymentService: roundedIncSum', roundedIncSum)
-      console.log('PaymentService: inv_id', inv_id)
+      console.log('🚀 PaymentService: roundedIncSum', roundedIncSum)
+      console.log('📝 PaymentService: inv_id', inv_id)
+
       let stars = 0
       let subscription = ''
-      if (roundedIncSum === 1110) {
-        stars = 476
-        subscription = 'neurophoto'
-      } else if (roundedIncSum === 2999) {
-        stars = 1303
-        subscription = 'neurobase'
-      } else if (roundedIncSum === 75000) {
-        stars = 32608
-        subscription = 'neuroblogger'
-      } else if (roundedIncSum === 2000) {
-        stars = 1250
-      } else if (roundedIncSum === 5000) {
-        stars = 3125
-      } else if (roundedIncSum === 10000) {
-        stars = 6250
-      } else if (roundedIncSum === 10) {
-        stars = 6
-      } else if (roundedIncSum === 4800) {
-        stars = 3000
+
+      // 1. Проверяем, соответствует ли сумма одному из тарифов
+      if (SUBSCRIPTION_AMOUNTS[roundedIncSum]) {
+        // Находим соответствующий тариф
+        const plan = SUBSCRIPTION_PLANS.find(p => p.ru_price === roundedIncSum)
+        if (plan) {
+          stars = plan.stars_price
+          subscription = plan.callback_data
+        }
+      }
+      // 2. Если не соответствует тарифу, проверяем стандартные варианты оплаты
+      else {
+        const option = PAYMENT_OPTIONS.find(opt => opt.amount === roundedIncSum)
+        if (option) {
+          stars = option.stars
+        }
       }
 
       if (stars > 0) {
@@ -68,7 +113,8 @@ export class PaymentService {
           bot_name,
         })
 
-        if ([1110, 1999, 75000].includes(roundedIncSum)) {
+        // Обновляем подписку только если платеж соответствует тарифу
+        if (subscription) {
           await updateUserSubscription(telegram_id, subscription)
         }
       }
