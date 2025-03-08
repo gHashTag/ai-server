@@ -13,20 +13,17 @@ export class PaymentService {
   ): Promise<void> {
     try {
       console.log('PaymentService: roundedIncSum', roundedIncSum)
-      console.log('PaymentService: Email', inv_id)
+      console.log('PaymentService: inv_id', inv_id)
       let stars = 0
       let subscription = ''
       if (roundedIncSum === 1110) {
-        stars = 693
+        stars = 476
         subscription = 'neurophoto'
       } else if (roundedIncSum === 1999) {
-        stars = 1250
+        stars = 750
         subscription = 'neurobase'
-      } else if (roundedIncSum === 49999) {
-        stars = 5000
-        subscription = 'neuromeeting'
       } else if (roundedIncSum === 75000) {
-        stars = 46875
+        stars = 27777
         subscription = 'neuroblogger'
       } else if (roundedIncSum === 2000) {
         stars = 1250
@@ -51,15 +48,16 @@ export class PaymentService {
           amount: stars,
         })
 
-        await sendPaymentNotification(
-          roundedIncSum,
+        await sendPaymentNotification({
+          amount: roundedIncSum.toString(),
           stars,
-          telegram_id,
+          telegramId: telegram_id.toString(),
           language,
           username,
           groupId,
-          bot
-        )
+          bot,
+        })
+
         await setPayments({
           inv_id,
           telegram_id,
@@ -70,7 +68,7 @@ export class PaymentService {
           bot_name,
         })
 
-        if ([1110, 1999, 9999, 49999, 99999].includes(roundedIncSum)) {
+        if ([1110, 1999, 75000].includes(roundedIncSum)) {
           await updateUserSubscription(telegram_id, subscription)
         }
       }

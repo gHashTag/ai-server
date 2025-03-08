@@ -17,7 +17,6 @@ export const setPayments = async ({
   roundedIncSum,
   currency,
   stars,
-  email,
   payment_method,
   bot_name,
 }: Payment) => {
@@ -33,7 +32,6 @@ export const setPayments = async ({
         payment_method,
         description: `Purchase and sale:: ${stars}`,
         stars,
-        email,
         bot_name,
       })
       .eq('inv_id', inv_id.toString())
