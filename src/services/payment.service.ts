@@ -70,7 +70,7 @@ export class PaymentService {
           bot_name,
         })
 
-        if ([1999, 9999, 49999, 99999].includes(roundedIncSum)) {
+        if ([1110, 1999, 9999, 49999, 99999].includes(roundedIncSum)) {
           await updateUserSubscription(telegram_id, subscription)
         }
       }
