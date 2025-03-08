@@ -19,11 +19,11 @@ export class PaymentService {
       if (roundedIncSum === 1110) {
         stars = 476
         subscription = 'neurophoto'
-      } else if (roundedIncSum === 1999) {
-        stars = 750
+      } else if (roundedIncSum === 2999) {
+        stars = 1303
         subscription = 'neurobase'
       } else if (roundedIncSum === 75000) {
-        stars = 27777
+        stars = 32608
         subscription = 'neuroblogger'
       } else if (roundedIncSum === 2000) {
         stars = 1250
