@@ -42,7 +42,6 @@ export const generateImageToVideo = async (
     if (!videoModel) throw new Error('Video model is required')
     if (!telegram_id) throw new Error('Telegram ID is required')
     if (!username) throw new Error('Username is required')
-    if (!is_ru) throw new Error('Is RU is required')
 
     const userExists = await getUserByTelegramId(telegram_id)
     if (!userExists) {
