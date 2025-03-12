@@ -1,8 +1,7 @@
 import { getUserBalance, updateUserBalance } from '@/core/supabase'
 
-import { VideoModel } from '@/interfaces/models.interface'
 import { BalanceOperationResult } from '@/interfaces/payments.interface'
-
+import { VIDEO_MODELS_CONFIG } from '@/helpers/VIDEO_MODELS'
 import { calculateFinalPrice } from './calculateFinalPrice'
 import { Telegraf } from 'telegraf'
 import { MyContext } from '@/interfaces'
@@ -14,35 +13,6 @@ type BalanceOperationProps = {
   bot: Telegraf<MyContext>
 }
 
-export interface VideoModelConfig {
-  name: VideoModel
-  title: string
-  description: string
-}
-
-export const VIDEO_MODELS: VideoModelConfig[] = [
-  {
-    name: 'minimax',
-    title: 'Minimax',
-    description: 'Оптимальное качество и скорость',
-  },
-  {
-    name: 'haiper',
-    title: 'Haiper',
-    description: 'Высокое качество, длительность 6 секунд',
-  },
-  {
-    name: 'ray',
-    title: 'Ray',
-    description: 'Реалистичная анимация',
-  },
-  {
-    name: 'i2vgen-xl',
-    title: 'I2VGen-XL',
-    description: 'Продвинутая модель для детальной анимации',
-  },
-]
-
 export const processBalanceVideoOperation = async ({
   videoModel,
   telegram_id,
@@ -53,15 +23,12 @@ export const processBalanceVideoOperation = async ({
     // Получаем текущий баланс
     const currentBalance = await getUserBalance(telegram_id)
 
-    const availableModels: VideoModel[] = VIDEO_MODELS.map(model => model.name)
+    const modelConfig = VIDEO_MODELS_CONFIG[videoModel]
 
-    // Проверка корректности модели
-    if (!videoModel || !availableModels.includes(videoModel as VideoModel)) {
+    if (!modelConfig) {
       await bot.telegram.sendMessage(
         telegram_id,
-        is_ru
-          ? 'Пожалуйста, выберите корректную модель'
-          : 'Please choose a valid model'
+        is_ru ? 'Неверная модель' : 'Invalid model'
       )
       return {
         newBalance: currentBalance,
@@ -71,8 +38,7 @@ export const processBalanceVideoOperation = async ({
       }
     }
 
-    const model = videoModel as VideoModel
-    const paymentAmount = calculateFinalPrice(model)
+    const paymentAmount = calculateFinalPrice(modelConfig.id)
 
     // Проверка достаточности средств
     if (currentBalance < paymentAmount) {

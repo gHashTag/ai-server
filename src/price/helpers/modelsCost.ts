@@ -1,8 +1,15 @@
 import { calculateCost } from './calculateTrainingCost'
 // Процент наценки
-export const interestRate = 0.5
+export const interestRate = 1.5
 // Стоимость звезды
 export const starCost = 0.016
+
+export const SYSTEM_CONFIG = {
+  starCost,
+  interestRate,
+  currency: 'RUB',
+}
+
 // Функция для расчета стоимости в звездах
 export function calculateCostInStars(costInDollars: number): number {
   return costInDollars / starCost

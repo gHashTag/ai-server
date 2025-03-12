@@ -9,6 +9,32 @@ import path from 'path'
 import { Telegraf } from 'telegraf'
 import { MyContext } from '@/interfaces'
 import { getUserByTelegramId, updateUserLevelPlusOne } from '@/core/supabase'
+import { VIDEO_MODELS_CONFIG } from '@/helpers/VIDEO_MODELS'
+
+export const processVideoGeneration = async (
+  videoModel: string,
+  aspect_ratio: string,
+  prompt: string
+) => {
+  const modelConfig = VIDEO_MODELS_CONFIG[videoModel]
+
+  if (!modelConfig) {
+    throw new Error('Invalid video model')
+  }
+
+  const output = await replicate.run(
+    modelConfig.api.model as `${string}/${string}`,
+    {
+      input: {
+        prompt,
+        ...modelConfig.api.input,
+        aspect_ratio,
+      },
+    }
+  )
+
+  return output
+}
 
 export const generateTextToVideo = async (
   prompt: string,
@@ -19,17 +45,17 @@ export const generateTextToVideo = async (
   bot: Telegraf<MyContext>
 ): Promise<{ videoLocalPath: string }> => {
   try {
+    console.log('videoModel', videoModel)
     if (!prompt) throw new Error('Prompt is required')
     if (!videoModel) throw new Error('Video model is required')
     if (!telegram_id) throw new Error('Telegram ID is required')
     if (!username) throw new Error('Username is required')
-    if (!is_ru) throw new Error('is_ru is required')
 
     const userExists = await getUserByTelegramId(telegram_id)
-    if (!userExists.data) {
+    if (!userExists) {
       throw new Error(`User with ID ${telegram_id} does not exist.`)
     }
-    const level = userExists.data.level
+    const level = userExists.level
     if (level === 9) {
       await updateUserLevelPlusOne(telegram_id, level)
     }
@@ -42,8 +68,6 @@ export const generateTextToVideo = async (
       bot,
     })
 
-    let output: any
-
     bot.telegram.sendMessage(
       telegram_id,
       is_ru ? '⏳ Генерация видео...' : '⏳ Generating video...',
@@ -54,27 +78,11 @@ export const generateTextToVideo = async (
       }
     )
 
-    if (videoModel === 'haiper') {
-      const input = {
-        prompt,
-        duration: 6,
-        aspect_ratio: '16:9',
-        use_prompt_enhancer: true,
-      }
-
-      output = await replicate.run('haiper-ai/haiper-video-2', { input })
-    } else {
-      const input = {
-        prompt,
-        prompt_optimizer: true,
-      }
-
-      output = await replicate.run('minimax/video-01', { input })
-    }
-
-    if (!output) {
-      throw new Error('No video generated')
-    }
+    const output = await processVideoGeneration(
+      videoModel,
+      userExists.aspect_ratio,
+      prompt
+    )
     //const videoUrl = 'https://yuukfqcsdhkyxegfwlcb.supabase.co/storage/v1/object/public/dev/2025-01-15T06%2011%2018.236Z.mp4';
     let videoUrl: string
     if (Array.isArray(output)) {

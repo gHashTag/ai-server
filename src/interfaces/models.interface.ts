@@ -12,4 +12,14 @@ export interface UserModel {
   model_key?: ModelUrl
 }
 
-export type VideoModel = 'minimax' | 'haiper' | 'ray' | 'i2vgen-xl'
+export type VideoModel =
+  | 'minimax'
+  | 'haiper'
+  | 'ray'
+  | 'ray_v2'
+  | 'i2vgen-xl'
+  | 'wan-2.1'
+  | 'kling-v1.6-pro'
+  | 'hunyuan-video-fast'
+  | 'haiper-video-2'
+  | 'wan-2.1-i2v-720p'

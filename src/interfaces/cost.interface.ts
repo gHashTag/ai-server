@@ -1,33 +1,33 @@
-import { VideoModel } from '@/interfaces'
+// import { VideoModel } from '@/interfaces'
 
-export interface VideoModelConfig {
-  name: VideoModel
-  title: string
-  description: string
-}
+// export interface VideoModelConfig {
+//   name: VideoModel
+//   title: string
+//   description: string
+// }
 
-export const VIDEO_MODELS: VideoModelConfig[] = [
-  {
-    name: 'minimax',
-    title: 'Minimax',
-    description: 'Оптимальное качество и скорость',
-  },
-  {
-    name: 'haiper',
-    title: 'Haiper',
-    description: 'Высокое качество, длительность 6 секунд',
-  },
-  {
-    name: 'ray',
-    title: 'Ray',
-    description: 'Реалистичная анимация',
-  },
-  {
-    name: 'i2vgen-xl',
-    title: 'I2VGen-XL',
-    description: 'Продвинутая модель для детальной анимации',
-  },
-]
+// export const VIDEO_MODELS: VideoModelConfig[] = [
+//   {
+//     name: 'minimax',
+//     title: 'Minimax',
+//     description: 'Оптимальное качество и скорость',
+//   },
+//   {
+//     name: 'haiper',
+//     title: 'Haiper',
+//     description: 'Высокое качество, длительность 6 секунд',
+//   },
+//   {
+//     name: 'ray',
+//     title: 'Ray',
+//     description: 'Реалистичная анимация',
+//   },
+//   {
+//     name: 'i2vgen-xl',
+//     title: 'I2VGen-XL',
+//     description: 'Продвинутая модель для детальной анимации',
+//   },
+// ]
 
 export type Mode =
   | 'subscribe'

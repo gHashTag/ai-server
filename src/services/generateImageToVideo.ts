@@ -11,6 +11,8 @@ import path from 'path'
 import { InputFile } from 'telegraf/typings/core/types/typegram'
 import { Telegraf } from 'telegraf'
 import { MyContext } from '@/interfaces'
+import { VIDEO_MODELS_CONFIG } from '@/helpers/VIDEO_MODELS'
+import { getVideoMetadata, optimizeForTelegram } from '@/helpers'
 
 interface ReplicateResponse {
   id: string
@@ -52,17 +54,12 @@ export const generateImageToVideo = async (
       await updateUserLevelPlusOne(telegram_id, level)
     }
 
-    const { newBalance, paymentAmount, success, error } =
-      await processBalanceVideoOperation({
-        videoModel,
-        telegram_id,
-        is_ru,
-        bot,
-      })
-
-    if (!success) {
-      throw new Error(error)
-    }
+    const { newBalance, paymentAmount } = await processBalanceVideoOperation({
+      videoModel,
+      telegram_id,
+      is_ru,
+      bot,
+    })
 
     bot.telegram.sendMessage(
       telegram_id,
@@ -85,56 +82,41 @@ export const generateImageToVideo = async (
       return result
     }
 
-    let result: ReplicateResponse | string
-
-    switch (videoModel) {
-      case 'minimax':
-        const imageBuffer = await downloadFile(imageUrl)
-        result = await runModel('minimax/video-01' as shortModelUrl, {
-          prompt,
-          first_frame_image: imageBuffer,
-        })
-        break
-
-      case 'haiper':
-        result = await runModel('haiper-ai/haiper-video-2' as shortModelUrl, {
-          prompt,
-          duration: 6,
-          aspect_ratio: '16:9',
-          use_prompt_enhancer: true,
-          frame_image_url: imageUrl,
-        })
-        break
-
-      case 'ray':
-        result = await runModel('luma/ray' as shortModelUrl, {
-          prompt,
-          aspect_ratio: '16:9',
-          loop: false,
-          start_image_url: imageUrl,
-        })
-        break
-
-      case 'i2vgen-xl':
-        result = await runModel(
-          'ali-vilab/i2vgen-xl:5821a338d00033abaaba89080a17eb8783d9a17ed710a6b4246a18e0900ccad4' as shortModelUrl,
-          {
-            image: imageUrl,
-            prompt,
-            max_frames: 16,
-            guidance_scale: 9,
-            num_inference_steps: 50,
-          }
-        )
-        break
-
-      default:
-        throw new Error('Unsupported service')
+    const imageBuffer = await downloadFile(imageUrl)
+    const modelConfig = VIDEO_MODELS_CONFIG[videoModel]
+    if (!modelConfig) {
+      throw new Error(`🚫 Unsupported service: ${videoModel}`)
     }
-    console.log(result, 'result')
-    const videoUrl = result?.output ? result.output : result
 
-    // const videoUrl = 'https://yuukfqcsdhkyxegfwlcb.supabase.co/storage/v1/object/public/dev/2025-01-15T06%2011%2018.236Z.mp4';
+    // 🎯 Формируем параметры для модели
+    const modelInput = {
+      ...modelConfig.api.input,
+      prompt,
+      aspect_ratio: userExists.aspect_ratio,
+      [modelConfig.imageKey]: imageBuffer, // 🖼 Динамический ключ для изображения
+    }
+
+    const result = await runModel(
+      modelConfig.api.model as shortModelUrl,
+      modelInput
+    )
+
+    // 🆕 Добавляем логирование параметров
+    console.log('🎬 Video generation params:', {
+      model: modelConfig.api.model,
+      input: {
+        ...modelInput,
+        imageBuffer: imageBuffer?.length ? 'exists' : 'missing', // 🖼 Логируем наличие буфера
+      },
+      userAspectRatio: userExists.aspect_ratio,
+      modelConfig: modelConfig.api.input,
+    })
+
+    const videoUrl = result?.output ? result.output : result
+    console.log('📹 Generated video URL:', videoUrl)
+
+    //const videoUrl =
+    ;('https://replicate.delivery/xezq/XatIg4rS2gaaN9TnENoqyKaw6JVfNH8AZ7Mm4CkSma4geuXUA/tmpygdbucj5.mp4')
 
     if (videoUrl) {
       const videoLocalPath = path.join(
@@ -144,12 +126,11 @@ export const generateImageToVideo = async (
         'image-to-video',
         `${new Date().toISOString()}.mp4`
       )
-      console.log(videoLocalPath, 'videoLocalPath')
       await mkdir(path.dirname(videoLocalPath), { recursive: true })
 
-      const videoBuffer = await downloadFile(videoUrl as string)
-      await writeFile(videoLocalPath, videoBuffer)
-
+      // 1. Сохраняем оригинальное видео в Supabase
+      const originalBuffer = await downloadFile(videoUrl as string)
+      await writeFile(videoLocalPath, originalBuffer)
       await saveVideoUrlToSupabase(
         telegram_id,
         videoUrl as string,
@@ -157,9 +138,8 @@ export const generateImageToVideo = async (
         videoModel
       )
 
-      const video = { source: videoLocalPath }
+      await bot.telegram.sendVideo(telegram_id, { source: videoLocalPath })
 
-      await bot.telegram.sendVideo(telegram_id, video as InputFile)
       await bot.telegram.sendMessage(
         telegram_id,
         is_ru
@@ -183,11 +163,15 @@ export const generateImageToVideo = async (
           },
         }
       )
-      await bot.telegram.sendVideo('@neuro_blogger_pulse', video as InputFile, {
-        caption: is_ru
-          ? `${username} Telegram ID: ${telegram_id} сгенерировал видео с промптом: ${prompt} \n\n Команда: ${videoModel}`
-          : `${username} Telegram ID: ${telegram_id} generated a video with a prompt: ${prompt} \n\n Command: ${videoModel}`,
-      })
+      await bot.telegram.sendVideo(
+        '@neuro_blogger_pulse',
+        { source: videoLocalPath },
+        {
+          caption: is_ru
+            ? `${username} Telegram ID: ${telegram_id} сгенерировал видео с промптом: ${prompt} \n\n Команда: ${videoModel}`
+            : `${username} Telegram ID: ${telegram_id} generated a video with a prompt: ${prompt} \n\n Command: ${videoModel}`,
+        }
+      )
     } else {
       throw new Error('Video URL is required')
     }

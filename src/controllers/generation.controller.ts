@@ -211,6 +211,8 @@ export class GenerationController {
     try {
       const { prompt, videoModel, telegram_id, username, is_ru, bot_name } =
         req.body
+
+      console.log('videoModel', videoModel)
       if (!prompt) {
         res.status(400).json({ message: 'Prompt is required' })
         return
