@@ -8,11 +8,10 @@ import { processBalanceVideoOperation } from '@/price/helpers'
 import { getUserByTelegramId, updateUserLevelPlusOne } from '@/core/supabase'
 import { mkdir, writeFile } from 'fs/promises'
 import path from 'path'
-import { InputFile } from 'telegraf/typings/core/types/typegram'
+
 import { Telegraf } from 'telegraf'
 import { MyContext } from '@/interfaces'
 import { VIDEO_MODELS_CONFIG } from '@/helpers/VIDEO_MODELS'
-import { getVideoMetadata, optimizeForTelegram } from '@/helpers'
 
 interface ReplicateResponse {
   id: string
@@ -20,6 +19,15 @@ interface ReplicateResponse {
 }
 
 type shortModelUrl = `${string}/${string}`
+
+export const truncateText = (text: string, maxLength: number): string => {
+  console.log(
+    `✂️ Truncating text from ${text.length} to max ${maxLength} chars`
+  )
+  return text.length > maxLength
+    ? text.substring(0, maxLength - 3) + '...'
+    : text
+}
 
 export const generateImageToVideo = async (
   imageUrl: string,
@@ -167,9 +175,16 @@ export const generateImageToVideo = async (
         '@neuro_blogger_pulse',
         { source: videoLocalPath },
         {
-          caption: is_ru
-            ? `${username} Telegram ID: ${telegram_id} сгенерировал видео с промптом: ${prompt} \n\n Команда: ${videoModel}`
-            : `${username} Telegram ID: ${telegram_id} generated a video with a prompt: ${prompt} \n\n Command: ${videoModel}`,
+          caption: (is_ru
+            ? `${username} Telegram ID: ${telegram_id} сгенерировал видео с промптом: ${truncateText(
+                prompt,
+                900
+              )}\n\nКоманда: ${videoModel}\n\nBot: @${bot.botInfo?.username}`
+            : `${username} Telegram ID: ${telegram_id} generated a video with a prompt: ${truncateText(
+                prompt,
+                900
+              )}\n\nCommand: ${videoModel}\n\nBot: @${bot.botInfo?.username}`
+          ).slice(0, 1000),
         }
       )
     } else {
