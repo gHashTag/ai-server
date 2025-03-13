@@ -42,7 +42,8 @@ export const generateTextToVideo = async (
   telegram_id: string,
   username: string,
   is_ru: boolean,
-  bot: Telegraf<MyContext>
+  bot: Telegraf<MyContext>,
+  bot_name: string
 ): Promise<{ videoLocalPath: string }> => {
   try {
     console.log('videoModel', videoModel)
@@ -154,7 +155,8 @@ export const generateTextToVideo = async (
       'text-to-video',
       telegram_id,
       username,
-      is_ru
+      is_ru,
+      bot_name
     )
 
     return { videoLocalPath }

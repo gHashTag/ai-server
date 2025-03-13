@@ -7,7 +7,8 @@ export const pulse = async (
   command: string,
   telegram_id: string,
   username: string,
-  is_ru: boolean
+  is_ru: boolean,
+  bot_name?: string
 ) => {
   try {
     if (process.env.NODE_ENV === 'development') return
@@ -16,10 +17,10 @@ export const pulse = async (
     const caption = is_ru
       ? `@${
           username || 'Пользователь без username'
-        } Telegram ID: ${telegram_id} сгенерировал изображение с промптом: ${truncatedPrompt} \n\n Команда: ${command}`
+        } Telegram ID: ${telegram_id} сгенерировал изображение с промптом: ${truncatedPrompt} \n\n Команда: ${command} \n\n Bot: @${bot_name}`
       : `@${
           username || 'User without username'
-        } Telegram ID: ${telegram_id} generated an image with a prompt: ${truncatedPrompt} \n\n Command: ${command}`
+        } Telegram ID: ${telegram_id} generated an image with a prompt: ${truncatedPrompt} \n\n Command: ${command} \n\n Bot: @${bot_name}`
 
     const chatId = '@neuro_blogger_pulse'
 

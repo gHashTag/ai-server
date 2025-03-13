@@ -226,7 +226,15 @@ export class GenerationController {
       res.status(200).json({ message: 'Processing started' })
 
       const { bot } = getBotByName(bot_name)
-      generateTextToVideo(prompt, videoModel, telegram_id, username, is_ru, bot)
+      generateTextToVideo(
+        prompt,
+        videoModel,
+        telegram_id,
+        username,
+        is_ru,
+        bot,
+        bot_name
+      )
     } catch (error) {
       next(error)
     }
