@@ -5,7 +5,6 @@ import {
   updateUserLevelPlusOne,
   getUserBalance,
   createModelTraining,
-  updateLatestModelTraining,
 } from '@/core/supabase'
 import { getBotByName } from '@/core/bot'
 import { modeCosts, ModeEnum } from '@/price/helpers/modelsCost'
@@ -71,7 +70,8 @@ export const generateModelTraining = inngest.createFunction(
         return step.run('update-balance', async () => {
           const current = await getUserBalance(event.data.telegram_id)
           if (current === null) throw new Error('User not found')
-          return updateUserBalance(event.data.telegram_id, newBalance)
+          await updateUserBalance(event.data.telegram_id, newBalance)
+          return newBalance
         })
       },
     }
@@ -104,14 +104,16 @@ export const generateModelTraining = inngest.createFunction(
 
       createTrainingRecord: async () => {
         await step.run('create-training-record', async () => {
-          return createModelTraining({
+          const training = {
             telegram_id: event.data.telegram_id,
             model_name: event.data.modelName,
             trigger_word: event.data.triggerWord,
             zip_url: event.data.zipUrl,
             steps: event.data.steps,
             replicate_training_id: event.data.trainingId,
-          })
+          }
+          createModelTraining(training)
+          return training
         })
       },
 
@@ -183,9 +185,9 @@ export const generateModelTraining = inngest.createFunction(
               resolution: '512,768,1024',
               learning_rate: 0.0001,
               wandb_project: 'flux_train_replicate',
-              webhook_url: `${API_URL}/webhooks/replicate`,
-              webhook_events_filter: ['completed', 'failed', 'started'],
             },
+            webhook: `${API_URL}/webhooks/replicate`,
+            webhook_events_filter: ['start', 'output', 'logs', 'completed'],
           }
         )
         console.log('🚀 Training ID:', training.id)
