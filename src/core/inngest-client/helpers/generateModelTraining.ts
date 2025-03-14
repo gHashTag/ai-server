@@ -12,24 +12,13 @@ import { modeCosts, ModeEnum } from '@/price/helpers/modelsCost'
 import { inngest } from '@/core/inngest-client/clients'
 import { API_URL } from '@/config'
 import { BalanceHelper } from '@/helpers/inngest'
-import { getLatestModelUrl } from '@/core/replicate/getLatestModelUrl'
-import { Training } from 'replicate'
-import type { Prediction, Status } from 'replicate'
+
+import type { Prediction } from 'replicate'
 
 export interface ApiError extends Error {
   response?: {
     status: number
   }
-}
-
-interface TrainingResponse extends Training {
-  id: string
-  status: Status
-  model: string
-  version: string
-  created_at: string
-  completed_at?: string
-  error?: any
 }
 
 const activeTrainings = new Map<string, { cancel: () => void }>()
@@ -194,7 +183,7 @@ export const generateModelTraining = inngest.createFunction(
               learning_rate: 0.0001,
               wandb_project: 'flux_train_replicate',
               webhook_url: `${API_URL}/webhooks/replicate`,
-              webhook_events_filter: ['completed'],
+              webhook_events_filter: ['completed', 'failed', 'started'],
             },
           }
         )
@@ -267,142 +256,10 @@ export const generateModelTraining = inngest.createFunction(
       const training = await trainingSteps.startTraining(destination)
       console.log('🚀 Training ID:', training.id)
 
-      // 1. Добавляем обработку промежуточных статусов
-      const STATUS_HANDLERS = {
-        processing: async () => {
-          console.log('🔄 Training in progress...')
-        },
-        starting: async () => {
-          console.log('🚀 Training starting...')
-        },
-        queued: async (trainingId: string) => {
-          console.log('⏳ Training queued:', trainingId)
-        },
-      }
-
-      // 2. Обновляем блок обработки статусов
-      let status: Training['status'] = 'starting'
-      let attempts = 0
-      const MAX_ATTEMPTS = 100 // ~15 минут при 10s интервале
-
-      // 1. Объявляем переменную вне цикла
-      let updatedTraining: TrainingResponse | null = null
-
-      while (
-        status !== 'succeeded' &&
-        status !== 'failed' &&
-        status !== 'canceled' &&
-        attempts < MAX_ATTEMPTS
-      ) {
-        await new Promise(resolve => setTimeout(resolve, 10000))
-
-        // 2. Присваиваем значение объявленной переменной
-        updatedTraining = await replicate.trainings.get(training.id)
-        status = updatedTraining.status
-
-        if (updatedTraining.error) {
-          console.error('Training error details from Replicate:', {
-            error: updatedTraining.error,
-            status: updatedTraining.status,
-            id: updatedTraining.id,
-          })
-        }
-
-        // Обрабатываем известные промежуточные статусы
-        if (STATUS_HANDLERS[status]) {
-          await STATUS_HANDLERS[status](training.id)
-        } else {
-          console.warn(`⚠️ Unknown status: ${status}`)
-        }
-
-        // Обновляем статус в БД при каждом изменении
-        await updateLatestModelTraining(
-          event.data.telegram_id,
-          modelName,
-          {
-            status: status.toUpperCase(),
-            replicate_training_id: training.id,
-          },
-          'replicate'
-        )
-
-        attempts++
-      }
-
-      // 3. Добавляем обработку таймаута
-      if (attempts >= MAX_ATTEMPTS) {
-        console.error('⏰ Training timeout')
-        await updateLatestModelTraining(
-          event.data.telegram_id,
-          modelName,
-          {
-            status: 'TIMEOUT',
-            error: 'Training exceeded maximum duration',
-          },
-          'replicate'
-        )
-        throw new Error('Training timeout')
-      }
-
-      // 4. Унифицированная обработка финальных статусов
-      const STATUS_ACTIONS = {
-        succeeded: async () => {
-          console.log('✅ Training succeeded')
-          const model_url = await getLatestModelUrl(modelName)
-          await updateLatestModelTraining(
-            event.data.telegram_id,
-            modelName,
-            {
-              status: 'SUCCESS',
-              model_url,
-            },
-            'replicate'
-          )
-        },
-        failed: async () => {
-          console.error('❌ Training failed')
-          await updateLatestModelTraining(
-            event.data.telegram_id,
-            modelName,
-            {
-              status: 'FAILED',
-              error: updatedTraining?.error,
-            },
-            'replicate'
-          )
-        },
-        canceled: async () => {
-          console.log('🛑 Training canceled')
-          await updateLatestModelTraining(
-            event.data.telegram_id,
-            modelName,
-            {
-              status: 'CANCELED',
-            },
-            'replicate'
-          )
-        },
-      }
-
-      if (STATUS_ACTIONS[status]) {
-        await STATUS_ACTIONS[status]()
-      } else {
-        console.error('🚨 Unhandled final status:', status)
-        await updateLatestModelTraining(
-          event.data.telegram_id,
-          modelName,
-          {
-            status: 'UNKNOWN',
-            error: `Unexpected status: ${status}`,
-          },
-          'replicate'
-        )
-      }
-
-      // 10. Возвращаем промежуточный результат
+      // 2. Возвращаем immediate response
       return {
         success: true,
-        message: 'Обучение начато. Вы получите уведомление по завершении.',
+        message: 'Обучение запущено. Ожидайте уведомления.',
         trainingId: training.id,
       }
     } catch (error) {
