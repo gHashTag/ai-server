@@ -177,3 +177,5 @@ if (!process.env.AERENDER_PATH) {
   throw new Error('AERENDER_PATH is not set')
 }
 export const AERENDER_PATH = process.env.AERENDER_PATH
+
+export const INNGEST_WEBHOOK_URL = process.env.INNGEST_WEBHOOK_URL

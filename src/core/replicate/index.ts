@@ -5,6 +5,7 @@ export const replicate = new Replicate({
 })
 
 export type { WebhookEventType }
+
 export const modelPricing: Record<string, string> = {
   'black-forest-labs/flux-1.1-pro': '$0.040 / image',
   'black-forest-labs/flux-1.1-pro-ultra': '$0.060 / image',
