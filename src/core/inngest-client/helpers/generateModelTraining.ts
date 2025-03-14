@@ -9,7 +9,7 @@ import {
 import { getBotByName } from '@/core/bot'
 import { modeCosts, ModeEnum } from '@/price/helpers/modelsCost'
 import { inngest } from '@/core/inngest-client/clients'
-import { INNGEST_WEBHOOK_URL } from '@/config'
+import { API_URL } from '@/config'
 import { BalanceHelper } from '@/helpers/inngest'
 
 import type { Prediction } from 'replicate'
@@ -186,7 +186,7 @@ export const generateModelTraining = inngest.createFunction(
               learning_rate: 0.0001,
               wandb_project: 'flux_train_replicate',
             },
-            webhook: INNGEST_WEBHOOK_URL,
+            webhook: `${API_URL}/webhooks/replicate`,
             webhook_events_filter: ['completed'],
           }
         )
