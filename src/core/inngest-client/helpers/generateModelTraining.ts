@@ -187,7 +187,7 @@ export const generateModelTraining = inngest.createFunction(
               wandb_project: 'flux_train_replicate',
             },
             webhook: `${API_URL}/webhooks/replicate`,
-            webhook_events_filter: ['start', 'output', 'logs', 'completed'],
+            webhook_events_filter: ['completed'],
           }
         )
         console.log('🚀 Training ID:', training.id)
