@@ -5,17 +5,17 @@ import cookieParser from 'cookie-parser'
 import cors from 'cors'
 import helmet from 'helmet'
 import hpp from 'hpp'
-const server = require('@nexrender/server')
-const { start } = require('@nexrender/worker')
+// const server = require('@nexrender/server')
+// const { start } = require('@nexrender/worker')
 import swaggerJSDoc from 'swagger-jsdoc'
 import swaggerUi from 'swagger-ui-express'
 import {
   NODE_ENV,
   PORT,
   LOG_FORMAT,
-  ORIGIN,
-  CREDENTIALS,
-  NEXRENDER_PORT,
+  // ORIGIN,
+  // CREDENTIALS,
+  // NEXRENDER_PORT,
 } from '@config'
 import { Routes } from '@interfaces/routes.interface'
 import { getDynamicLogger, logger } from '@utils/logger'
@@ -23,15 +23,17 @@ import { getDynamicLogger, logger } from '@utils/logger'
 import { Server } from 'http'
 import path from 'path'
 import morgan from 'morgan'
-import { checkSecretKey } from './utils/checkSecretKey'
+// import { checkSecretKey } from './utils/checkSecretKey'
 import { fileUpload } from './utils/fileUpload'
+import { inngestRouter } from './routes/inngest.route'
+import { UploadRoute } from './routes/upload.route'
+import { inngest } from './core/inngest-client/clients'
+// const nexrenderPort = NEXRENDER_PORT
+// const secret = process.env.NEXRENDER_SECRET
 
-const nexrenderPort = NEXRENDER_PORT
-const secret = process.env.NEXRENDER_SECRET
-
-server.listen(nexrenderPort, secret, () => {
-  console.log(`🚀 Nexrender Server listening on port ${nexrenderPort}`)
-})
+// server.listen(nexrenderPort, secret, () => {
+//   console.log(`🚀 Nexrender Server listening on port ${nexrenderPort}`)
+// })
 
 export class App {
   public app: Application
@@ -78,10 +80,14 @@ export class App {
     })
     this.app.use(
       cors({
-        origin: ORIGIN,
-        credentials: CREDENTIALS,
-        methods: ['GET', 'POST', 'PUT', 'DELETE'],
-        allowedHeaders: ['Content-Type', 'Authorization'],
+        origin: '*',
+        methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+        allowedHeaders: [
+          'Content-Type',
+          'Authorization',
+          'x-inngest-signature',
+          'x-inngest-sdk',
+        ],
       })
     )
     this.app.use(hpp())
@@ -96,6 +102,16 @@ export class App {
   }
 
   private initializeRoutes(routes: Routes[]) {
+    this.app.use('/api/inngest', inngestRouter)
+    this.app.use('/api/upload', new UploadRoute().router)
+    this.app.get('/trigger', async (req, res) => {
+      await inngest.send({
+        name: 'test/hello',
+        data: { name: 'Пользователь' },
+      })
+      res.json({ status: 'Событие отправлено! 🚀' })
+    })
+
     routes.forEach(route => {
       this.app.use('/', route.router)
     })
@@ -132,6 +148,8 @@ export class App {
         message: 'API is working',
       })
     })
+
+    this.app.use('/api/upload', new UploadRoute().router)
   }
 
   private initializeSwagger() {

@@ -34,7 +34,7 @@
       "@core/*": ["core/*"],
       "@price/*": ["price/*"],
       "@config/*": ["config/*"],
-      "@supabase/*": ["supabase/*"]
+      "@supabase/*": ["supabase/*"],
     }
   },
   "include": ["src/**/*.ts", "src/**/*.json", ".env"],

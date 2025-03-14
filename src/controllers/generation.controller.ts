@@ -6,7 +6,7 @@ import { generateImageToVideo } from '@/services/generateImageToVideo'
 import { generateImageToPrompt } from '@/services/generateImageToPrompt'
 import { generateNeuroImage } from '@/services/generateNeuroImage'
 import { createVoiceAvatar } from '@/services/createVoiceAvatar'
-import { generateModelTraining } from '@/services/generateModelTraining'
+import { generateModelTraining } from '@/core/inngest-client/helpers/generateModelTraining'
 import { validateUserParams } from '@/middlewares/validateUserParams'
 import { generateNeuroImageV2 } from '@/services/generateNeuroImageV2'
 import { generateLipSync } from '@/services/generateLipSync'
@@ -16,6 +16,7 @@ import { API_URL } from '@/config'
 import { deleteFile } from '@/helpers'
 import path from 'path'
 import { getBotByName } from '@/core/bot'
+import { inngest } from '@/core/inngest-client/clients'
 export class GenerationController {
   public textToImage = async (
     req: Request,
@@ -343,8 +344,8 @@ export class GenerationController {
         res.status(400).json({ message: 'telegram_id is required' })
         return
       }
-      if (!is_ru) {
-        res.status(400).json({ message: 'is_ru is required' })
+      if (!bot_name) {
+        res.status(400).json({ message: 'bot_name is required' })
         return
       }
       const zipFile = req.files?.find(file => file.fieldname === 'zipUrl')
@@ -354,16 +355,19 @@ export class GenerationController {
       }
       // Создаем URL для доступа к файлу
       const zipUrl = `https://${req.headers.host}/uploads/${telegram_id}/${type}/${zipFile.filename}`
-      const { bot } = getBotByName(bot_name)
-      await generateModelTraining(
-        zipUrl,
-        triggerWord,
-        modelName,
-        steps,
-        telegram_id,
-        is_ru,
-        bot
-      )
+
+      await inngest.send({
+        name: 'model/training.start',
+        data: {
+          zipUrl,
+          triggerWord,
+          modelName,
+          steps,
+          telegram_id,
+          is_ru,
+          bot_name,
+        },
+      })
 
       res.status(200).json({ message: 'Model training started' })
     } catch (error) {
@@ -371,6 +375,7 @@ export class GenerationController {
       next(error)
     }
   }
+
   public createModelTrainingV2 = async (
     req: Request,
     res: Response,
