@@ -110,6 +110,7 @@ export const generateModelTraining = inngest.createFunction(
             trigger_word: event.data.triggerWord,
             zip_url: event.data.zipUrl,
             steps: event.data.steps,
+            replicate_training_id: event.data.trainingId,
           })
         })
       },
