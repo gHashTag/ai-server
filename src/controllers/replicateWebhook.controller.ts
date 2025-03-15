@@ -9,9 +9,10 @@ export class ReplicateWebhookController {
   async handleWebhook(req: Request, res: Response) {
     try {
       const event = req.body
+      console.log('🔄 Получен вебхук', event)
 
       // 🔒 Усиленная валидация
-      if (!event.id || !event.status || !event.metadata?.telegram_id) {
+      if (!event.id || !event.status) {
         console.warn(
           `⚠️ Invalid webhook payload: ${JSON.stringify(event, null, 2)}`
         )

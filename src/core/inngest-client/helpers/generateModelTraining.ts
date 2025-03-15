@@ -102,7 +102,7 @@ export const generateModelTraining = inngest.createFunction(
         ])
       },
 
-      createTrainingRecord: async () => {
+      createTrainingRecord: async (trainingId: string) => {
         await step.run('create-training-record', async () => {
           const training = {
             telegram_id: event.data.telegram_id,
@@ -110,8 +110,9 @@ export const generateModelTraining = inngest.createFunction(
             trigger_word: event.data.triggerWord,
             zip_url: event.data.zipUrl,
             steps: event.data.steps,
-            replicate_training_id: event.data.trainingId,
+            replicate_training_id: trainingId,
           }
+          console.log('🔵 Создание записи о тренировке', training)
           createModelTraining(training)
           return training
         })
@@ -254,11 +255,12 @@ export const generateModelTraining = inngest.createFunction(
       const destination = await trainingSteps.createReplicateModel(modelName)
       console.log('🎯 Destination:', destination)
       // 8. Создание записи о тренировке
-      await trainingSteps.createTrainingRecord()
+
       console.log('📝 Запись о тренировке создана')
       // 9. Запуск обучения
       const training = await trainingSteps.startTraining(destination)
       console.log('🚀 Training ID:', training.id)
+      await trainingSteps.createTrainingRecord(training.id)
 
       // 2. Возвращаем immediate response
       return {

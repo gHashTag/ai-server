@@ -12,19 +12,24 @@ export class ReplicateWebhookRoute {
     this.router.post(
       '/webhooks/replicate',
       (req, res, next) => {
-        logger.info('🔔 Входящий вебхук', {
-          headers: req.headers,
-          body: req.body,
-        })
+        logger.info('🔔 Входящий вебхук')
         next()
       },
-      validateReplicateSignature,
       async (req, res, next) => {
         try {
+          logger.debug('🌀 Запуск контроллера', {
+            bodyStatus: req.body.status,
+            predictionId: req.body.id,
+          })
+
           await this.controller.handleWebhook(req as any, res as any)
-          logger.info('✅ Вебхук успешно обработан')
+
+          if (!res.headersSent) {
+            logger.warn('⚠️ Контроллер не отправил ответ')
+            res.status(200).end()
+          }
         } catch (error) {
-          logger.error('❌ Ошибка обработки вебхука:', error)
+          logger.error('⚡ Поймана ошибка в обработчике:', error)
           next(error)
         }
       }
