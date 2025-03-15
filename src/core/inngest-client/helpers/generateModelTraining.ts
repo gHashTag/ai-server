@@ -187,9 +187,10 @@ export const generateModelTraining = inngest.createFunction(
               wandb_project: 'flux_train_replicate',
             },
             webhook: `${API_URL}/webhooks/replicate`,
-            webhook_events_filter: ['completed'],
+            webhook_events_filter: ['completed', 'start'],
           }
         )
+
         console.log('🚀 Training ID:', training.id)
         trainingSteps.registerCancelHandler(event.data.telegram_id, training.id)
         return training
