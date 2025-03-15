@@ -250,22 +250,129 @@ export const generateModelTraining = inngest.createFunction(
       // 6. Списание средств
       await helpers.updateBalance(balanceCheck.currentBalance - paymentAmount)
 
-      // 7. Создание/проверка модели
-      const destination = await trainingSteps.createReplicateModel(modelName)
-      console.log('🎯 Destination:', destination)
-      // 8. Создание записи о тренировке
+      // 7. Создание/проверка модели Replicate
+      const destination = await step.run('create-replicate-model', async () => {
+        try {
+          const username = process.env.REPLICATE_USERNAME
+          if (!username) throw new Error('REPLICATE_USERNAME не задан')
 
-      console.log('📝 Запись о тренировке создана')
-      // 9. Запуск обучения
-      const training = await trainingSteps.startTraining(destination)
-      console.log('🚀 Training ID:', training.id)
-      await trainingSteps.createTrainingRecord(training.id)
+          console.log('🔍 Проверка существования модели', { modelName })
+          try {
+            const existing = await replicate.models.get(username, modelName)
+            console.log('🔵 Существующая модель найдена:', existing.url)
+            return `${username}/${modelName}`
+          } catch (error) {
+            console.log('🏗️ Создание новой модели...')
+            const newModel = await replicate.models.create(
+              username,
+              modelName,
+              {
+                description: `LoRA: ${event.data.triggerWord}`,
+                visibility: 'public',
+                hardware: 'gpu-t4',
+              }
+            )
+            console.log('✅ Новая модель создана:', newModel.url)
+            return `${username}/${modelName}`
+          }
+        } catch (error) {
+          console.error('❌ Ошибка создания/проверки модели:', error)
+          throw error
+        }
+      })
+
+      console.log('🎯 Модель определена:', destination)
+
+      // 8. Запуск обучения с идемпотентностью
+      const trainingResult = await step.run(
+        'start-replicate-training',
+        async () => {
+          try {
+            // Создаем идемпотентный ключ
+            const idempotencyKey = `train_${event.data.telegram_id}_${
+              event.data.modelName
+            }_${Date.now()}`
+
+            // Добавляем идемпотентный ключ в опциях запроса
+            const requestOptions = {
+              destination: destination,
+              input: {
+                input_images: event.data.zipUrl,
+                trigger_word: event.data.triggerWord,
+                steps: event.data.steps,
+                lora_rank: 128,
+                optimizer: 'adamw8bit',
+                batch_size: 1,
+                resolution: '512,768,1024',
+                learning_rate: 0.0001,
+                wandb_project: 'flux_train_replicate',
+              },
+              webhook: `${API_URL}/webhooks/replicate`,
+              webhook_events_filter: ['completed'],
+              idempotency_key: idempotencyKey,
+            }
+
+            const training = await replicate.trainings.create(
+              'ostris',
+              'flux-dev-lora-trainer',
+              'e440909d3512c31646ee2e0c7d6f6f4923224863a6a10c494606e79fb5844497',
+              requestOptions as any
+            )
+
+            console.log('🚀 Тренировка запущена. ID:', training.id)
+            return training
+          } catch (error) {
+            // Проверяем не дубликат ли это
+            if (error.response?.status === 409) {
+              console.log('⚠️ Обнаружен дублирующий запрос тренировки')
+
+              // Используем официальное API для получения списка тренировок
+              const trainingsResponse = await replicate.trainings.list()
+
+              // Правильно обращаемся к results для получения массива
+              if (
+                trainingsResponse.results &&
+                trainingsResponse.results.length > 0
+              ) {
+                console.log('♻️ Используем последнюю созданную тренировку')
+                return trainingsResponse.results[0]
+              }
+            }
+
+            console.error('💥 Ошибка старта тренировки:', error)
+            throw error
+          }
+        }
+      )
+
+      console.log('🚀 Тренировка создана:', trainingResult.id)
+
+      // 9. Создание записи о тренировке
+      await step.run('create-training-record', async () => {
+        try {
+          // Используем существующую функцию из проекта
+          const trainingRecord = await createModelTraining({
+            telegram_id: event.data.telegram_id,
+            model_name: event.data.modelName,
+            trigger_word: event.data.triggerWord,
+            zip_url: event.data.zipUrl,
+            steps: event.data.steps,
+            replicate_training_id: trainingResult.id,
+          })
+
+          console.log('📝 Запись о тренировке создана', trainingRecord)
+          return { success: true }
+        } catch (error) {
+          console.error('📋 Ошибка создания записи:', error)
+          throw error
+        }
+      })
 
       // 2. Возвращаем immediate response
       return {
         success: true,
         message: 'Обучение запущено. Ожидайте уведомления.',
-        trainingId: training.id,
+        trainingId: trainingResult.id,
       }
     } catch (error) {
       console.error('🔥 Critical Error:', error)
