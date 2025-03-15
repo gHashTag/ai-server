@@ -42,7 +42,6 @@ const TRAINING_MESSAGES = {
 export const generateModelTraining = inngest.createFunction(
   {
     id: 'model-training',
-    retries: 3,
     concurrency: { limit: 2, key: 'event.data.telegram_id' },
   },
   { event: 'model/training.start' },
@@ -188,7 +187,7 @@ export const generateModelTraining = inngest.createFunction(
               wandb_project: 'flux_train_replicate',
             },
             webhook: `${API_URL}/webhooks/replicate`,
-            webhook_events_filter: ['completed', 'start'],
+            webhook_events_filter: ['completed'],
           }
         )
 

@@ -9,7 +9,8 @@ export async function getTrainingWithUser(trainingId: string) {
         *,
         users (
           bot_name,
-          telegram_id
+          telegram_id,
+          language_code
         )
       `
       )
@@ -27,6 +28,7 @@ export async function getTrainingWithUser(trainingId: string) {
       users: {
         bot_name: string
         telegram_id: number
+        language_code: string
       } | null
     }
   } catch (error) {

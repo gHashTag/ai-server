@@ -55,15 +55,17 @@ export class NotificationService {
   // Дополнительные методы сервиса
   async sendSuccessNotification(
     telegramId: string,
-    modelUrl: string
+    botName: string,
+    is_ru: boolean
   ): Promise<void> {
     try {
-      const bot = await this.getBotInstance('ZavaraBot')
-      await bot.telegram.sendMessage(
-        telegramId,
-        `🎉 *Обучение завершено!*\n\n[Скачать модель](${modelUrl})`,
-        { parse_mode: 'Markdown' }
-      )
+      const bot = await this.getBotInstance(botName)
+      const message = is_ru
+        ? '🎉 Обучение завершено! 🎉\n\nМодель готова к использованию!\n\nНажмите 📸 Нейрофото в главном меню, чтобы использовать модель.'
+        : '🎉 Training completed! 🎉\n\nModel is ready to use!\n\nClick 📸 Neurophoto in the main menu to use the model.'
+      await bot.telegram.sendMessage(telegramId, message, {
+        parse_mode: 'Markdown',
+      })
     } catch (error) {
       console.error('Ошибка отправки успешного уведомления:', error)
     }
