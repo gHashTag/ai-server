@@ -1,4 +1,4 @@
-import { Router, RequestHandler } from 'express'
+import { Router } from 'express'
 import { validateReplicateSignature } from '../middlewares/replicateWebhook.middleware'
 import { ReplicateWebhookController } from '../controllers/replicateWebhook.controller'
 

@@ -361,7 +361,7 @@ export const generateModelTraining = inngest.createFunction(
           })
 
           console.log('📝 Запись о тренировке создана', trainingRecord)
-          return { success: true }
+          return trainingRecord
         } catch (error) {
           console.error('📋 Ошибка создания записи:', error)
           throw error
