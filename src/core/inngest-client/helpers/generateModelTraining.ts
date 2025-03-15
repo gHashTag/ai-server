@@ -48,9 +48,9 @@ export const generateModelTraining = inngest.createFunction(
 
   async ({ event, step }) => {
     // 🔄 Вспомогательные функции
-    const { bot } = getBotByName(event.data.bot_name)
+    const { bot } = getBotByName(event.data.botName)
     if (!bot) {
-      throw new Error(`❌ Бот ${event.data.bot_name} не найден`)
+      throw new Error(`❌ Бот ${event.data.botName} не найден`)
     }
     const helpers = {
       sendMessage: async (message: string) => {
@@ -283,62 +283,64 @@ export const generateModelTraining = inngest.createFunction(
 
       console.log('🎯 Модель определена:', destination)
 
-      // 8. Запуск обучения с идемпотентностью
+      // 8. Запуск обучения с Replicate и отправка кнопки отмены
       const trainingResult = await step.run(
         'start-replicate-training',
         async () => {
           try {
-            // Создаем идемпотентный ключ
-            const idempotencyKey = `train_${event.data.telegram_id}_${
-              event.data.modelName
-            }_${Date.now()}`
-
-            // Добавляем идемпотентный ключ в опциях запроса
-            const requestOptions = {
-              destination: destination,
-              input: {
-                input_images: event.data.zipUrl,
-                trigger_word: event.data.triggerWord,
-                steps: event.data.steps,
-                lora_rank: 128,
-                optimizer: 'adamw8bit',
-                batch_size: 1,
-                resolution: '512,768,1024',
-                learning_rate: 0.0001,
-                wandb_project: 'flux_train_replicate',
-              },
-              webhook: `${API_URL}/webhooks/replicate`,
-              webhook_events_filter: ['completed'],
-              idempotency_key: idempotencyKey,
-            }
-
             const training = await replicate.trainings.create(
               'ostris',
               'flux-dev-lora-trainer',
-              'e440909d3512c31646ee2e0c7d6f6f4923224863a6a10c494606e79fb5844497',
-              requestOptions as any
+              'b6af14222e6bd9be257cbc1ea4afda3cd0503e1133083b9d1de0364d8568e6ef',
+              {
+                destination: destination as `${string}/${string}`,
+                input: {
+                  input_images: event.data.zipUrl,
+                  trigger_word: event.data.triggerWord,
+                  steps: event.data.steps,
+                  lora_rank: 128,
+                  optimizer: 'adamw8bit',
+                  batch_size: 1,
+                  resolution: '512,768,1024',
+                  learning_rate: 0.0001,
+                  wandb_project: 'flux_train_replicate',
+                },
+                webhook: `${API_URL}/webhooks/replicate`,
+                webhook_events_filter: ['completed'],
+              }
             )
 
             console.log('🚀 Тренировка запущена. ID:', training.id)
-            return training
-          } catch (error) {
-            // Проверяем не дубликат ли это
-            if (error.response?.status === 409) {
-              console.log('⚠️ Обнаружен дублирующий запрос тренировки')
+            console.log('📡 URL отмены:', training.urls?.cancel)
 
-              // Используем официальное API для получения списка тренировок
-              const trainingsResponse = await replicate.trainings.list()
+            // Отправляем сообщение с кнопкой отмены
+            if (bot && training.urls?.cancel) {
+              // Формируем payload для callback_data (с ограничением длины)
+              const cancelPayload = `cancel_train:${training.id}`
 
-              // Правильно обращаемся к results для получения массива
-              if (
-                trainingsResponse.results &&
-                trainingsResponse.results.length > 0
-              ) {
-                console.log('♻️ Используем последнюю созданную тренировку')
-                return trainingsResponse.results[0]
-              }
+              await bot.telegram.sendMessage(
+                event.data.telegram_id,
+                is_ru
+                  ? `🔄 *Обучение модели началось*\n\nМодель: ${event.data.modelName}\nТриггер: \`${event.data.triggerWord}\`\n\nЭто займет 30-40 минут.\nВы можете отменить процесс кнопкой ниже.`
+                  : `🔄 *Model training started*\n\nModel: ${event.data.modelName}\nTrigger: \`${event.data.triggerWord}\`\n\nIt will take 30-40 minutes.\nYou can cancel the process by the button below.`,
+                {
+                  parse_mode: 'Markdown',
+                  reply_markup: {
+                    inline_keyboard: [
+                      [
+                        {
+                          text: '❌ Отменить тренировку',
+                          callback_data: cancelPayload,
+                        },
+                      ],
+                    ],
+                  },
+                }
+              )
             }
 
+            return training
+          } catch (error) {
             console.error('💥 Ошибка старта тренировки:', error)
             throw error
           }
@@ -358,6 +360,7 @@ export const generateModelTraining = inngest.createFunction(
             zip_url: event.data.zipUrl,
             steps: event.data.steps,
             replicate_training_id: trainingResult.id,
+            cancel_url: trainingResult.urls?.cancel,
           })
 
           console.log('📝 Запись о тренировке создана', trainingRecord)

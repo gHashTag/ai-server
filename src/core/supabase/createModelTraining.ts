@@ -10,6 +10,7 @@ export interface ModelTraining {
   status?: string
   error?: string
   steps?: number
+  cancel_url?: string
 }
 
 export const createModelTraining = async (training: ModelTraining) => {
