@@ -357,7 +357,7 @@ export class GenerationController {
       const zipUrl = `https://${req.headers.host}/uploads/${telegram_id}/${type}/${zipFile.filename}`
 
       await inngest.send({
-        name: 'model/training.start',
+        name: `model/training.start-${modelName}-${triggerWord}-${bot_name}-${Date.now()}`,
         data: {
           zipUrl,
           triggerWord,

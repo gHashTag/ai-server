@@ -20,6 +20,17 @@ export interface ApiError extends Error {
   }
 }
 
+// Определяем типы для наших событий
+interface TrainingEventData {
+  bot_name: string
+  is_ru: string | boolean
+  modelName: string
+  steps: string | number
+  telegram_id: string
+  triggerWord: string
+  zipUrl: string
+}
+
 const activeTrainings = new Map<string, { cancel: () => void }>()
 
 // Локализованные сообщения
@@ -38,27 +49,41 @@ const TRAINING_MESSAGES = {
   }),
 }
 
-// Если стоимость фиксированная:
+// Определяем функцию с правильной идемпотентностью
 export const generateModelTraining = inngest.createFunction(
   {
     id: 'model-training',
-    concurrency: { limit: 2, key: 'event.data.telegram_id' },
+    concurrency: 2,
   },
   { event: 'model/training.start' },
-
   async ({ event, step }) => {
+    // Добавляем информативный лог о входящем событии
+    console.log(
+      `🛎️ Получено событие ID: ${event.id}, timestamp: ${new Date(
+        event.ts
+      ).toISOString()}`
+    )
+    console.log(
+      `🎯 Ключ идемпотентности: train:${event.data.telegram_id}:${
+        event.data.modelName
+      }:${new Date().toISOString().split('T')[0]}`
+    )
+
+    // Приведение типов для event.data
+    const eventData = event.data as TrainingEventData
+
     // 🔄 Вспомогательные функции
-    console.log('🔵 event.data', event.data)
-    const { bot } = getBotByName(event.data.botName)
-    console.log('🔵 Бот:', bot)
+    console.log('🔵 event.data', eventData)
+    const { bot } = getBotByName(eventData.bot_name)
+
     if (!bot) {
-      throw new Error(`❌ Бот ${event.data.botName} не найден`)
+      throw new Error(`❌ Бот ${eventData.bot_name} не найден`)
     }
     const helpers = {
       sendMessage: async (message: string) => {
         await step.run('send-message', async () => {
           try {
-            await bot.telegram.sendMessage(event.data.telegram_id, message)
+            await bot.telegram.sendMessage(eventData.telegram_id, message)
             return true
           } catch (error) {
             console.error('📩 Send failed:', error)
@@ -69,9 +94,9 @@ export const generateModelTraining = inngest.createFunction(
 
       updateBalance: async (newBalance: number) => {
         return step.run('update-balance', async () => {
-          const current = await getUserBalance(event.data.telegram_id)
+          const current = await getUserBalance(eventData.telegram_id)
           if (current === null) throw new Error('User not found')
-          await updateUserBalance(event.data.telegram_id, newBalance)
+          await updateUserBalance(eventData.telegram_id, newBalance)
           return newBalance
         })
       },
@@ -80,7 +105,7 @@ export const generateModelTraining = inngest.createFunction(
     // 🧩 Основные шаги процесса
     const trainingSteps = {
       validateInput: async () => {
-        const { modelName, steps: rawSteps, is_ru } = event.data
+        const { modelName, steps: rawSteps, is_ru } = eventData
         const steps = Number(rawSteps)
 
         if (isNaN(steps) || steps <= 0) {
@@ -93,7 +118,7 @@ export const generateModelTraining = inngest.createFunction(
       },
 
       checkUserAndBalance: async () => {
-        const { telegram_id } = event.data
+        const { telegram_id } = eventData
         return Promise.all([
           step.run('get-user', async () => {
             const user = await getUserByTelegramId(telegram_id)
@@ -105,12 +130,15 @@ export const generateModelTraining = inngest.createFunction(
 
       createTrainingRecord: async (trainingId: string) => {
         await step.run('create-training-record', async () => {
+          // Преобразуем steps в число
+          const steps = Number(eventData.steps)
+
           const training = {
-            telegram_id: event.data.telegram_id,
-            model_name: event.data.modelName,
-            trigger_word: event.data.triggerWord,
-            zip_url: event.data.zipUrl,
-            steps: event.data.steps,
+            telegram_id: eventData.telegram_id,
+            model_name: eventData.modelName,
+            trigger_word: eventData.triggerWord,
+            zip_url: eventData.zipUrl,
+            steps: steps, // Теперь гарантированно число
             replicate_training_id: trainingId,
           }
           console.log('🔵 Создание записи о тренировке', training)
@@ -134,12 +162,12 @@ export const generateModelTraining = inngest.createFunction(
               username,
               modelName,
               {
-                description: `LoRA: ${event.data.triggerWord}`,
+                description: `LoRA: ${eventData.triggerWord}`,
                 visibility: 'public',
                 hardware: 'gpu-t4',
               }
             )
-            console.log('✅ Модель создана:', newModel.latest_version.id)
+            console.log('✅ Модель создана:', newModel.latest_version?.id)
             await new Promise(resolve => setTimeout(resolve, 5000))
             return `${username}/${modelName}`
           } catch (createError) {
@@ -166,7 +194,7 @@ export const generateModelTraining = inngest.createFunction(
       },
 
       startTraining: async (destination: string) => {
-        if (!event.data.zipUrl || !event.data.triggerWord) {
+        if (!eventData.zipUrl || !eventData.triggerWord) {
           throw new Error(
             '❌ Отсутствуют обязательные параметры: zipUrl или triggerWord'
           )
@@ -178,9 +206,9 @@ export const generateModelTraining = inngest.createFunction(
           {
             destination: destination as `${string}/${string}`,
             input: {
-              input_images: event.data.zipUrl,
-              trigger_word: event.data.triggerWord,
-              steps: event.data.steps,
+              input_images: eventData.zipUrl,
+              trigger_word: eventData.triggerWord,
+              steps: Number(eventData.steps), // Преобразуем в число
               lora_rank: 128,
               optimizer: 'adamw8bit',
               batch_size: 1,
@@ -194,7 +222,7 @@ export const generateModelTraining = inngest.createFunction(
         )
 
         console.log('🚀 Training ID:', training.id)
-        trainingSteps.registerCancelHandler(event.data.telegram_id, training.id)
+        trainingSteps.registerCancelHandler(eventData.telegram_id, training.id)
         return training
       },
     }
@@ -203,8 +231,11 @@ export const generateModelTraining = inngest.createFunction(
 
     // 🚀 Основной процесс
     try {
-      const { is_ru } = event.data
-      await helpers.sendMessage(TRAINING_MESSAGES.start[is_ru ? 'ru' : 'en'])
+      // Преобразуем is_ru к булевому типу если это строка
+      const isRussian = eventData.is_ru === true || eventData.is_ru === 'true'
+      await helpers.sendMessage(
+        TRAINING_MESSAGES.start[isRussian ? 'ru' : 'en']
+      )
 
       // 1. Валидация входных данных
       const { modelName, steps } = await trainingSteps.validateInput()
@@ -216,7 +247,7 @@ export const generateModelTraining = inngest.createFunction(
       // 3. Обновление уровня при необходимости
       if (user.level === 0) {
         await step.run('update-level', () =>
-          updateUserLevelPlusOne(event.data.telegram_id, 0)
+          updateUserLevelPlusOne(eventData.telegram_id, 0)
         )
       }
 
@@ -228,12 +259,12 @@ export const generateModelTraining = inngest.createFunction(
       // 5. Проверка баланса
       balanceCheck = await step.run('balance-check', async () => {
         const result = await BalanceHelper.checkBalance(
-          event.data.telegram_id,
+          eventData.telegram_id,
           paymentAmount,
           {
             notifyUser: true,
             botInstance: bot,
-            isRu: event.data.is_ru,
+            isRu: isRussian,
           }
         )
         console.log('💰 Balance check result:', result)
@@ -244,8 +275,8 @@ export const generateModelTraining = inngest.createFunction(
         }
       })
 
-      if (!balanceCheck.success) {
-        console.log('🚫 Недостаточно средств:', balanceCheck.currentBalance)
+      if (!balanceCheck?.success) {
+        console.log('🚫 Недостаточно средств:', balanceCheck?.currentBalance)
         throw new Error('Insufficient balance')
       }
 
@@ -269,7 +300,7 @@ export const generateModelTraining = inngest.createFunction(
               username,
               modelName,
               {
-                description: `LoRA: ${event.data.triggerWord}`,
+                description: `LoRA: ${eventData.triggerWord}`,
                 visibility: 'public',
                 hardware: 'gpu-t4',
               }
@@ -297,9 +328,9 @@ export const generateModelTraining = inngest.createFunction(
               {
                 destination: destination as `${string}/${string}`,
                 input: {
-                  input_images: event.data.zipUrl,
-                  trigger_word: event.data.triggerWord,
-                  steps: event.data.steps,
+                  input_images: eventData.zipUrl,
+                  trigger_word: eventData.triggerWord,
+                  steps: Number(eventData.steps), // Преобразуем в число
                   lora_rank: 128,
                   optimizer: 'adamw8bit',
                   batch_size: 1,
@@ -321,10 +352,10 @@ export const generateModelTraining = inngest.createFunction(
               const cancelPayload = `cancel_train:${training.id}`
 
               await bot.telegram.sendMessage(
-                event.data.telegram_id,
-                is_ru
-                  ? `🔄 *Обучение модели началось*\n\nМодель: ${event.data.modelName}\nТриггер: \`${event.data.triggerWord}\`\n\nЭто займет 30-40 минут.\nВы можете отменить процесс кнопкой ниже.`
-                  : `🔄 *Model training started*\n\nModel: ${event.data.modelName}\nTrigger: \`${event.data.triggerWord}\`\n\nIt will take 30-40 minutes.\nYou can cancel the process by the button below.`,
+                eventData.telegram_id,
+                isRussian
+                  ? `🔄 *Обучение модели началось*\n\nМодель: ${eventData.modelName}\nТриггер: \`${eventData.triggerWord}\`\n\nЭто займет 30-40 минут.\nВы можете отменить процесс кнопкой ниже.`
+                  : `🔄 *Model training started*\n\nModel: ${eventData.modelName}\nTrigger: \`${eventData.triggerWord}\`\n\nIt will take 30-40 minutes.\nYou can cancel the process by the button below.`,
                 {
                   parse_mode: 'Markdown',
                   reply_markup: {
@@ -355,16 +386,18 @@ export const generateModelTraining = inngest.createFunction(
       await step.run('create-training-record', async () => {
         try {
           // Используем существующую функцию из проекта
+          // Преобразуем steps в число
+          const steps = Number(eventData.steps)
+
           const trainingRecord = await createModelTraining({
-            telegram_id: event.data.telegram_id,
-            model_name: event.data.modelName,
-            trigger_word: event.data.triggerWord,
-            zip_url: event.data.zipUrl,
-            steps: event.data.steps,
+            telegram_id: eventData.telegram_id,
+            model_name: eventData.modelName,
+            trigger_word: eventData.triggerWord,
+            zip_url: eventData.zipUrl,
+            steps: steps, // Теперь гарантированно число
             replicate_training_id: trainingResult.id,
             cancel_url: trainingResult.urls?.cancel,
           })
-
           console.log('📝 Запись о тренировке создана', trainingRecord)
           return trainingRecord
         } catch (error) {
@@ -373,7 +406,7 @@ export const generateModelTraining = inngest.createFunction(
         }
       })
 
-      // 2. Возвращаем immediate response
+      // Возвращаем результат
       return {
         success: true,
         message: 'Обучение запущено. Ожидайте уведомления.',
@@ -382,17 +415,20 @@ export const generateModelTraining = inngest.createFunction(
     } catch (error) {
       console.error('🔥 Critical Error:', error)
 
-      // 4. Добавляем проверку через optional chaining
+      // Добавляем проверку через optional chaining
       if (balanceCheck?.success) {
         await helpers.updateBalance(balanceCheck.currentBalance)
       }
 
+      // Преобразуем is_ru к булевому типу если это строка
+      const isRussian = eventData.is_ru === true || eventData.is_ru === 'true'
+
       await helpers.sendMessage(
-        TRAINING_MESSAGES.error(error.message)[event.data.is_ru ? 'ru' : 'en']
+        TRAINING_MESSAGES.error(error.message)[isRussian ? 'ru' : 'en']
       )
 
-      if (activeTrainings.has(event.data.telegram_id)) {
-        activeTrainings.get(event.data.telegram_id)?.cancel()
+      if (activeTrainings.has(eventData.telegram_id)) {
+        activeTrainings.get(eventData.telegram_id)?.cancel()
         console.log('🔄 Automatic cancel triggered')
       }
 
