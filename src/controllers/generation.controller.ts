@@ -357,7 +357,7 @@ export class GenerationController {
       const zipUrl = `https://${req.headers.host}/uploads/${telegram_id}/${type}/${zipFile.filename}`
 
       await inngest.send({
-        name: `model/training.start-${modelName}-${triggerWord}-${bot_name}-${Date.now()}`,
+        name: `model/training.start`,
         data: {
           zipUrl,
           triggerWord,
@@ -366,6 +366,7 @@ export class GenerationController {
           telegram_id,
           is_ru,
           bot_name,
+          idempotencyKey: `train:${telegram_id}:${modelName}-${Date.now()}`,
         },
       })
 

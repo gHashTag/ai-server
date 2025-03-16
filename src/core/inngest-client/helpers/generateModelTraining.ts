@@ -54,6 +54,7 @@ const TRAINING_MESSAGES = {
 export const generateModelTraining = inngest.createFunction(
   {
     id: 'model-training',
+    idempotency: 'event.data.idempotencyKey',
     concurrency: 2,
   },
   { event: 'model/training.start' },
@@ -63,7 +64,7 @@ export const generateModelTraining = inngest.createFunction(
       message: 'Получено событие тренировки модели',
       eventId: event.id,
       timestamp: new Date(event.ts).toISOString(),
-      idempotencyKey: `train:${event.data.telegram_id}:${event.data.modelName}`,
+      idempotency: event.data.idempotencyKey,
     })
 
     // Приведение типов для event.data
