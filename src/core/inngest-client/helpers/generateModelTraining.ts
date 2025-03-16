@@ -15,10 +15,52 @@ import { logger } from '@utils/logger'
 
 import type { Prediction } from 'replicate'
 
-export interface ApiError extends Error {
-  response?: {
-    status: number
+// Кэш для предотвращения двойных запусков для одного пользователя и модели
+// Ключ: `${telegram_id}:${modelName}`, Значение: метка времени последнего запуска
+const replicateTrainingCache = new Map<string, number>()
+
+// Время кэширования - 5 минут
+const CACHE_TTL_MS = 5 * 60 * 1000
+
+// Функция для проверки кэша
+function checkAndSetTrainingCache(
+  telegram_id: string,
+  modelName: string
+): boolean {
+  const cacheKey = `${telegram_id}:${modelName}`
+  const now = Date.now()
+
+  // Проверяем, есть ли в кэше запись и не устарела ли она
+  const lastAttempt = replicateTrainingCache.get(cacheKey)
+  if (lastAttempt && now - lastAttempt < CACHE_TTL_MS) {
+    logger.warn({
+      message:
+        'Обнаружена попытка повторного запуска тренировки в течение защитного периода',
+      telegram_id,
+      modelName,
+      lastAttempt: new Date(lastAttempt).toISOString(),
+      ttlMs: CACHE_TTL_MS,
+    })
+    return false // Защитный период активен, блокируем запуск
   }
+
+  // Устанавливаем новую метку времени
+  replicateTrainingCache.set(cacheKey, now)
+  logger.info({
+    message: 'Установлена новая метка для защитного периода тренировки',
+    telegram_id,
+    modelName,
+    timestamp: new Date(now).toISOString(),
+  })
+
+  // Очистка устаревших записей (необязательно, но хорошая практика)
+  for (const [key, timestamp] of replicateTrainingCache.entries()) {
+    if (now - timestamp > CACHE_TTL_MS) {
+      replicateTrainingCache.delete(key)
+    }
+  }
+
+  return true // Разрешаем запуск
 }
 
 // Определяем типы для наших событий
@@ -48,14 +90,18 @@ const TRAINING_MESSAGES = {
     ru: `❌ Ошибка: ${error}`,
     en: `❌ Error: ${error}`,
   }),
+  duplicateRequest: {
+    ru: '⚠️ Запрос на обучение этой модели уже обрабатывается. Пожалуйста, подождите...',
+    en: '⚠️ Your training request is already processing. Please wait...',
+  },
 }
 
 // Определяем функцию с правильной идемпотентностью
 export const generateModelTraining = inngest.createFunction(
   {
     id: 'model-training',
-    idempotency: 'event.data.idempotencyKey',
     concurrency: 2,
+    idempotency: `train:{event.data.telegram_id}:{event.data.modelName}-${new Date().toISOString()}`,
   },
   { event: 'model/training.start' },
   async ({ event, step }) => {
@@ -64,11 +110,44 @@ export const generateModelTraining = inngest.createFunction(
       message: 'Получено событие тренировки модели',
       eventId: event.id,
       timestamp: new Date(event.ts).toISOString(),
-      idempotency: event.data.idempotencyKey,
+      idempotencyKey: `train:${event.data.telegram_id}:${event.data.modelName}`,
     })
 
     // Приведение типов для event.data
     const eventData = event.data as TrainingEventData
+
+    // Проверка защитного периода - ДО любых других действий
+    if (!checkAndSetTrainingCache(eventData.telegram_id, eventData.modelName)) {
+      // Получение бота для отправки уведомления
+      const { bot } = getBotByName(eventData.bot_name)
+
+      if (bot) {
+        const isRussian = eventData.is_ru === true || eventData.is_ru === 'true'
+        try {
+          await bot.telegram.sendMessage(
+            eventData.telegram_id,
+            TRAINING_MESSAGES.duplicateRequest[isRussian ? 'ru' : 'en']
+          )
+        } catch (error) {
+          logger.error({
+            message: 'Не удалось отправить уведомление о дублированном запросе',
+            error: error.message,
+          })
+        }
+      }
+
+      logger.info({
+        message: 'Запрос на тренировку отклонен из-за защитного периода',
+        telegram_id: eventData.telegram_id,
+        modelName: eventData.modelName,
+      })
+
+      return {
+        success: false,
+        message: 'Duplicate request within throttle period',
+        throttled: true,
+      }
+    }
 
     // 🔄 Вспомогательные функции
     logger.debug({ message: 'Данные события', data: eventData })
@@ -415,6 +494,15 @@ export const generateModelTraining = inngest.createFunction(
         'start-replicate-training',
         async () => {
           try {
+            // Проверяем, нет ли уже запущенной тренировки в Replicate
+            // Дополнительная мера безопасности перед вызовом API
+            const cacheKey = `${eventData.telegram_id}:${eventData.modelName}`
+            logger.info({
+              message: 'Подготовка к запуску тренировки в Replicate',
+              cacheKey,
+              destination,
+            })
+
             const training = await replicate.trainings.create(
               'ostris',
               'flux-dev-lora-trainer',
@@ -424,7 +512,7 @@ export const generateModelTraining = inngest.createFunction(
                 input: {
                   input_images: eventData.zipUrl,
                   trigger_word: eventData.triggerWord,
-                  steps: Number(eventData.steps), // Преобразуем в число
+                  steps: Number(eventData.steps),
                   lora_rank: 128,
                   optimizer: 'adamw8bit',
                   batch_size: 1,
@@ -437,8 +525,12 @@ export const generateModelTraining = inngest.createFunction(
               }
             )
 
-            logger.info('🚀 Тренировка запущена. ID:', training.id)
-            logger.info('📡 URL отмены:', training.urls?.cancel)
+            logger.info({
+              message: 'Тренировка успешно запущена в Replicate',
+              trainingId: training.id,
+              telegram_id: eventData.telegram_id,
+              modelName: eventData.modelName,
+            })
 
             // Отправляем сообщение с кнопкой отмены
             if (bot && training.urls?.cancel) {
@@ -468,7 +560,18 @@ export const generateModelTraining = inngest.createFunction(
 
             return training
           } catch (error) {
-            logger.error('💥 Ошибка старта тренировки:', error)
+            // Если произошла ошибка, удаляем запись из кэша,
+            // чтобы разрешить повторные попытки
+            const cacheKey = `${eventData.telegram_id}:${eventData.modelName}`
+            replicateTrainingCache.delete(cacheKey)
+
+            logger.error({
+              message: 'Ошибка запуска тренировки в Replicate, кэш очищен',
+              error: error.message,
+              stack: error.stack,
+              telegram_id: eventData.telegram_id,
+            })
+
             throw error
           }
         }
