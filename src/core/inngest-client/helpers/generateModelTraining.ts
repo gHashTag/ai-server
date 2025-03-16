@@ -48,7 +48,9 @@ export const generateModelTraining = inngest.createFunction(
 
   async ({ event, step }) => {
     // 🔄 Вспомогательные функции
+    console.log('🔵 event.data', event.data)
     const { bot } = getBotByName(event.data.botName)
+    console.log('🔵 Бот:', bot)
     if (!bot) {
       throw new Error(`❌ Бот ${event.data.botName} не найден`)
     }
