@@ -189,7 +189,7 @@ export const generateModelTraining = inngest.createFunction(
   {
     id: 'model-training',
     concurrency: 2,
-    idempotency: 'train:{event.data.telegram_id}:{event.data.modelName}',
+    idempotency: 'event.data.telegram_id + "-" + event.data.modelName',
   },
   { event: 'model/training.start' },
   async ({ event, step }) => {

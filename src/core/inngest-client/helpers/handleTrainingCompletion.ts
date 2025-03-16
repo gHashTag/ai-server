@@ -18,7 +18,7 @@ export const handleTrainingCompletion = inngest.createFunction(
         '🎯 Training Completion Event:',
         JSON.stringify(event, null, 2)
       )
-      return 'logged'
+      return event.data.status
     })
 
     // 2. Обновляем статус в базе данных
