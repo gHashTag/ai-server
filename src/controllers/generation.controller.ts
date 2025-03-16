@@ -6,7 +6,7 @@ import { generateImageToVideo } from '@/services/generateImageToVideo'
 import { generateImageToPrompt } from '@/services/generateImageToPrompt'
 import { generateNeuroImage } from '@/services/generateNeuroImage'
 import { createVoiceAvatar } from '@/services/createVoiceAvatar'
-import { generateModelTraining } from '@/core/inngest-client/helpers/generateModelTraining'
+
 import { validateUserParams } from '@/middlewares/validateUserParams'
 import { generateNeuroImageV2 } from '@/services/generateNeuroImageV2'
 import { generateLipSync } from '@/services/generateLipSync'

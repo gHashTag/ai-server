@@ -1,5 +1,5 @@
 import { Router } from 'express'
-import { validateReplicateSignature } from '../middlewares/replicateWebhook.middleware'
+
 import { ReplicateWebhookController } from '../controllers/replicateWebhook.controller'
 
 import { logger } from '@utils/logger'

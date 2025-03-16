@@ -12,56 +12,138 @@ import { inngest } from '@/core/inngest-client/clients'
 import { API_URL } from '@/config'
 import { BalanceHelper } from '@/helpers/inngest'
 import { logger } from '@utils/logger'
+import { supabase } from '@/core/supabase'
 
 import type { Prediction } from 'replicate'
 
-// Кэш для предотвращения двойных запусков для одного пользователя и модели
-// Ключ: `${telegram_id}:${modelName}`, Значение: метка времени последнего запуска
-const replicateTrainingCache = new Map<string, number>()
+// Более чёткое определение типов
+type ActiveCheckFromDB = {
+  exists: true
+  source: 'database'
+  training: {
+    id: any
+    replicate_training_id: any
+    status: any
+  }
+}
 
-// Время кэширования - 5 минут
-const CACHE_TTL_MS = 5 * 60 * 1000
+type ActiveCheckFromCache = {
+  exists: true
+  source: 'cache'
+  cachedEntry: {
+    timestamp: number
+    status: string
+    trainingId?: string
+  }
+}
 
-// Функция для проверки кэша
+type NoActiveCheck = {
+  exists: false
+}
+
+type ErrorActiveCheck = {
+  exists: false
+  error: string
+}
+
+type ActiveCheckResult =
+  | ActiveCheckFromDB
+  | ActiveCheckFromCache
+  | NoActiveCheck
+  | ErrorActiveCheck
+
+// 1. Изменим кэш на более надежный механизм с проверкой статуса
+const replicateTrainingCache = new Map<
+  string,
+  {
+    timestamp: number
+    status: 'starting' | 'running' | 'completed' | 'failed'
+    trainingId?: string
+  }
+>()
+
+// 2. Функция проверки и установки статуса
 function checkAndSetTrainingCache(
   telegram_id: string,
-  modelName: string
+  modelName: string,
+  status: 'starting'
 ): boolean {
   const cacheKey = `${telegram_id}:${modelName}`
   const now = Date.now()
 
-  // Проверяем, есть ли в кэше запись и не устарела ли она
-  const lastAttempt = replicateTrainingCache.get(cacheKey)
-  if (lastAttempt && now - lastAttempt < CACHE_TTL_MS) {
+  // Получаем текущую запись
+  const currentEntry = replicateTrainingCache.get(cacheKey)
+
+  // Проверяем только реально запущенные тренировки
+  if (
+    currentEntry &&
+    currentEntry.status === 'running' &&
+    now - currentEntry.timestamp < CACHE_TTL_MS
+  ) {
     logger.warn({
-      message:
-        'Обнаружена попытка повторного запуска тренировки в течение защитного периода',
+      message: 'Обнаружена активная тренировка в кэше',
       telegram_id,
       modelName,
-      lastAttempt: new Date(lastAttempt).toISOString(),
-      ttlMs: CACHE_TTL_MS,
+      currentStatus: currentEntry.status,
+      startedAt: new Date(currentEntry.timestamp).toISOString(),
     })
-    return false // Защитный период активен, блокируем запуск
+    return false // Блокируем запуск - тренировка действительно идет
   }
 
-  // Устанавливаем новую метку времени
-  replicateTrainingCache.set(cacheKey, now)
+  // Устанавливаем статус 'starting' - тренировка только начинается
+  replicateTrainingCache.set(cacheKey, {
+    timestamp: now,
+    status,
+  })
+
   logger.info({
-    message: 'Установлена новая метка для защитного периода тренировки',
+    message: 'Установлен статус начала тренировки в кэше',
     telegram_id,
     modelName,
+    status: 'starting',
     timestamp: new Date(now).toISOString(),
   })
 
-  // Очистка устаревших записей (необязательно, но хорошая практика)
-  for (const [key, timestamp] of replicateTrainingCache.entries()) {
-    if (now - timestamp > CACHE_TTL_MS) {
+  // Очистка устаревших записей
+  for (const [key, entry] of replicateTrainingCache.entries()) {
+    if (now - entry.timestamp > CACHE_TTL_MS) {
       replicateTrainingCache.delete(key)
     }
   }
 
   return true // Разрешаем запуск
 }
+
+// 3. Функция обновления статуса
+function updateTrainingStatus(
+  telegram_id: string,
+  modelName: string,
+  status: 'running' | 'completed' | 'failed',
+  trainingId?: string
+): void {
+  const cacheKey = `${telegram_id}:${modelName}`
+  const entry = replicateTrainingCache.get(cacheKey)
+
+  if (entry) {
+    replicateTrainingCache.set(cacheKey, {
+      ...entry,
+      status,
+      trainingId,
+    })
+
+    logger.info({
+      message: 'Обновлен статус тренировки в кэше',
+      telegram_id,
+      modelName,
+      oldStatus: entry.status,
+      newStatus: status,
+      trainingId,
+    })
+  }
+}
+
+// Время кэширования - 5 минут
+const CACHE_TTL_MS = 5 * 60 * 1000
 
 // Определяем типы для наших событий
 interface TrainingEventData {
@@ -72,6 +154,12 @@ interface TrainingEventData {
   telegram_id: string
   triggerWord: string
   zipUrl: string
+}
+
+export interface ApiError extends Error {
+  response?: {
+    status: number
+  }
 }
 
 const activeTrainings = new Map<string, { cancel: () => void }>()
@@ -101,7 +189,7 @@ export const generateModelTraining = inngest.createFunction(
   {
     id: 'model-training',
     concurrency: 2,
-    idempotency: `train:{event.data.telegram_id}:{event.data.modelName}-${new Date().toISOString()}`,
+    idempotency: 'train:{event.data.telegram_id}:{event.data.modelName}',
   },
   { event: 'model/training.start' },
   async ({ event, step }) => {
@@ -115,9 +203,75 @@ export const generateModelTraining = inngest.createFunction(
 
     // Приведение типов для event.data
     const eventData = event.data as TrainingEventData
+    const cacheKey = `${eventData.telegram_id}:${eventData.modelName}`
 
-    // Проверка защитного периода - ДО любых других действий
-    if (!checkAndSetTrainingCache(eventData.telegram_id, eventData.modelName)) {
+    // ВАЖНО: Проверка наличия реальной активной тренировки в Replicate
+    const activeCheck = (await step.run('check-active-training', async () => {
+      try {
+        // 1. Проверяем записи в базе данных
+        const { data: existingTrainings } = await supabase
+          .from('trainings')
+          .select('id, replicate_training_id, status')
+          .eq('telegram_id', eventData.telegram_id)
+          .eq('model_name', eventData.modelName)
+          .in('status', ['active', 'pending'])
+          .order('created_at', { ascending: false })
+          .limit(1)
+
+        if (existingTrainings?.length > 0) {
+          const training = existingTrainings[0]
+          logger.info({
+            message: 'Найдена активная тренировка в базе данных',
+            trainingRecord: training,
+          })
+
+          // Если есть запись в БД, обновляем кэш
+          if (training.replicate_training_id) {
+            replicateTrainingCache.set(cacheKey, {
+              timestamp: Date.now(),
+              status: 'running',
+              trainingId: training.replicate_training_id,
+            })
+          }
+
+          return {
+            exists: true,
+            source: 'database',
+            training,
+          } as ActiveCheckFromDB
+        }
+
+        // 2. Кэш проверяем только если в БД нет записи
+        const cachedEntry = replicateTrainingCache.get(cacheKey)
+        if (
+          cachedEntry?.status === 'running' &&
+          Date.now() - cachedEntry.timestamp < CACHE_TTL_MS
+        ) {
+          logger.info({
+            message: 'Найдена активная тренировка в кэше',
+            cachedEntry,
+          })
+          return {
+            exists: true,
+            source: 'cache',
+            cachedEntry,
+          } as ActiveCheckFromCache
+        }
+
+        // Если ни в БД, ни в кэше нет активной тренировки
+        return { exists: false } as NoActiveCheck
+      } catch (error) {
+        logger.error({
+          message: 'Ошибка при проверке активных тренировок',
+          error: error.message,
+        })
+        // При ошибке проверки разрешаем запуск для надежности
+        return { exists: false, error: error.message } as ErrorActiveCheck
+      }
+    })) as ActiveCheckResult
+
+    // Если есть активная тренировка, не начинаем новую
+    if (activeCheck.exists) {
       // Получение бота для отправки уведомления
       const { bot } = getBotByName(eventData.bot_name)
 
@@ -128,6 +282,30 @@ export const generateModelTraining = inngest.createFunction(
             eventData.telegram_id,
             TRAINING_MESSAGES.duplicateRequest[isRussian ? 'ru' : 'en']
           )
+
+          // Если есть информация о тренировке в БД, добавляем кнопку отмены
+          if ('training' in activeCheck && activeCheck.training?.id) {
+            await bot.telegram.sendMessage(
+              eventData.telegram_id,
+              isRussian
+                ? `Вы можете отменить текущую тренировку, если хотите начать новую.`
+                : `You can cancel the current training if you want to start a new one.`,
+              {
+                reply_markup: {
+                  inline_keyboard: [
+                    [
+                      {
+                        text: isRussian
+                          ? '❌ Отменить текущую тренировку'
+                          : '❌ Cancel current training',
+                        callback_data: `cancel_train:${activeCheck.training.id}`,
+                      },
+                    ],
+                  ],
+                },
+              }
+            )
+          }
         } catch (error) {
           logger.error({
             message: 'Не удалось отправить уведомление о дублированном запросе',
@@ -137,16 +315,40 @@ export const generateModelTraining = inngest.createFunction(
       }
 
       logger.info({
-        message: 'Запрос на тренировку отклонен из-за защитного периода',
+        message:
+          'Запрос на тренировку отклонен - обнаружена активная тренировка',
         telegram_id: eventData.telegram_id,
         modelName: eventData.modelName,
+        activeCheck,
       })
 
       return {
         success: false,
-        message: 'Duplicate request within throttle period',
-        throttled: true,
+        message: 'Active training already exists',
+        activeTrainingExists: true,
+        trainingId:
+          'training' in activeCheck
+            ? activeCheck.training?.replicate_training_id
+            : undefined,
       }
+    }
+
+    // Теперь, когда мы уверены, что активной тренировки нет,
+    // устанавливаем статус 'starting'
+    if (
+      !checkAndSetTrainingCache(
+        eventData.telegram_id,
+        eventData.modelName,
+        'starting'
+      )
+    ) {
+      logger.warn({
+        message:
+          'Странная ошибка - кэш блокирует, но проверка активных тренировок прошла',
+        telegram_id: eventData.telegram_id,
+        modelName: eventData.modelName,
+      })
+      // Всё равно продолжаем, так как мы проверили отсутствие реальной тренировки
     }
 
     // 🔄 Вспомогательные функции
@@ -359,25 +561,6 @@ export const generateModelTraining = inngest.createFunction(
 
     // 🚀 Основной процесс
     try {
-      // Проверяем наличие активной тренировки
-      if (activeTrainings.has(eventData.telegram_id)) {
-        logger.warn({
-          message: 'Обнаружена активная тренировка',
-          telegram_id: eventData.telegram_id,
-        })
-        logger.info({
-          message: 'Отмена предыдущей тренировки',
-          telegram_id: eventData.telegram_id,
-        })
-
-        activeTrainings.get(eventData.telegram_id)?.cancel()
-
-        logger.info({
-          message: 'Предыдущая тренировка успешно отменена',
-          telegram_id: eventData.telegram_id,
-        })
-      }
-
       // Преобразуем is_ru к булевому типу если это строка
       const isRussian = eventData.is_ru === true || eventData.is_ru === 'true'
       await helpers.sendMessage(
@@ -560,16 +743,13 @@ export const generateModelTraining = inngest.createFunction(
 
             return training
           } catch (error) {
-            // Если произошла ошибка, удаляем запись из кэша,
-            // чтобы разрешить повторные попытки
+            // Очистка кэша при ошибке
             const cacheKey = `${eventData.telegram_id}:${eventData.modelName}`
             replicateTrainingCache.delete(cacheKey)
 
             logger.error({
-              message: 'Ошибка запуска тренировки в Replicate, кэш очищен',
+              message: 'Ошибка запуска тренировки, кэш очищен',
               error: error.message,
-              stack: error.stack,
-              telegram_id: eventData.telegram_id,
             })
 
             throw error
@@ -578,6 +758,14 @@ export const generateModelTraining = inngest.createFunction(
       )
 
       logger.info('🚀 Тренировка создана:', trainingResult.id)
+
+      // Обновляем статус в кэше
+      updateTrainingStatus(
+        eventData.telegram_id,
+        eventData.modelName,
+        'running',
+        trainingResult.id
+      )
 
       // 9. Создание записи о тренировке
       await step.run('create-training-record', async () => {
