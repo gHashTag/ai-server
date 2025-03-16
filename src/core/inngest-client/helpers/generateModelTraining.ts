@@ -11,6 +11,7 @@ import { modeCosts, ModeEnum } from '@/price/helpers/modelsCost'
 import { inngest } from '@/core/inngest-client/clients'
 import { API_URL } from '@/config'
 import { BalanceHelper } from '@/helpers/inngest'
+import { logger } from '@utils/logger'
 
 import type { Prediction } from 'replicate'
 
@@ -58,25 +59,27 @@ export const generateModelTraining = inngest.createFunction(
   { event: 'model/training.start' },
   async ({ event, step }) => {
     // Добавляем информативный лог о входящем событии
-    console.log(
-      `🛎️ Получено событие ID: ${event.id}, timestamp: ${new Date(
-        event.ts
-      ).toISOString()}`
-    )
-    console.log(
-      `🎯 Ключ идемпотентности: train:${event.data.telegram_id}:${
-        event.data.modelName
-      }:${new Date().toISOString().split('T')[0]}`
-    )
+    logger.info({
+      message: 'Получено событие тренировки модели',
+      eventId: event.id,
+      timestamp: new Date(event.ts).toISOString(),
+      idempotencyKey: `train:${event.data.telegram_id}:${event.data.modelName}`,
+    })
 
     // Приведение типов для event.data
     const eventData = event.data as TrainingEventData
 
     // 🔄 Вспомогательные функции
-    console.log('🔵 event.data', eventData)
+    logger.debug({ message: 'Данные события', data: eventData })
     const { bot } = getBotByName(eventData.bot_name)
+    logger.info({
+      message: 'Получен бот',
+      botUsername: bot?.botInfo?.username || 'не найден',
+      botName: eventData.bot_name,
+    })
 
     if (!bot) {
+      logger.error({ message: 'Бот не найден', botName: eventData.bot_name })
       throw new Error(`❌ Бот ${eventData.bot_name} не найден`)
     }
     const helpers = {
@@ -84,9 +87,17 @@ export const generateModelTraining = inngest.createFunction(
         await step.run('send-message', async () => {
           try {
             await bot.telegram.sendMessage(eventData.telegram_id, message)
+            logger.info({
+              message: 'Сообщение отправлено',
+              telegram_id: eventData.telegram_id,
+            })
             return true
           } catch (error) {
-            console.error('📩 Send failed:', error)
+            logger.error({
+              message: 'Ошибка отправки сообщения',
+              error: error.message,
+              telegram_id: eventData.telegram_id,
+            })
             return false
           }
         })
@@ -95,8 +106,20 @@ export const generateModelTraining = inngest.createFunction(
       updateBalance: async (newBalance: number) => {
         return step.run('update-balance', async () => {
           const current = await getUserBalance(eventData.telegram_id)
-          if (current === null) throw new Error('User not found')
+          if (current === null) {
+            logger.error({
+              message: 'Пользователь не найден при обновлении баланса',
+              telegram_id: eventData.telegram_id,
+            })
+            throw new Error('User not found')
+          }
           await updateUserBalance(eventData.telegram_id, newBalance)
+          logger.info({
+            message: 'Баланс обновлен',
+            telegram_id: eventData.telegram_id,
+            oldBalance: current,
+            newBalance,
+          })
           return newBalance
         })
       },
@@ -109,10 +132,23 @@ export const generateModelTraining = inngest.createFunction(
         const steps = Number(rawSteps)
 
         if (isNaN(steps) || steps <= 0) {
-          throw new Error(
-            is_ru ? 'Некорректное количество шагов' : 'Invalid steps count'
-          )
+          const errorMessage = is_ru
+            ? 'Некорректное количество шагов'
+            : 'Invalid steps count'
+          logger.error({
+            message: errorMessage,
+            steps: rawSteps,
+            telegram_id: eventData.telegram_id,
+          })
+          throw new Error(errorMessage)
         }
+
+        logger.info({
+          message: 'Входные данные валидны',
+          modelName,
+          steps,
+          telegram_id: eventData.telegram_id,
+        })
 
         return { modelName, steps }
       },
@@ -122,7 +158,19 @@ export const generateModelTraining = inngest.createFunction(
         return Promise.all([
           step.run('get-user', async () => {
             const user = await getUserByTelegramId(telegram_id)
-            return user || Promise.reject('User not found')
+            if (!user) {
+              logger.error({
+                message: 'Пользователь не найден',
+                telegram_id,
+              })
+              return Promise.reject('User not found')
+            }
+            logger.info({
+              message: 'Пользователь найден',
+              userId: user.id,
+              telegram_id,
+            })
+            return user
           }),
           step.run('get-balance', () => getUserBalance(telegram_id)),
         ])
@@ -141,7 +189,7 @@ export const generateModelTraining = inngest.createFunction(
             steps: steps, // Теперь гарантированно число
             replicate_training_id: trainingId,
           }
-          console.log('🔵 Создание записи о тренировке', training)
+          logger.info('🔵 Создание записи о тренировке', training)
           createModelTraining(training)
           return training
         })
@@ -153,10 +201,10 @@ export const generateModelTraining = inngest.createFunction(
 
         try {
           const existing = await replicate.models.get(username, modelName)
-          console.log('🔵 Существующая модель:', existing.url)
+          logger.info('🔵 Существующая модель:', existing.url)
           return `${username}/${modelName}`
         } catch (error) {
-          console.log('🆕 Создание новой модели...')
+          logger.info('🏗️ Создание новой модели...')
           try {
             const newModel = await replicate.models.create(
               username,
@@ -167,11 +215,11 @@ export const generateModelTraining = inngest.createFunction(
                 hardware: 'gpu-t4',
               }
             )
-            console.log('✅ Модель создана:', newModel.latest_version?.id)
+            logger.info('✅ Модель создана:', newModel.latest_version?.id)
             await new Promise(resolve => setTimeout(resolve, 5000))
             return `${username}/${modelName}`
           } catch (createError) {
-            console.error('❌ Ошибка создания модели:', createError)
+            logger.error('❌ Ошибка создания модели:', createError)
             throw new Error('Failed to create model')
           }
         }
@@ -182,15 +230,15 @@ export const generateModelTraining = inngest.createFunction(
           cancel: async () => {
             try {
               await replicate.trainings.cancel(trainingId)
-              console.log(`❌ Training ${trainingId} canceled`)
+              logger.info(`❌ Training ${trainingId} canceled`)
             } catch (error) {
-              console.error('Cancel error:', error)
+              logger.error('Cancel error:', error)
             }
             activeTrainings.delete(telegram_id)
           },
         }
         activeTrainings.set(telegram_id, cancelProcess)
-        console.log('🛑 Cancel handler registered for:', telegram_id)
+        logger.info('🛑 Cancel handler registered for:', telegram_id)
       },
 
       startTraining: async (destination: string) => {
@@ -221,7 +269,7 @@ export const generateModelTraining = inngest.createFunction(
           }
         )
 
-        console.log('🚀 Training ID:', training.id)
+        logger.info('🚀 Training ID:', training.id)
         trainingSteps.registerCancelHandler(eventData.telegram_id, training.id)
         return training
       },
@@ -231,6 +279,25 @@ export const generateModelTraining = inngest.createFunction(
 
     // 🚀 Основной процесс
     try {
+      // Проверяем наличие активной тренировки
+      if (activeTrainings.has(eventData.telegram_id)) {
+        logger.warn({
+          message: 'Обнаружена активная тренировка',
+          telegram_id: eventData.telegram_id,
+        })
+        logger.info({
+          message: 'Отмена предыдущей тренировки',
+          telegram_id: eventData.telegram_id,
+        })
+
+        activeTrainings.get(eventData.telegram_id)?.cancel()
+
+        logger.info({
+          message: 'Предыдущая тренировка успешно отменена',
+          telegram_id: eventData.telegram_id,
+        })
+      }
+
       // Преобразуем is_ru к булевому типу если это строка
       const isRussian = eventData.is_ru === true || eventData.is_ru === 'true'
       await helpers.sendMessage(
@@ -242,19 +309,36 @@ export const generateModelTraining = inngest.createFunction(
 
       // 2. Проверка пользователя и баланса
       const [user, initialBalance] = await trainingSteps.checkUserAndBalance()
-      console.log(`👤 User ${user.id} | 💰 Balance: ${initialBalance}`)
+      logger.info({
+        message: 'Баланс пользователя',
+        userId: user.id,
+        initialBalance,
+        telegram_id: eventData.telegram_id,
+      })
 
       // 3. Обновление уровня при необходимости
       if (user.level === 0) {
         await step.run('update-level', () =>
           updateUserLevelPlusOne(eventData.telegram_id, 0)
         )
+        logger.info({
+          message: 'Уровень пользователя обновлен',
+          telegram_id: eventData.telegram_id,
+          newLevel: 1,
+        })
       }
 
       // 4. Расчет стоимости
       const paymentAmount = (
         modeCosts[ModeEnum.DigitalAvatarBody] as (steps: number) => number
       )(steps)
+
+      logger.info({
+        message: 'Рассчитана стоимость тренировки',
+        steps,
+        paymentAmount,
+        telegram_id: eventData.telegram_id,
+      })
 
       // 5. Проверка баланса
       balanceCheck = await step.run('balance-check', async () => {
@@ -267,7 +351,11 @@ export const generateModelTraining = inngest.createFunction(
             isRu: isRussian,
           }
         )
-        console.log('💰 Balance check result:', result)
+        logger.info({
+          message: 'Результат проверки баланса',
+          result,
+          telegram_id: eventData.telegram_id,
+        })
 
         return {
           success: result.success,
@@ -276,7 +364,12 @@ export const generateModelTraining = inngest.createFunction(
       })
 
       if (!balanceCheck?.success) {
-        console.log('🚫 Недостаточно средств:', balanceCheck?.currentBalance)
+        logger.warn({
+          message: 'Недостаточно средств',
+          currentBalance: balanceCheck?.currentBalance,
+          requiredAmount: paymentAmount,
+          telegram_id: eventData.telegram_id,
+        })
         throw new Error('Insufficient balance')
       }
 
@@ -289,13 +382,13 @@ export const generateModelTraining = inngest.createFunction(
           const username = process.env.REPLICATE_USERNAME
           if (!username) throw new Error('REPLICATE_USERNAME не задан')
 
-          console.log('🔍 Проверка существования модели', { modelName })
+          logger.info('🔍 Проверка существования модели', { modelName })
           try {
             const existing = await replicate.models.get(username, modelName)
-            console.log('🔵 Существующая модель найдена:', existing.url)
+            logger.info('🔵 Существующая модель найдена:', existing.url)
             return `${username}/${modelName}`
           } catch (error) {
-            console.log('🏗️ Создание новой модели...')
+            logger.info('🏗️ Создание новой модели...')
             const newModel = await replicate.models.create(
               username,
               modelName,
@@ -305,16 +398,16 @@ export const generateModelTraining = inngest.createFunction(
                 hardware: 'gpu-t4',
               }
             )
-            console.log('✅ Новая модель создана:', newModel.url)
+            logger.info('✅ Новая модель создана:', newModel.url)
             return `${username}/${modelName}`
           }
         } catch (error) {
-          console.error('❌ Ошибка создания/проверки модели:', error)
+          logger.error('❌ Ошибка создания/проверки модели:', error)
           throw error
         }
       })
 
-      console.log('🎯 Модель определена:', destination)
+      logger.info('🎯 Модель определена:', destination)
 
       // 8. Запуск обучения с Replicate и отправка кнопки отмены
       const trainingResult = await step.run(
@@ -343,8 +436,8 @@ export const generateModelTraining = inngest.createFunction(
               }
             )
 
-            console.log('🚀 Тренировка запущена. ID:', training.id)
-            console.log('📡 URL отмены:', training.urls?.cancel)
+            logger.info('🚀 Тренировка запущена. ID:', training.id)
+            logger.info('📡 URL отмены:', training.urls?.cancel)
 
             // Отправляем сообщение с кнопкой отмены
             if (bot && training.urls?.cancel) {
@@ -374,13 +467,13 @@ export const generateModelTraining = inngest.createFunction(
 
             return training
           } catch (error) {
-            console.error('💥 Ошибка старта тренировки:', error)
+            logger.error('💥 Ошибка старта тренировки:', error)
             throw error
           }
         }
       )
 
-      console.log('🚀 Тренировка создана:', trainingResult.id)
+      logger.info('🚀 Тренировка создана:', trainingResult.id)
 
       // 9. Создание записи о тренировке
       await step.run('create-training-record', async () => {
@@ -398,26 +491,42 @@ export const generateModelTraining = inngest.createFunction(
             replicate_training_id: trainingResult.id,
             cancel_url: trainingResult.urls?.cancel,
           })
-          console.log('📝 Запись о тренировке создана', trainingRecord)
+          logger.info('📝 Запись о тренировке создана', trainingRecord)
           return trainingRecord
         } catch (error) {
-          console.error('📋 Ошибка создания записи:', error)
+          logger.error('📋 Ошибка создания записи:', error)
           throw error
         }
       })
 
       // Возвращаем результат
+      logger.info({
+        message: 'Тренировка успешно запущена',
+        trainingId: trainingResult.id,
+        telegram_id: eventData.telegram_id,
+      })
+
       return {
         success: true,
         message: 'Обучение запущено. Ожидайте уведомления.',
         trainingId: trainingResult.id,
       }
     } catch (error) {
-      console.error('🔥 Critical Error:', error)
+      logger.error({
+        message: 'Критическая ошибка в процессе тренировки',
+        error: error.message,
+        stack: error.stack,
+        telegram_id: eventData.telegram_id,
+      })
 
       // Добавляем проверку через optional chaining
       if (balanceCheck?.success) {
         await helpers.updateBalance(balanceCheck.currentBalance)
+        logger.info({
+          message: 'Средства возвращены пользователю',
+          amount: balanceCheck.currentBalance,
+          telegram_id: eventData.telegram_id,
+        })
       }
 
       // Преобразуем is_ru к булевому типу если это строка
@@ -429,7 +538,10 @@ export const generateModelTraining = inngest.createFunction(
 
       if (activeTrainings.has(eventData.telegram_id)) {
         activeTrainings.get(eventData.telegram_id)?.cancel()
-        console.log('🔄 Automatic cancel triggered')
+        logger.info({
+          message: 'Автоматический отменен текущей тренировки',
+          telegram_id: eventData.telegram_id,
+        })
       }
 
       throw error
