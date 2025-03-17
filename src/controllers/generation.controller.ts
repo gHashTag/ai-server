@@ -16,7 +16,7 @@ import { API_URL } from '@/config'
 import { deleteFile } from '@/helpers'
 import path from 'path'
 import { getBotByName } from '@/core/bot'
-import { inngest } from '@/core/inngest-client/clients'
+import { inngest } from '@/core/inngest/clients'
 export class GenerationController {
   public textToImage = async (
     req: Request,
@@ -412,10 +412,7 @@ export class GenerationController {
         res.status(400).json({ message: 'telegram_id is required' })
         return
       }
-      if (!is_ru) {
-        res.status(400).json({ message: 'is_ru is required' })
-        return
-      }
+
       const zipFile = req.files?.find(file => file.fieldname === 'zipUrl')
       if (!zipFile) {
         res.status(400).json({ message: 'zipFile is required' })
@@ -423,16 +420,23 @@ export class GenerationController {
       }
       // Создаем URL для доступа к файлу
       const zipUrl = `https://${req.headers.host}/uploads/${telegram_id}/${type}/${zipFile.filename}`
-      const { bot } = getBotByName(bot_name)
-      await generateModelTrainingV2(
-        zipUrl,
-        triggerWord,
-        modelName,
-        steps,
-        telegram_id,
-        is_ru,
-        bot
-      )
+      console.log('zipUrl', zipUrl)
+      // Отправляем событие в Inngest вместо прямого вызова функции
+      await inngest.send({
+        name: 'model/training.v2.requested',
+        data: {
+          zipUrl,
+          triggerWord,
+          modelName,
+          steps,
+          telegram_id,
+          is_ru,
+          bot_name,
+          type,
+          // Идемпотентный ключ для предотвращения дублирования
+          idempotencyKey: `train-v2:${telegram_id}:${modelName}-${Date.now()}`,
+        },
+      })
 
       res.status(200).json({ message: 'Model training started' })
     } catch (error) {

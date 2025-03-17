@@ -27,7 +27,7 @@ import morgan from 'morgan'
 import { fileUpload } from './utils/fileUpload'
 import { inngestRouter } from './routes/inngest.route'
 import { UploadRoute } from './routes/upload.route'
-import { inngest } from './core/inngest-client/clients'
+import { inngest } from './core/inngest/clients'
 // const nexrenderPort = NEXRENDER_PORT
 // const secret = process.env.NEXRENDER_SECRET
 

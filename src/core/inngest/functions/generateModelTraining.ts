@@ -9,7 +9,7 @@ import {
 } from '@/core/supabase'
 import { getBotByName } from '@/core/bot'
 import { modeCosts, ModeEnum } from '@/price/helpers/modelsCost'
-import { inngest } from '@/core/inngest-client/clients'
+import { inngest } from '@/core/inngest/clients'
 import { API_URL } from '@/config'
 import { BalanceHelper } from '@/helpers/inngest'
 import { logger } from '@utils/logger'

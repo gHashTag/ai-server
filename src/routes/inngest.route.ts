@@ -1,6 +1,6 @@
 import { serve } from 'inngest/express'
-import { inngest } from '@/core/inngest-client/clients'
-import { generateModelTraining } from '@/core/inngest-client/helpers'
+import { inngest } from '@/core/inngest/clients'
+import { generateModelTraining } from '@/core/inngest/functions'
 
 // Регистрация ВСЕХ функций в одном месте
 export const inngestRouter = serve({
