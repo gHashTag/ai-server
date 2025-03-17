@@ -5,8 +5,7 @@ export async function getTrainingWithUser(trainingId: string) {
     const { data, error } = await supabase
       .from('model_trainings')
       .select(
-        `
-        *,
+        `*,
         users (
           bot_name,
           telegram_id,
@@ -21,6 +20,7 @@ export async function getTrainingWithUser(trainingId: string) {
       console.error('❌ Training fetch error:', error)
       return null
     }
+    console.log('data', data)
 
     return data as {
       id: string

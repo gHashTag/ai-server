@@ -1,6 +1,6 @@
 import { Request, Response } from 'express'
 import { inngest } from '@/core/inngest-client/clients'
-import { updateLatestModelTraining } from '@/core/supabase'
+import { updateLatestModelTrainingQuick } from '@/core/supabase'
 import { NotificationService } from '@/services'
 import { getTrainingWithUser } from '@/core/supabase/getTrainingWithUser'
 import { logger } from '@utils/logger'
@@ -34,6 +34,7 @@ export class ReplicateWebhookController {
       try {
         // Получаем данные о тренировке из базы
         const training = await getTrainingWithUser(event.id)
+        console.log('training', training)
 
         // Проверяем результат
         if (!training || !training.users) {
@@ -61,13 +62,12 @@ export class ReplicateWebhookController {
         const terminalStatuses = ['succeeded', 'failed', 'canceled']
 
         if (terminalStatuses.includes(event.status)) {
-          await updateLatestModelTraining(
-            training.users.telegram_id.toString(),
-            training.model_name,
+          await updateLatestModelTrainingQuick(
             {
-              status: event.status.toUpperCase(),
+              status: 'SUCCESS',
               model_url: event.output?.weights || event.output?.model_url,
               error: event.error,
+              replicate_training_id: event.id,
             },
             'replicate'
           )

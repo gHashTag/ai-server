@@ -5,6 +5,7 @@ import {
   updateUserLevelPlusOne,
   getUserBalance,
   createModelTraining,
+  updateLatestModelTraining,
 } from '@/core/supabase'
 import { getBotByName } from '@/core/bot'
 import { modeCosts, ModeEnum } from '@/price/helpers/modelsCost'
@@ -672,136 +673,84 @@ export const generateModelTraining = inngest.createFunction(
 
       logger.info('🎯 Модель определена:', destination)
 
-      // 8. Запуск обучения с Replicate и отправка кнопки отмены
+      // Запуск тренировки с Replicate
       const trainingResult = await step.run(
         'start-replicate-training',
         async () => {
           try {
-            // Проверяем, нет ли уже запущенной тренировки в Replicate
-            // Дополнительная мера безопасности перед вызовом API
-            const cacheKey = `${eventData.telegram_id}:${eventData.modelName}`
-            logger.info({
-              message: 'Подготовка к запуску тренировки в Replicate',
-              cacheKey,
-              destination,
-            })
+            const training = await trainingSteps.startTraining(destination)
 
-            const training = await replicate.trainings.create(
-              'ostris',
-              'flux-dev-lora-trainer',
-              'b6af14222e6bd9be257cbc1ea4afda3cd0503e1133083b9d1de0364d8568e6ef',
-              {
-                destination: destination as `${string}/${string}`,
-                input: {
-                  input_images: eventData.zipUrl,
-                  trigger_word: eventData.triggerWord,
-                  steps: Number(eventData.steps),
-                  lora_rank: 128,
-                  optimizer: 'adamw8bit',
-                  batch_size: 1,
-                  resolution: '512,768,1024',
-                  learning_rate: 0.0001,
-                  wandb_project: 'flux_train_replicate',
-                },
-                webhook: `${API_URL}/webhooks/replicate`,
-                webhook_events_filter: ['completed'],
-              }
-            )
-
-            logger.info({
-              message: 'Тренировка успешно запущена в Replicate',
-              trainingId: training.id,
+            // ⚠️ Сразу сохраняем ID в базу данных здесь же
+            // Так мы гарантируем, что даже если дальнейший код сломается,
+            // запись в БД будет создана
+            const trainingRecord = await createModelTraining({
               telegram_id: eventData.telegram_id,
-              modelName: eventData.modelName,
+              model_name: eventData.modelName,
+              trigger_word: eventData.triggerWord,
+              zip_url: eventData.zipUrl,
+              steps: Number(eventData.steps),
+              replicate_training_id: training.id,
+              cancel_url: training.urls?.cancel,
+              status: 'pending', // Начальный статус
             })
 
-            // Отправляем сообщение с кнопкой отмены
-            if (bot && training.urls?.cancel) {
-              // Формируем payload для callback_data (с ограничением длины)
-              const cancelPayload = `cancel_train:${training.id}`
+            logger.info({
+              message: 'Тренировка запущена и сохранена в БД',
+              trainingId: training.id,
+              dbRecordId: trainingRecord.id,
+            })
 
-              await bot.telegram.sendMessage(
-                eventData.telegram_id,
-                isRussian
-                  ? `🔄 *Обучение модели началось*\n\nМодель: ${eventData.modelName}\nТриггер: \`${eventData.triggerWord}\`\n\nЭто займет 30-40 минут.\nВы можете отменить процесс кнопкой ниже.`
-                  : `🔄 *Model training started*\n\nModel: ${eventData.modelName}\nTrigger: \`${eventData.triggerWord}\`\n\nIt will take 30-40 minutes.\nYou can cancel the process by the button below.`,
-                {
-                  parse_mode: 'Markdown',
-                  reply_markup: {
-                    inline_keyboard: [
-                      [
-                        {
-                          text: '❌ Отменить тренировку',
-                          callback_data: cancelPayload,
-                        },
-                      ],
-                    ],
-                  },
-                }
-              )
+            // Теперь можно обновить кэш
+            updateTrainingStatus(
+              eventData.telegram_id,
+              eventData.modelName,
+              'running',
+              training.id
+            )
+            updateLatestModelTraining(
+              eventData.telegram_id,
+              eventData.modelName,
+              {
+                status: 'running',
+                replicate_training_id: training.id,
+              },
+              'replicate'
+            )
+            return {
+              training,
+              dbRecord: trainingRecord,
             }
-
-            return training
           } catch (error) {
             // Очистка кэша при ошибке
-            const cacheKey = `${eventData.telegram_id}:${eventData.modelName}`
-            replicateTrainingCache.delete(cacheKey)
-
-            logger.error({
-              message: 'Ошибка запуска тренировки, кэш очищен',
-              error: error.message,
-            })
-
+            replicateTrainingCache.delete(
+              `${eventData.telegram_id}:${eventData.modelName}`
+            )
             throw error
           }
         }
       )
 
-      logger.info('🚀 Тренировка создана:', trainingResult.id)
+      logger.info('🚀 Тренировка создана:', trainingResult.training.id)
 
       // Обновляем статус в кэше
       updateTrainingStatus(
         eventData.telegram_id,
         eventData.modelName,
         'running',
-        trainingResult.id
+        trainingResult.training.id
       )
-
-      // 9. Создание записи о тренировке
-      await step.run('create-training-record', async () => {
-        try {
-          // Используем существующую функцию из проекта
-          // Преобразуем steps в число
-          const steps = Number(eventData.steps)
-
-          const trainingRecord = await createModelTraining({
-            telegram_id: eventData.telegram_id,
-            model_name: eventData.modelName,
-            trigger_word: eventData.triggerWord,
-            zip_url: eventData.zipUrl,
-            steps: steps, // Теперь гарантированно число
-            replicate_training_id: trainingResult.id,
-            cancel_url: trainingResult.urls?.cancel,
-          })
-          logger.info('📝 Запись о тренировке создана', trainingRecord)
-          return trainingRecord
-        } catch (error) {
-          logger.error('📋 Ошибка создания записи:', error)
-          throw error
-        }
-      })
 
       // Возвращаем результат
       logger.info({
         message: 'Тренировка успешно запущена',
-        trainingId: trainingResult.id,
+        trainingId: trainingResult.training.id,
         telegram_id: eventData.telegram_id,
       })
 
       return {
         success: true,
         message: 'Обучение запущено. Ожидайте уведомления.',
-        trainingId: trainingResult.id,
+        trainingId: trainingResult.training.id,
       }
     } catch (error) {
       logger.error({
@@ -811,7 +760,7 @@ export const generateModelTraining = inngest.createFunction(
         telegram_id: eventData.telegram_id,
       })
 
-      // Добавляем проверку через optional chaining
+      // Добавляем проверку через optional chainingИ где мы здесь сохраняем таблицу тренинг результат ID
       if (balanceCheck?.success) {
         await helpers.updateBalance(balanceCheck.currentBalance)
         logger.info({
