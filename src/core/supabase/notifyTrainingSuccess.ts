@@ -4,6 +4,8 @@ import { Telegraf } from 'telegraf'
 import { MyContext } from '@/interfaces'
 import { getUserByTelegramId } from '@/core/supabase'
 import { getTelegramIdFromFinetune } from '@/core/bfl'
+import { logger } from '@/utils/logger'
+import { inngest } from '@/core/inngest/clients'
 
 export async function notifyTrainingSuccess(
   finetuneId: string,
@@ -11,42 +13,102 @@ export async function notifyTrainingSuccess(
   result: string
 ): Promise<void> {
   try {
-    // Выполняем запрос с соединением таблиц для получения telegram_id и bot_name
-    console.log(`finetuneId: ${finetuneId}`)
+    logger.info({
+      message: '🔔 Starting training success notification',
+      finetuneId,
+      status,
+    })
 
     const telegram_id = await getTelegramIdFromFinetune(finetuneId)
-    console.log(`telegramId: ${telegram_id}`)
-    const data = await getUserByTelegramId(telegram_id)
+    logger.info({
+      message: '👤 Retrieved Telegram ID',
+      finetuneId,
+      telegram_id,
+    })
 
+    const data = await getUserByTelegramId(telegram_id)
     const bot_name = data.users.bot_name
-    console.log(`bot_name: ${bot_name}`)
     const language_code = data.users.language_code
-    console.log(`language_code: ${language_code}`)
-    // Обновляем статус тренировки в базе данных
+
+    logger.info({
+      message: '🤖 Bot details fetched',
+      bot_name,
+      language_code,
+      telegram_id,
+    })
+
+    await inngest.send({
+      name: 'model/training.status_update.started',
+      data: { finetuneId, status },
+    })
+
     const { error: updateError } = await supabase
       .from('model_trainings')
       .update({ status, result, api: 'bfl' })
       .eq('finetune_id', finetuneId)
 
     if (updateError) {
-      console.error('Ошибка при обновлении статуса тренировки:', updateError)
+      logger.error({
+        message: '❌ Failed to update training status',
+        finetuneId,
+        error: updateError,
+      })
+
+      await inngest.send({
+        name: 'model/training.status_update.failed',
+        data: {
+          finetuneId,
+          error: updateError.message,
+        },
+      })
       return
     }
 
-    // Получаем бота по имени
+    logger.info({
+      message: '✅ Training status updated',
+      finetuneId,
+      status,
+    })
+
     const { bot } = getBotByName(bot_name) as { bot: Telegraf<MyContext> }
 
-    // Отправляем сообщение об успешной тренировке
     await bot.telegram.sendMessage(
       telegram_id,
       language_code === 'ru'
         ? `🎉 Ваша модель успешно натренирована!`
         : `🎉 Your model has been trained successfully!`
     )
+
+    logger.info({
+      message: '📨 Success notification sent',
+      telegram_id,
+      bot_name,
+    })
+
+    await inngest.send({
+      name: 'model/training.completed',
+      data: {
+        finetuneId,
+        status,
+        telegram_id,
+        bot_name,
+      },
+    })
   } catch (error) {
-    console.error(
-      'Ошибка при отправке уведомления об успешной тренировке:',
-      error
-    )
+    logger.error({
+      message: '🚨 Critical error in training notification',
+      finetuneId,
+      error: error.message,
+      stack: error.stack,
+    })
+
+    await inngest.send({
+      name: 'model/training.notification_failed',
+      data: {
+        finetuneId,
+        error: error.message,
+        status,
+      },
+    })
   }
 }
