@@ -21,8 +21,6 @@ interface TrainingResponse {
   finetune_id?: string
 }
 
-const activeTrainings = new Map<string, { cancel: () => void }>()
-
 // Функция для кодирования файла в base64
 async function encodeFileToBase64(url: string): Promise<string> {
   const response = await axios.get(url, { responseType: 'arraybuffer' })
@@ -31,7 +29,7 @@ async function encodeFileToBase64(url: string): Promise<string> {
 }
 
 // Создаем Inngest функцию
-export const modelTrainingV2Function = inngest.createFunction(
+export const modelTrainingV2 = inngest.createFunction(
   {
     id: 'model-training-v2',
     idempotency: 'event.data.idempotencyKey',
