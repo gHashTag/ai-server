@@ -23,11 +23,13 @@ export function getBotByName(bot_name: string): {
 } {
   console.log('CASE: getBotByName', bot_name)
   const token = BOT_NAMES[bot_name]
+  console.log('token', token)
   if (!token) {
     return { error: 'Unauthorized' }
   }
 
   const bot = bots.find(bot => bot.telegram.token === token)
+  console.log('CASE: getBotByName', bot)
   if (!bot) {
     return { error: 'Unauthorized' }
   }

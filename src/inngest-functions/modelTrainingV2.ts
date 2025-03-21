@@ -1,4 +1,4 @@
-import { inngest } from '../clients'
+import { inngest } from '../core/inngest/clients'
 import { getBotByName } from '@/core/bot'
 import {
   getUserByTelegramId,
