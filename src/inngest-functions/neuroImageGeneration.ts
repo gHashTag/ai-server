@@ -19,7 +19,7 @@ import { getBotByName } from '@/core/bot'
 export const neuroImageGeneration = inngest.createFunction(
   {
     id: 'neuro-image-generation',
-    idempotency: 'event.data.telegram_id',
+    // idempotency: 'event.data.telegram_id',
     retries: 3,
   },
   { event: 'neuro/photo.generate' },
@@ -51,7 +51,7 @@ export const neuroImageGeneration = inngest.createFunction(
 
         return getBotByName(bot_name)
       })) as { bot: any }
-
+      console.log('botData', botData)
       const bot = botData.bot
 
       if (!bot) {
@@ -139,6 +139,7 @@ export const neuroImageGeneration = inngest.createFunction(
         const generationResult = await step.run(
           `generate-image-${i}`,
           async () => {
+            const { bot } = getBotByName(bot_name)
             await bot.telegram.sendMessage(
               telegram_id,
               is_ru
@@ -201,7 +202,8 @@ export const neuroImageGeneration = inngest.createFunction(
               `/${model_url}`,
               telegram_id,
               username,
-              is_ru
+              is_ru,
+              bot_name
             )
 
             return {
@@ -215,6 +217,7 @@ export const neuroImageGeneration = inngest.createFunction(
         )
 
         await step.run(`notify-image-${i}`, async () => {
+          const { bot } = getBotByName(bot_name)
           await bot.telegram.sendPhoto(telegram_id, {
             source: fs.createReadStream(generationResult.path),
           })
@@ -224,6 +227,7 @@ export const neuroImageGeneration = inngest.createFunction(
       }
 
       await step.run('final-notification', async () => {
+        const { bot } = getBotByName(bot_name)
         await bot.telegram.sendMessage(
           telegram_id,
           is_ru

@@ -5,7 +5,7 @@ console.log('🔄 Initializing Inngest client...')
 
 export const inngest = new Inngest({
   id: 'ai-training-server',
-  eventKey: process.env.INNGEST_EVENT_KEY || 'dev',
+  eventKey: process.env.INNGEST_EVENT_KEY,
 })
 
 // Проверка экспорта
