@@ -96,18 +96,17 @@ export class GenerationController {
       validateUserParams(req)
       res.status(200).json({ message: 'Processing started' })
 
-      const { bot } = getBotByName(bot_name)
-      generateNeuroImage(
-        prompt,
-        model_url,
-        num_images,
-        telegram_id,
-        username,
-        is_ru,
-        bot,
-        bot_name
-      ).catch(error => {
-        console.error('Ошибка при генерации изображения:', error)
+      await inngest.send({
+        name: 'neuro/photo.generate',
+        data: {
+          prompt,
+          model_url,
+          num_images,
+          telegram_id,
+          username,
+          is_ru,
+          bot_name,
+        },
       })
     } catch (error) {
       next(error)
