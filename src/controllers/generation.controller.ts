@@ -10,7 +10,6 @@ import { createVoiceAvatar } from '@/services/createVoiceAvatar'
 import { validateUserParams } from '@/middlewares/validateUserParams'
 import { generateNeuroImageV2 } from '@/services/generateNeuroImageV2'
 import { generateLipSync } from '@/services/generateLipSync'
-import { generateModelTrainingV2 } from '@/services/generateModelTrainingV2'
 
 import { API_URL } from '@/config'
 import { deleteFile } from '@/helpers'
@@ -105,7 +104,8 @@ export class GenerationController {
         telegram_id,
         username,
         is_ru,
-        bot
+        bot,
+        bot_name
       ).catch(error => {
         console.error('Ошибка при генерации изображения:', error)
       })
