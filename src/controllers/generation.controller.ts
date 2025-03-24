@@ -52,14 +52,15 @@ export class GenerationController {
 
       const { bot } = getBotByName(bot_name)
 
-      generateTextToImage(
+      await generateTextToImage(
         prompt,
         model,
         num_images,
         telegram_id,
         username,
         is_ru,
-        bot
+        bot,
+        bot_name
       )
     } catch (error) {
       next(error)
@@ -197,7 +198,14 @@ export class GenerationController {
       res.status(200).json({ message: 'Processing started' })
 
       const { bot } = getBotByName(bot_name)
-      generateSpeech({ text, voice_id, telegram_id, is_ru, bot })
+      await generateSpeech({
+        text,
+        voice_id,
+        telegram_id,
+        is_ru,
+        bot,
+        bot_name,
+      })
     } catch (error) {
       next(error)
     }
@@ -225,14 +233,12 @@ export class GenerationController {
       validateUserParams(req)
       res.status(200).json({ message: 'Processing started' })
 
-      const { bot } = getBotByName(bot_name)
-      generateTextToVideo(
+      await generateTextToVideo(
         prompt,
         videoModel,
         telegram_id,
         username,
         is_ru,
-        bot,
         bot_name
       )
     } catch (error) {
@@ -271,15 +277,14 @@ export class GenerationController {
       validateUserParams(req)
       res.status(200).json({ message: 'Processing started' })
 
-      const { bot } = getBotByName(bot_name)
-      generateImageToVideo(
+      await generateImageToVideo(
         imageUrl,
         prompt,
         videoModel,
         telegram_id,
         username,
         is_ru,
-        bot
+        bot_name
       )
     } catch (error) {
       next(error)
@@ -302,7 +307,7 @@ export class GenerationController {
       res.status(200).json({ message: 'Processing started' })
       const { bot } = getBotByName(bot_name)
 
-      generateImageToPrompt(image, telegram_id, username, is_ru, bot)
+      generateImageToPrompt(image, telegram_id, username, is_ru, bot, bot_name)
     } catch (error) {
       next(error)
     }

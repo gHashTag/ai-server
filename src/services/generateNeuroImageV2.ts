@@ -54,6 +54,10 @@ export async function generateNeuroImageV2(
       paymentAmount: costPerImage * num_images,
       is_ru,
       bot,
+      bot_name,
+      description: `Payment for generating ${num_images} image${
+        num_images === 1 ? '' : 's'
+      } with prompt: ${prompt.substring(0, 30)}...`,
     })
     if (!balanceCheck.success) {
       throw new Error(balanceCheck.error)

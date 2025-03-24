@@ -24,9 +24,12 @@ export const updateUserBalance = async (
       throw new Error('Не удалось обновить баланс пользователя')
     }
 
+    const invId = Math.floor(Math.random() * 1000000)
+
     // Создаем запись о транзакции
     const { error: paymentError } = await supabase.from('payments').insert({
       telegram_id,
+      inv_id: invId,
       currency: 'STARS',
       amount: Math.abs(amount),
       status: 'COMPLETED',

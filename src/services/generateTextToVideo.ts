@@ -6,8 +6,7 @@ import { mkdir, writeFile } from 'fs/promises'
 import { InputFile } from 'telegraf/typings/core/types/typegram'
 import { saveVideoUrlToSupabase } from '@/core/supabase/saveVideoUrlToSupabase'
 import path from 'path'
-import { Telegraf } from 'telegraf'
-import { MyContext } from '@/interfaces'
+import { getBotByName } from '@/core/bot'
 import { getUserByTelegramId, updateUserLevelPlusOne } from '@/core/supabase'
 import { VIDEO_MODELS_CONFIG } from '@/helpers/VIDEO_MODELS'
 
@@ -42,7 +41,6 @@ export const generateTextToVideo = async (
   telegram_id: string,
   username: string,
   is_ru: boolean,
-  bot: Telegraf<MyContext>,
   bot_name: string
 ): Promise<{ videoLocalPath: string }> => {
   try {
@@ -51,6 +49,7 @@ export const generateTextToVideo = async (
     if (!videoModel) throw new Error('Video model is required')
     if (!telegram_id) throw new Error('Telegram ID is required')
     if (!username) throw new Error('Username is required')
+    if (!bot_name) throw new Error('Bot name is required')
 
     const userExists = await getUserByTelegramId(telegram_id)
     if (!userExists) {
@@ -60,13 +59,15 @@ export const generateTextToVideo = async (
     if (level === 9) {
       await updateUserLevelPlusOne(telegram_id, level)
     }
-
+    const { bot } = getBotByName(bot_name)
     // Проверка баланса для всех изображений
     const { newBalance, paymentAmount } = await processBalanceVideoOperation({
       videoModel,
       telegram_id,
       is_ru,
       bot,
+      bot_name,
+      description: `Payment for generating video`,
     })
 
     bot.telegram.sendMessage(

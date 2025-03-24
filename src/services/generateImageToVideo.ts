@@ -8,9 +8,7 @@ import { processBalanceVideoOperation } from '@/price/helpers'
 import { getUserByTelegramId, updateUserLevelPlusOne } from '@/core/supabase'
 import { mkdir, writeFile } from 'fs/promises'
 import path from 'path'
-
-import { Telegraf } from 'telegraf'
-import { MyContext } from '@/interfaces'
+import { getBotByName } from '@/core/bot'
 import { VIDEO_MODELS_CONFIG } from '@/helpers/VIDEO_MODELS'
 
 interface ReplicateResponse {
@@ -36,7 +34,7 @@ export const generateImageToVideo = async (
   telegram_id: string,
   username: string,
   is_ru: boolean,
-  bot: Telegraf<MyContext>
+  bot_name: string
 ): Promise<{ videoUrl?: string; prediction_id?: string } | string> => {
   try {
     console.log('Start generateImageToVideo', {
@@ -46,12 +44,14 @@ export const generateImageToVideo = async (
       telegram_id,
       username,
       is_ru,
+      bot_name,
     })
     if (!imageUrl) throw new Error('Image is required')
     if (!prompt) throw new Error('Prompt is required')
     if (!videoModel) throw new Error('Video model is required')
     if (!telegram_id) throw new Error('Telegram ID is required')
     if (!username) throw new Error('Username is required')
+    if (!bot_name) throw new Error('Bot name is required')
 
     const userExists = await getUserByTelegramId(telegram_id)
     if (!userExists) {
@@ -62,11 +62,15 @@ export const generateImageToVideo = async (
       await updateUserLevelPlusOne(telegram_id, level)
     }
 
+    const { bot } = getBotByName(bot_name)
+
     const { newBalance, paymentAmount } = await processBalanceVideoOperation({
       videoModel,
       telegram_id,
       is_ru,
       bot,
+      bot_name,
+      description: `Payment for generating video`,
     })
 
     bot.telegram.sendMessage(
@@ -194,6 +198,7 @@ export const generateImageToVideo = async (
     return { videoUrl: videoUrl as string }
   } catch (error) {
     console.error('Error in generateImageToVideo:', error)
+    const { bot } = getBotByName(bot_name)
     bot.telegram.sendMessage(
       telegram_id,
       is_ru

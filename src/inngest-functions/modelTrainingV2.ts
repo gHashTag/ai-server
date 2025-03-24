@@ -151,6 +151,8 @@ export const modelTrainingV2 = inngest.createFunction(
           paymentAmount,
           is_ru,
           bot,
+          bot_name,
+          description: `Payment for model training ${modelName} (steps: ${steps})`,
         })
 
         if (!balanceCheck.success) {
@@ -176,27 +178,6 @@ export const modelTrainingV2 = inngest.createFunction(
         return { currentBalance, paymentAmount }
       }
     )
-
-    // Обновляем баланс пользователя
-    await step.run('update-balance', async () => {
-      logger.info({
-        message: '💸 Deducting payment from user balance',
-        telegramId: telegram_id,
-        amount: paymentAmount,
-        oldBalance: currentBalance,
-        newBalance: currentBalance - paymentAmount,
-        step: 'update-balance',
-      })
-
-      await updateUserBalance(telegram_id, currentBalance - paymentAmount)
-
-      logger.info({
-        message: '✅ Balance updated successfully',
-        telegramId: telegram_id,
-        newBalance: currentBalance - paymentAmount,
-        step: 'update-balance',
-      })
-    })
 
     try {
       // Кодируем ZIP файл в base64
@@ -390,7 +371,13 @@ export const modelTrainingV2 = inngest.createFunction(
           step: 'refund-balance',
         })
 
-        await updateUserBalance(telegram_id, currentBalance + paymentAmount)
+        await updateUserBalance(
+          telegram_id,
+          currentBalance + paymentAmount,
+          paymentAmount,
+          'income',
+          `Refund for model training ${modelName} (steps: ${steps})`
+        )
 
         logger.info({
           message: '✅ Payment refunded successfully',

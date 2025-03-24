@@ -8,6 +8,8 @@ type BalanceOperationProps = {
   paymentAmount: number
   is_ru: boolean
   bot: Telegraf<MyContext>
+  bot_name?: string
+  description?: string
 }
 
 export const processBalanceOperation = async ({
@@ -15,6 +17,8 @@ export const processBalanceOperation = async ({
   paymentAmount,
   is_ru,
   bot,
+  bot_name = 'neuro_blogger_bot',
+  description,
 }: BalanceOperationProps): Promise<BalanceOperationResult> => {
   try {
     // Получаем текущий баланс
@@ -36,8 +40,20 @@ export const processBalanceOperation = async ({
     // Рассчитываем новый баланс
     const newBalance = Number(currentBalance) - Number(paymentAmount)
 
-    // Обновляем баланс в БД
-    await updateUserBalance(telegram_id, newBalance)
+    // Обновляем баланс в БД и создаем запись о транзакции
+    await updateUserBalance(
+      telegram_id,
+      newBalance,
+      paymentAmount,
+      'outcome',
+      description,
+      {
+        stars: paymentAmount,
+        payment_method: 'NeuroPhoto',
+        bot_name,
+        language: is_ru ? 'ru' : 'en',
+      }
+    )
 
     return {
       newBalance,

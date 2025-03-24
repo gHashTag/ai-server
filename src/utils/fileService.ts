@@ -2,7 +2,7 @@ import { existsSync } from 'fs'
 import fs from 'fs'
 import { join, resolve } from 'path'
 
-import { CONFIG } from '../services/createRenderJob.service'
+import { CONFIG } from '@/config'
 
 export const createFileUrl = (filePath: string): string => {
   const absolutePath = resolve(filePath)

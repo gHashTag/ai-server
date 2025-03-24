@@ -859,3 +859,13 @@ export const generateModelTraining = inngest.createFunction(
     }
   }
 )
+// inngest event data
+// "data": {
+//   "bot_name": "neuro_blogger_bot",
+//   "is_ru": true,
+//   "modelName": "test_lora_model",
+//   "steps": 1500,
+//   "telegram_id": "144022504",
+//   "triggerWord": "person1",
+//   "zipUrl": "https://example.com/training-images.zip"
+// },
