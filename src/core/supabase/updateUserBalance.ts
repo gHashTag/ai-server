@@ -24,24 +24,34 @@ export const updateUserBalance = async (
       throw new Error('Не удалось обновить баланс пользователя')
     }
 
-    const invId = Math.floor(Math.random() * 1000000)
+    const invId = String(Math.floor(Math.random() * 1000000))
+    const paymentId = Math.floor(Math.random() * 1000000)
+
+    // Преобразуем stars в целое число
+    const starsValue =
+      options?.stars !== undefined
+        ? Math.floor(options.stars)
+        : Math.floor(Math.abs(amount))
 
     // Создаем запись о транзакции
     const { error: paymentError } = await supabase.from('payments').insert({
       telegram_id,
       inv_id: invId,
+      payment_id: paymentId,
       currency: 'STARS',
       amount: Math.abs(amount),
       status: 'COMPLETED',
-      stars: Math.abs(amount) || 0,
+      stars: starsValue, // Гарантированно целое число
       type,
       description: description || `Balance ${type}`,
       payment_method: options?.payment_method || 'System',
       bot_name: options?.bot_name || 'neuro_blogger_bot',
       language: options?.language || 'ru',
+      payment_date: new Date(),
     })
 
     if (paymentError) {
+      console.error('Ошибка создания записи о транзакции:', paymentError)
       throw new Error('Не удалось создать запись о транзакции')
     }
   } catch (error) {

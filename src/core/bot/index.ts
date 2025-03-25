@@ -2,17 +2,10 @@ import { BOT_NAMES } from '@/config'
 import { config } from 'dotenv'
 import { pulseBot } from '@/config'
 import { logger } from '@utils/logger'
-config({ path: `.env.${process.env.NODE_ENV || 'development'}.local` })
-
-// import { Telegraf } from 'telegraf'
-
-// // Явно указываем тип Telegraf для переменной bot
-// const bot: Telegraf = new Telegraf(BOT_TOKEN)
-
-// export default bot
 
 import { Telegraf } from 'telegraf'
 import { MyContext } from '@/interfaces'
+config({ path: `.env.${process.env.NODE_ENV || 'development'}.local` })
 
 export const bots = Object.values(BOT_NAMES).map(
   token => new Telegraf<MyContext>(token)
