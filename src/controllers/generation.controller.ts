@@ -437,8 +437,6 @@ export class GenerationController {
           is_ru,
           bot_name,
           type,
-          // Идемпотентный ключ для предотвращения дублирования
-          idempotencyKey: `train-v2:${telegram_id}:${modelName}-${Date.now()}`,
         },
       })
 

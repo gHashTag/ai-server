@@ -32,7 +32,6 @@ async function encodeFileToBase64(url: string): Promise<string> {
 export const modelTrainingV2 = inngest.createFunction(
   {
     id: 'model-training-v2',
-    idempotency: 'event.data.idempotencyKey',
   },
   { event: 'model/training.v2.requested' },
   async ({ event, step }) => {
