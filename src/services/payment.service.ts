@@ -5,6 +5,8 @@ import { getTelegramIdFromInvId } from '@/core/supabase'
 import { errorMessageAdmin } from '@/helpers/errorMessageAdmin'
 import { errorMessage } from '@/helpers'
 import { updateUserSubscription } from '@/core/supabase'
+import { Telegraf, Context } from 'telegraf'
+import { logger } from '@/utils/logger'
 
 // Константы для вариантов оплаты
 const PAYMENT_OPTIONS = [
@@ -53,6 +55,16 @@ const SUBSCRIPTION_AMOUNTS = SUBSCRIPTION_PLANS.reduce((acc, plan) => {
   return acc
 }, {})
 
+interface PaymentParams {
+  amount: string
+  stars: number
+  telegramId: string
+  language_code: string
+  username: string
+  groupId: string
+  bot: Telegraf<Context>
+}
+
 export class PaymentService {
   public async processPayment(
     roundedIncSum: number,
@@ -83,7 +95,7 @@ export class PaymentService {
       }
 
       if (stars > 0) {
-        const { telegram_id, username, language, bot_name } =
+        const { telegram_id, username, language_code, bot_name } =
           await getTelegramIdFromInvId(inv_id)
 
         const { bot, groupId } = createBotByName(bot_name)
@@ -97,7 +109,7 @@ export class PaymentService {
           amount: roundedIncSum.toString(),
           stars,
           telegramId: telegram_id.toString(),
-          language,
+          language_code,
           username,
           groupId,
           bot,
@@ -117,10 +129,18 @@ export class PaymentService {
         if (subscription) {
           await updateUserSubscription(telegram_id, subscription)
         }
+
+        logger.info('💰 Платеж успешно обработан', {
+          description: 'Payment processed successfully',
+          telegram_id,
+          language_code,
+        })
       }
     } catch (error) {
-      const { telegram_id, language } = await getTelegramIdFromInvId(inv_id)
-      errorMessage(error as Error, telegram_id, language === 'ru')
+      const { telegram_id, language_code } = await getTelegramIdFromInvId(
+        inv_id
+      )
+      errorMessage(error as Error, telegram_id, language_code === 'ru')
       errorMessageAdmin(error as Error)
       throw error
     }
