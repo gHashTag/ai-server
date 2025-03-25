@@ -2,7 +2,7 @@ import { supabase } from '.'
 
 type User = {
   telegram_id: string
-  language: string
+  language_code: string
   first_name?: string
   last_name?: string
   username?: string
@@ -17,7 +17,6 @@ export const getTelegramIdFromInvId = async (inv_id: string): Promise<User> => {
       .select(
         `
         telegram_id,
-        language,
         users (
           first_name,
           last_name,
@@ -37,17 +36,24 @@ export const getTelegramIdFromInvId = async (inv_id: string): Promise<User> => {
     }
 
     // Проверяем, что данные пользователя существуют
-    const { telegram_id, language, users } = data
+    const { telegram_id, users } = data
     if (!users) {
       throw new Error('Данные пользователя не найдены')
     }
 
     //@ts-ignore
-    const { first_name, last_name, username, balance, bot_name } = users
+    const {
+      first_name,
+      last_name,
+      username,
+      balance,
+      bot_name,
+      language_code,
+    } = users
 
     return {
       telegram_id,
-      language,
+      language_code,
       first_name,
       last_name,
       username,

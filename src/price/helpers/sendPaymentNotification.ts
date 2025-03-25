@@ -5,7 +5,7 @@ export const sendPaymentNotification = async ({
   amount,
   stars,
   telegramId,
-  language,
+  language_code,
   username,
   groupId,
   bot,
@@ -13,14 +13,14 @@ export const sendPaymentNotification = async ({
   amount: string
   stars: number
   telegramId: string
-  language: string
+  language_code: string
   username: string
   groupId: string
   bot: Telegraf<MyContext>
 }) => {
   try {
     const caption =
-      language === 'ru'
+      language_code === 'ru'
         ? `💸 Пользователь @${
             username || 'Пользователь без username'
           } (Telegram ID: ${telegramId.toString()}) оплатил ${amount} рублей и получил ${stars} звезд.`
