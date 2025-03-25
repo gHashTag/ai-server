@@ -102,6 +102,7 @@ export const broadcastMessage = inngest.createFunction(
           params.textRu,
           {
             ...params,
+            bot_name: params.bot_name,
             textEn: params.textEn,
           }
         )

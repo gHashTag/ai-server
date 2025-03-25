@@ -165,6 +165,31 @@ export const broadcastService = {
       textEn,
     } = options
 
+    // Строгая проверка наличия bot_name
+    if (!bot_name || typeof bot_name !== 'string' || bot_name.trim() === '') {
+      logger.error('❌ Не указан или некорректный bot_name для рассылки', {
+        description: 'Invalid or missing bot_name for broadcast',
+        bot_name,
+        options: JSON.stringify(options),
+      })
+      return {
+        successCount: 0,
+        errorCount: 0,
+        reason: 'invalid_bot_name',
+      }
+    }
+
+    logger.info('🚀 Начало рассылки с параметрами:', {
+      description: 'Starting broadcast with parameters',
+      bot_name,
+      test_mode: test_mode || false,
+      contentType: contentType || 'photo',
+      has_image: !!imageUrl,
+      has_video: !!videoFileId,
+      has_post_link: !!postLink,
+      sender_telegram_id: sender_telegram_id || 'not_provided',
+    })
+
     // Если указан ID отправителя и имя бота, проверяем права
     if (sender_telegram_id && bot_name) {
       const isOwner = await avatarService.isAvatarOwner(
@@ -187,7 +212,7 @@ export const broadcastService = {
 
     logger.info('📊 Начинаем загрузку пользователей из базы данных...', {
       description: 'Starting to fetch users from database',
-      bot_name: bot_name || 'all',
+      bot_name,
       test_mode: test_mode || false,
     })
 
@@ -236,14 +261,10 @@ export const broadcastService = {
       }
     } else {
       // Стандартная логика - получаем пользователей из базы данных
-      let query = supabase
+      const query = supabase
         .from('users')
         .select('telegram_id, bot_name, language_code')
-
-      // Если указано имя бота, фильтруем пользователей
-      if (bot_name) {
-        query = query.eq('bot_name', bot_name)
-      }
+        .eq('bot_name', bot_name) // Всегда фильтруем по bot_name
 
       const { data, error } = await query
 
@@ -253,7 +274,7 @@ export const broadcastService = {
           {
             description: `Error fetching users: ${error.message}`,
             error,
-            bot_name: bot_name || 'all',
+            bot_name,
           }
         )
         return {
@@ -266,16 +287,21 @@ export const broadcastService = {
       users = data || []
     }
 
-    logger.info(`👥 Загружено пользователей: ${users?.length || 0}`, {
-      description: `Fetched users count: ${users?.length || 0}`,
-      bot_name: bot_name || 'all',
-      test_mode: test_mode || false,
-    })
+    logger.info(
+      `👥 Загружено пользователей для бота ${bot_name}: ${users?.length || 0}`,
+      {
+        description: `Fetched users count for bot ${bot_name}: ${
+          users?.length || 0
+        }`,
+        bot_name,
+        test_mode: test_mode || false,
+      }
+    )
 
     if (!users || users.length === 0) {
       logger.warn('⚠️ Нет пользователей для рассылки', {
         description: 'No users found for broadcast',
-        bot_name: bot_name || 'all',
+        bot_name,
         test_mode: test_mode || false,
       })
       return { successCount: 0, errorCount: 0, reason: 'no_users' }
@@ -491,7 +517,7 @@ export const broadcastService = {
       `📊 Итоги рассылки: успешно - ${successCount}, ошибок - ${errorCount}`,
       {
         description: `Broadcast summary: success - ${successCount}, errors - ${errorCount}`,
-        bot_name: bot_name || 'all',
+        bot_name,
         test_mode: test_mode || false,
       }
     )
