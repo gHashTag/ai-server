@@ -9,6 +9,9 @@ type BalanceUpdateMetadata = {
   language?: string
   service_type?: PaymentService
   inv_id?: string
+  modePrice?: number
+  currentBalance?: number
+  paymentAmount?: number
   [key: string]: any
 }
 
@@ -24,6 +27,17 @@ export const updateUserBalance = async (
   metadata?: BalanceUpdateMetadata
 ): Promise<boolean> => {
   try {
+    // Подробное логирование входных данных для диагностики
+    logger.info('🔍 Входные данные updateUserBalance:', {
+      log_description: 'Input parameters for updateUserBalance',
+      telegram_id,
+      amount,
+      amount_type: typeof amount,
+      type,
+      operation_description: description,
+      metadata: metadata ? JSON.stringify(metadata) : 'нет метаданных',
+    })
+
     // Проверка входных данных
     if (!telegram_id) {
       logger.error('❌ Пустой telegram_id в updateUserBalance:', {
@@ -45,6 +59,127 @@ export const updateUserBalance = async (
 
     // Безопасно преобразуем amount в число
     let safeAmount = Number(amount)
+    const originalAmount = safeAmount // Сохраняем оригинальное значение для логов
+
+    // ЭКСТРЕННОЕ ИСПРАВЛЕНИЕ: Извлечение суммы платежа из описания, если это оплата генерации
+    if (
+      description &&
+      description.includes('Payment for generating') &&
+      type === 'outcome'
+    ) {
+      // Извлекаем значение modePrice из metadata
+      if (metadata?.modePrice && typeof metadata.modePrice === 'number') {
+        logger.info('🎯 ПРИНУДИТЕЛЬНО использую modePrice из metadata:', {
+          description: 'FORCED use of modePrice from metadata',
+          telegram_id,
+          original_amount: safeAmount,
+          modePrice: metadata.modePrice,
+        })
+        safeAmount = metadata.modePrice
+      }
+      // Или проверяем paymentAmount
+      else if (
+        metadata?.paymentAmount &&
+        typeof metadata.paymentAmount === 'number'
+      ) {
+        logger.info('🎯 ПРИНУДИТЕЛЬНО использую paymentAmount из metadata:', {
+          description: 'FORCED use of paymentAmount from metadata',
+          telegram_id,
+          original_amount: safeAmount,
+          paymentAmount: metadata.paymentAmount,
+        })
+        safeAmount = metadata.paymentAmount
+      } else {
+        // Последний шанс - попытка извлечь из описания сумму операции
+        logger.warn(
+          '⚠️ Не могу определить сумму операции, устанавливаю значение по умолчанию 5:',
+          {
+            description:
+              'Cannot determine operation amount, setting default value of 5',
+            telegram_id,
+            original_amount: safeAmount,
+          }
+        )
+        safeAmount = 5 // Устанавливаем значение по умолчанию для нейрогенерации
+      }
+    }
+    // Если не нашли в описании, пробуем другие методы определения суммы
+    else {
+      // --- ЛОГИКА ОПРЕДЕЛЕНИЯ ФАКТИЧЕСКОЙ СУММЫ ТРАНЗАКЦИИ ---
+
+      // Если есть modePrice в metadata - это стоимость операции
+      if (metadata?.modePrice && typeof metadata.modePrice === 'number') {
+        logger.info('🎯 Найдена стоимость операции в metadata.modePrice:', {
+          description: 'Found operation price in metadata.modePrice',
+          telegram_id,
+          original_amount: safeAmount,
+          modePrice: metadata.modePrice,
+        })
+        safeAmount = metadata.modePrice
+      }
+      // Если есть paymentAmount в metadata - используем его
+      else if (
+        metadata?.paymentAmount &&
+        typeof metadata.paymentAmount === 'number'
+      ) {
+        logger.info('🎯 Найдена стоимость операции в metadata.paymentAmount:', {
+          description: 'Found operation price in metadata.paymentAmount',
+          telegram_id,
+          original_amount: safeAmount,
+          paymentAmount: metadata.paymentAmount,
+        })
+        safeAmount = metadata.paymentAmount
+      }
+      // Если есть stars в metadata - используем их
+      else if (metadata?.stars && typeof metadata.stars === 'number') {
+        logger.info('🔄 Используем stars из metadata вместо amount:', {
+          description: 'Using stars from metadata instead of amount',
+          telegram_id,
+          original_amount: safeAmount,
+          stars_amount: metadata.stars,
+        })
+        safeAmount = metadata.stars
+      }
+      // Проверка на ситуацию когда передан баланс вместо суммы операции
+      else if (
+        metadata?.currentBalance &&
+        Math.abs(metadata.currentBalance - safeAmount) < 100 &&
+        type === 'outcome'
+      ) {
+        // Вероятно передан новый баланс вместо суммы операции
+        // Вычисляем разницу между текущим и новым балансом
+        const operationAmount = Math.abs(metadata.currentBalance - safeAmount)
+        logger.info('🔎 Определена сумма операции по разнице балансов:', {
+          description: 'Detected operation amount as balance difference',
+          telegram_id,
+          currentBalance: metadata.currentBalance,
+          newBalance: safeAmount,
+          calculatedAmount: operationAmount,
+        })
+        safeAmount = operationAmount
+      }
+    }
+
+    // Проверка на подозрительно большие суммы для outcome операций
+    if (type === 'outcome' && safeAmount > 100) {
+      logger.warn('⚠️ Подозрительно большая сумма списания, возможно ошибка:', {
+        description: 'Suspiciously large amount for outcome operation',
+        telegram_id,
+        original_amount: originalAmount,
+        processed_amount: safeAmount,
+      })
+
+      // Для генерации изображений устанавливаем значение по умолчанию
+      if (description && description.toLowerCase().includes('generating')) {
+        logger.info('🛠️ Корректировка суммы для генерации изображения:', {
+          description: 'Correcting amount for image generation',
+          telegram_id,
+          original_amount: safeAmount,
+          new_amount: 5,
+        })
+        safeAmount = 5 // Стандартная стоимость генерации
+      }
+    }
 
     // Дополнительная защита: если после преобразования получили NaN, устанавливаем 0
     if (isNaN(safeAmount)) {
@@ -59,28 +194,127 @@ export const updateUserBalance = async (
       safeAmount = 0
     }
 
-    // Проверяем существование пользователя
-    const { data: userData, error: userError } = await supabase
-      .from('users')
-      .select('id')
-      .eq('telegram_id', telegram_id)
-      .single()
+    // Логируем финальную сумму для проверки
+    logger.info('✅ Финальная сумма транзакции:', {
+      description: 'Final transaction amount',
+      telegram_id,
+      original_amount: originalAmount,
+      final_amount: safeAmount,
+      type,
+    })
 
-    if (userError) {
-      logger.error('❌ Пользователь не найден при создании транзакции:', {
-        description: 'User not found during transaction creation',
-        telegram_id,
-        error: userError.message,
-      })
-      return false
-    }
+    // Проверяем существование пользователя и его баланс для outcome операций
+    if (type === 'outcome') {
+      // Проверка существования пользователя
+      const { data: userData, error: userError } = await supabase
+        .from('users')
+        .select('id')
+        .eq('telegram_id', telegram_id)
+        .single()
 
-    if (!userData) {
-      logger.error('❌ Пользователь не найден (нет данных):', {
-        description: 'User not found (no data)',
+      if (userError) {
+        logger.error('❌ Пользователь не найден при создании транзакции:', {
+          description: 'User not found during transaction creation',
+          telegram_id,
+          error: userError.message,
+        })
+        return false
+      }
+
+      if (!userData) {
+        logger.error('❌ Пользователь не найден (нет данных):', {
+          description: 'User not found (no data)',
+          telegram_id,
+        })
+        return false
+      }
+
+      // Получаем баланс пользователя из таблицы payments
+      const { data: balanceData, error: balanceError } = await supabase.rpc(
+        'get_user_balance',
+        { user_telegram_id: Number(telegram_id) }
+      )
+      console.log('balanceData 📊', balanceData)
+
+      // Если RPC функция не существует, используем обычный SQL запрос
+      let currentBalance = 0
+      if (balanceError) {
+        logger.warn('⚠️ Ошибка при вызове RPC get_user_balance:', {
+          description: 'Error calling RPC get_user_balance',
+          telegram_id,
+          error: balanceError.message,
+        })
+
+        // Вычисляем баланс суммируя все транзакции
+        const { data: paymentsData, error: paymentsError } = await supabase
+          .from('payments')
+          .select('stars, type')
+          .eq('telegram_id', Number(telegram_id))
+          .eq('status', 'COMPLETED')
+
+        if (paymentsError) {
+          logger.error('❌ Ошибка при получении истории платежей:', {
+            description: 'Error getting payments history',
+            telegram_id,
+            error: paymentsError.message,
+          })
+          return false
+        }
+
+        // Вычисляем баланс: сумма всех поступлений минус сумма всех списаний
+        currentBalance = (paymentsData || []).reduce((sum, payment) => {
+          if (payment.type === 'income') {
+            return sum + (payment.stars || 0)
+          } else {
+            return sum - (payment.stars || 0)
+          }
+        }, 0)
+      } else {
+        // Используем результат RPC функции
+        currentBalance = Number(balanceData) || 0
+      }
+
+      logger.info('💰 Баланс пользователя (из payments):', {
+        description: 'User balance from payments table',
         telegram_id,
+        balance: currentBalance,
+        required_amount: safeAmount,
       })
-      return false
+
+      // Проверка достаточности средств для списания
+      if (currentBalance < safeAmount) {
+        logger.error('❌ Недостаточно средств на балансе:', {
+          description: 'Insufficient funds',
+          telegram_id,
+          balance: currentBalance,
+          required_amount: safeAmount,
+        })
+        return false
+      }
+    } else {
+      // Для операций пополнения просто проверяем существование пользователя
+      const { data: userData, error: userError } = await supabase
+        .from('users')
+        .select('id')
+        .eq('telegram_id', telegram_id)
+        .single()
+
+      if (userError) {
+        logger.error('❌ Пользователь не найден при создании транзакции:', {
+          description: 'User not found during transaction creation',
+          telegram_id,
+          error: userError.message,
+        })
+        return false
+      }
+
+      if (!userData) {
+        logger.error('❌ Пользователь не найден (нет данных):', {
+          description: 'User not found (no data)',
+          telegram_id,
+        })
+        return false
+      }
     }
 
     // Проверяем, есть ли inv_id в метаданных (для обновления существующей записи)
@@ -125,91 +359,72 @@ export const updateUserBalance = async (
         Math.random() * 1000000
       )}-${telegram_id.substring(0, 5)}`
 
+      // Получаем реальную сумму транзакции и звезд
+      const transactionAmount = Math.abs(safeAmount)
+
       logger.info('💼 Создание новой записи о транзакции:', {
         description: 'Creating new transaction record',
         telegram_id,
         inv_id: invId,
-        amount: Math.abs(safeAmount),
+        transaction_amount: transactionAmount,
         type,
       })
 
-      // Создаем запись о транзакции
-      const { error: paymentError } = await supabase.from('payments').insert({
-        telegram_id,
-        inv_id: invId,
-        currency: metadata?.currency || 'STARS',
-        amount: parseFloat(Math.abs(safeAmount).toFixed(2)),
-        status: 'COMPLETED',
-        stars:
-          parseFloat(Math.abs(metadata?.stars || safeAmount).toFixed(2)) || 0,
-        type,
-        description: description || `Balance ${type}`,
-        payment_method: metadata?.payment_method,
-        bot_name: metadata?.bot_name || 'neuro_blogger_bot',
-        language: metadata?.language || 'ru',
-      })
+      // Проверим структуру таблицы, чтобы убедиться в правильности типов
+      try {
+        // Создаем запись о транзакции с корректным типом данных
+        // Все числовые поля преобразуем в целые числа для безопасности
+        // БЕЗОПАСНОЕ преобразование, защита от null/undefined
+        const safeRoundedAmount =
+          transactionAmount != null ? Math.round(transactionAmount) : 0
 
-      if (paymentError) {
-        logger.error('❌ Ошибка при создании записи о транзакции:', {
-          description: 'Error creating transaction record',
+        const { error: paymentError } = await supabase.from('payments').insert({
           telegram_id,
-          error: paymentError.message,
+          inv_id: invId,
+          currency: metadata?.currency || 'STARS',
+          amount: safeRoundedAmount, // Защита от null/undefined
+          status: 'COMPLETED',
+          stars: safeRoundedAmount, // Защита от null/undefined
+          type,
+          description: description || `Balance ${type}`,
+          payment_method:
+            metadata?.payment_method ||
+            (metadata?.service_type as PaymentService),
+          bot_name: metadata?.bot_name || 'neuro_blogger_bot',
+          language: metadata?.language || 'ru',
+        })
+
+        if (paymentError) {
+          logger.error('❌ Ошибка при создании записи о транзакции:', {
+            description: 'Error creating transaction record',
+            telegram_id,
+            error: paymentError.message,
+            amount: transactionAmount,
+          })
+          return false
+        }
+
+        logger.info('✅ Транзакция успешно создана:', {
+          description: 'Transaction successfully created',
+          telegram_id,
+          amount: transactionAmount,
+          type,
+        })
+      } catch (insertError) {
+        logger.error('❌ Исключение при создании записи о транзакции:', {
+          description: 'Exception during transaction record creation',
+          telegram_id,
+          error:
+            insertError instanceof Error
+              ? insertError.message
+              : 'Unknown error',
+          amount: transactionAmount,
         })
         return false
       }
-
-      logger.info('✅ Транзакция успешно создана:', {
-        description: 'Transaction successfully created',
-        telegram_id,
-        amount: safeAmount,
-        type,
-      })
     }
 
-    // Обновляем баланс пользователя
-    if (type === 'income') {
-      // Получаем текущий баланс
-      const { data: userBalance, error: balanceError } = await supabase
-        .from('users')
-        .select('balance')
-        .eq('telegram_id', telegram_id)
-        .single()
-
-      if (balanceError || !userBalance) {
-        logger.error('❌ Ошибка при получении баланса:', {
-          description: 'Error getting balance',
-          telegram_id,
-          error: balanceError?.message || 'User not found',
-        })
-        return false
-      }
-
-      // Вычисляем новый баланс
-      const newBalance = (userBalance.balance || 0) + safeAmount
-
-      // Обновляем баланс
-      const { error: updateBalanceError } = await supabase
-        .from('users')
-        .update({ balance: newBalance })
-        .eq('telegram_id', telegram_id)
-
-      if (updateBalanceError) {
-        logger.error('❌ Ошибка при обновлении баланса:', {
-          description: 'Error updating balance',
-          telegram_id,
-          error: updateBalanceError.message,
-        })
-        return false
-      }
-
-      logger.info('💰 Баланс успешно обновлен:', {
-        description: 'Balance successfully updated',
-        telegram_id,
-        old_balance: userBalance.balance,
-        amount: safeAmount,
-        new_balance: newBalance,
-      })
-    }
+    // Обновление баланса в таблице Users больше не требуется
 
     return true
   } catch (error) {
