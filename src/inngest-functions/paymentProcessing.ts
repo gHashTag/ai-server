@@ -1,5 +1,5 @@
 import { inngest } from '@/core/inngest/clients'
-import { setPayments } from '@/core/supabase'
+import { updateUserBalance } from '@/core/supabase'
 import { sendPaymentNotification } from '@/price/helpers'
 import { createBotByName } from '@/config'
 import { getTelegramIdFromInvId } from '@/core/supabase'
@@ -9,7 +9,6 @@ import { updateUserSubscription } from '@/core/supabase'
 import { logger } from '@/utils/logger'
 import { Telegraf } from 'telegraf'
 import { MyContext } from '@/interfaces'
-import { updateUserBalance } from '@/core/supabase'
 
 // Константы для вариантов оплаты
 const PAYMENT_OPTIONS = [
@@ -158,7 +157,7 @@ export const processPayment = inngest.createFunction(
           // Передаем inv_id в метаданных, чтобы функция обновила существующую запись
           const result = await updateUserBalance(
             telegram_id.toString(),
-            stars,
+            Number(roundedIncSum),
             'income',
             description,
             {
@@ -171,7 +170,6 @@ export const processPayment = inngest.createFunction(
               inv_id, // Передаем inv_id для обновления существующей записи
             }
           )
-
           if (!result) {
             throw new Error(
               `Не удалось обновить баланс пользователя ${telegram_id}`

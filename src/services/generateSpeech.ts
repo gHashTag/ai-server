@@ -44,6 +44,7 @@ export const generateSpeech = async ({
     bot,
     bot_name,
     description: `Payment for text to speech`,
+    type: 'Text to speech',
   })
   if (!balanceCheck.success) {
     throw new Error(balanceCheck.error)

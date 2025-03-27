@@ -62,19 +62,11 @@ export const processBalanceVideoOperation = async ({
     const newBalance = currentBalance - paymentAmount
 
     // Обновляем баланс в БД
-    await updateUserBalance(
-      telegram_id,
-      newBalance,
-      paymentAmount,
-      'outcome',
-      description,
-      {
-        stars: paymentAmount,
-        payment_method: 'Image to video',
-        bot_name,
-        language: is_ru ? 'ru' : 'en',
-      }
-    )
+    await updateUserBalance(telegram_id, newBalance, 'outcome', description, {
+      payment_method: 'Image to video',
+      bot_name,
+      language: is_ru ? 'ru' : 'en',
+    })
 
     return { newBalance, paymentAmount, success: true }
   } catch (error) {

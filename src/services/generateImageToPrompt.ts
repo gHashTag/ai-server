@@ -39,6 +39,7 @@ export async function generateImageToPrompt(
       bot,
       bot_name,
       description: 'Payment for image to prompt',
+      type: 'NeuroPhoto',
     })
     if (!balanceCheck.success) {
       throw new Error('Not enough stars')

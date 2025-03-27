@@ -172,11 +172,3 @@ export interface WorkspaceNode {
   telegram_id: string
   workspace_id: string
 }
-
-export interface User {
-  telegram_id: number
-  username: string
-  bot_name: string
-  language_code: string
-  // ... existing code ...
-}

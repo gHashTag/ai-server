@@ -115,6 +115,7 @@ export const neuroImageGeneration = inngest.createFunction(
           description: `Payment for generating ${num_images} image${
             num_images === 1 ? '' : 's'
           } with prompt: ${prompt.substring(0, 30)}...`,
+          type: 'NeuroPhoto',
         })
 
         if (!result.success) {

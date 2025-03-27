@@ -152,6 +152,7 @@ export const modelTrainingV2 = inngest.createFunction(
           bot,
           bot_name,
           description: `Payment for model training ${modelName} (steps: ${steps})`,
+          type: 'Training',
         })
 
         if (!balanceCheck.success) {
@@ -373,9 +374,13 @@ export const modelTrainingV2 = inngest.createFunction(
         await updateUserBalance(
           telegram_id,
           currentBalance + paymentAmount,
-          paymentAmount,
           'income',
-          `Refund for model training ${modelName} (steps: ${steps})`
+          `Refund for model training ${modelName} (steps: ${steps})`,
+          {
+            payment_method: 'Training',
+            bot_name,
+            language: is_ru ? 'ru' : 'en',
+          }
         )
 
         logger.info({

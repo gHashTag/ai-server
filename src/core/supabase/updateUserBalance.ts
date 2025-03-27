@@ -1,15 +1,6 @@
 import { supabase } from './index'
 import { logger } from '@/utils/logger'
-
-type PaymentService =
-  | 'NeuroPhoto'
-  | 'Text to speech'
-  | 'Image to video'
-  | 'Training'
-  | 'Refund'
-  | 'System'
-  | 'Telegram'
-  | 'Robokassa'
+import { PaymentService } from '@/interfaces/payments.interface'
 
 type BalanceUpdateMetadata = {
   stars?: number

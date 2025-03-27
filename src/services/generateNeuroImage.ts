@@ -52,6 +52,7 @@ export async function generateNeuroImage(
       description: `Payment for generating ${num_images} image${
         num_images === 1 ? '' : 's'
       } with prompt: ${prompt.substring(0, 30)}...`,
+      type: 'NeuroPhoto',
     })
     if (!balanceCheck.success) {
       throw new Error(balanceCheck.error)

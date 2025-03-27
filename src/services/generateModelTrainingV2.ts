@@ -67,6 +67,7 @@ export async function generateModelTrainingV2(
     bot,
     bot_name,
     description: `Payment for model training ${modelName} (steps: ${steps})`,
+    type: 'Training',
   })
 
   if (!balanceCheck.success) {
@@ -133,11 +134,9 @@ export async function generateModelTrainingV2(
     await updateUserBalance(
       telegram_id,
       currentBalance + paymentAmount,
-      paymentAmount,
       'income',
       `Refund for model training ${modelName} (steps: ${steps})`,
       {
-        stars: paymentAmount,
         payment_method: 'Training',
         bot_name,
         language: is_ru ? 'ru' : 'en',
