@@ -5,6 +5,7 @@ import {
   modelTrainingV2,
   neuroImageGeneration,
   broadcastMessage,
+  processPayment,
 } from '../inngest-functions'
 
 // Регистрация ВСЕХ функций в одном месте
@@ -15,6 +16,7 @@ export const inngestRouter = serve({
     generateModelTraining,
     modelTrainingV2,
     broadcastMessage,
+    processPayment,
   ],
   signingKey: process.env.INNGEST_SIGNING_KEY,
 })

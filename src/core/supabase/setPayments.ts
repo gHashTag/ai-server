@@ -3,7 +3,7 @@ import { supabase } from '.'
 type Payment = {
   inv_id: string
   telegram_id: string
-  roundedIncSum: number
+  amount: number
   currency: 'RUB' | 'USD' | 'EUR' | 'STARS'
   stars: number
   email?: string
@@ -14,7 +14,7 @@ type Payment = {
 export const setPayments = async ({
   inv_id,
   telegram_id,
-  roundedIncSum,
+  amount,
   currency,
   stars,
   payment_method,
@@ -26,7 +26,7 @@ export const setPayments = async ({
       .from('payments')
       .update({
         telegram_id,
-        amount: roundedIncSum,
+        amount,
         currency,
         status: 'COMPLETED',
         payment_method,
