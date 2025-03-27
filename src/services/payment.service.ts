@@ -17,7 +17,7 @@ export class PaymentService {
 
       // Отправляем событие в Inngest для асинхронной обработки
       await inngest.send({
-        name: 'payment/process',
+        name: 'payment/process-ai-server',
         data: {
           IncSum: Math.round(Number(roundedIncSum)),
           inv_id,

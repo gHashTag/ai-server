@@ -60,7 +60,7 @@ const SUBSCRIPTION_AMOUNTS = SUBSCRIPTION_PLANS.reduce((acc, plan) => {
 // Функция Inngest для обработки платежей
 export const processPayment = inngest.createFunction(
   {
-    id: 'payment-processing',
+    id: 'payment-processing-ai-server',
     name: 'Обработка платежей',
     retries: 3, // Автоматические повторы при сбоях
     onFailure: async ({ error }) => {
@@ -69,7 +69,7 @@ export const processPayment = inngest.createFunction(
       return { error: error.message }
     },
   },
-  { event: 'payment/process' }, // Триггерное событие
+  { event: 'payment/process-ai-server' }, // Триггерное событие
   async ({ event, step }) => {
     const { IncSum, inv_id } = event.data
     // Преобразуем строку в число и округляем до целого
