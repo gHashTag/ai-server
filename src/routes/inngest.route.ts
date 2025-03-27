@@ -3,7 +3,6 @@ import { inngest } from '@/core/inngest/clients'
 import {
   generateModelTraining,
   modelTrainingV2,
-  neuroImageGeneration,
   broadcastMessage,
   processPayment,
 } from '../inngest-functions'
@@ -12,7 +11,6 @@ import {
 export const inngestRouter = serve({
   client: inngest,
   functions: [
-    neuroImageGeneration,
     generateModelTraining,
     modelTrainingV2,
     broadcastMessage,
