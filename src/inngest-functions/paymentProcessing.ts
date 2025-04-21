@@ -71,6 +71,9 @@ export const processPayment = inngest.createFunction(
   },
   { event: 'payment/process-ai-server' }, // Триггерное событие
   async ({ event, step }) => {
+    console.log('🎯 Получено событие платежа:', event)
+    console.log('📦 Данные события:', event.data)
+
     const { IncSum, inv_id } = event.data
     // Преобразуем строку в число и округляем до целого
     const roundedIncSum = Math.round(Number(IncSum))
@@ -158,7 +161,7 @@ export const processPayment = inngest.createFunction(
           const result = await updateUserBalance(
             telegram_id.toString(),
             Number(roundedIncSum),
-            'income',
+            'money_income',
             description,
             {
               payment_method: 'Robokassa',

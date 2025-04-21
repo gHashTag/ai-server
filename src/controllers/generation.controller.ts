@@ -396,60 +396,9 @@ export class GenerationController {
     next: NextFunction
   ): Promise<void> => {
     try {
-      const {
-        type,
-        telegram_id,
-        triggerWord,
-        modelName,
-        steps,
-        is_ru,
-        bot_name,
-      } = req.body
-      if (!type) {
-        res.status(400).json({ message: 'type is required' })
-        return
-      }
-      if (!triggerWord) {
-        res.status(400).json({ message: 'triggerWord is required' })
-        return
-      }
-      if (!modelName) {
-        res.status(400).json({ message: 'modelName is required' })
-        return
-      }
-      if (!steps) {
-        res.status(400).json({ message: 'steps is required' })
-        return
-      }
-      if (!telegram_id) {
-        res.status(400).json({ message: 'telegram_id is required' })
-        return
-      }
-
-      const zipFile = req.files?.find(file => file.fieldname === 'zipUrl')
-      if (!zipFile) {
-        res.status(400).json({ message: 'zipFile is required' })
-        return
-      }
-      // Создаем URL для доступа к файлу
-      const zipUrl = `https://${req.headers.host}/uploads/${telegram_id}/${type}/${zipFile.filename}`
-      console.log('zipUrl', zipUrl)
-      // Отправляем событие в Inngest вместо прямого вызова функции
-      await inngest.send({
-        name: 'model/training.v2.requested',
-        data: {
-          zipUrl,
-          triggerWord,
-          modelName,
-          steps,
-          telegram_id,
-          is_ru,
-          bot_name,
-          type,
-        },
-      })
-
-      res.status(200).json({ message: 'Model training started' })
+      // Временно перенаправляем на основную версию
+      console.log('⚠️ V2 версия временно отключена, используем основную версию')
+      return this.createModelTraining(req, res, next)
     } catch (error) {
       console.error('Ошибка при обработке запроса:', error)
       next(error)

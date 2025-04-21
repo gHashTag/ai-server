@@ -1,7 +1,8 @@
 import { MyContext } from '@/interfaces'
-import { config } from 'dotenv'
+import { config as dotenvConfig } from 'dotenv'
 import { Telegraf } from 'telegraf'
-config({ path: `.env.${process.env.NODE_ENV || 'development'}.local` })
+
+dotenvConfig({ path: `.env.${process.env.NODE_ENV || 'development'}.local` })
 
 export const isDev = process.env.NODE_ENV === 'development'
 
@@ -191,3 +192,19 @@ if (!process.env.AERENDER_PATH) {
 export const AERENDER_PATH = process.env.AERENDER_PATH
 
 export const INNGEST_WEBHOOK_URL = process.env.INNGEST_WEBHOOK_URL
+
+export interface SupabaseConfig {
+  url: string;
+  key: string;
+}
+
+export interface AppConfig {
+  supabase: SupabaseConfig;
+}
+
+export const appConfig: AppConfig = {
+  supabase: {
+    url: process.env.SUPABASE_URL || 'https://yuukfqcsdhkyxegfwlcb.supabase.co',
+    key: process.env.SUPABASE_KEY || '',
+  }
+};

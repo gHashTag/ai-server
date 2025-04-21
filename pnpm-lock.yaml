@@ -123,6 +123,9 @@ importers:
         specifier: ^4.7.1
         version: 4.7.1(winston@3.17.0)
     devDependencies:
+      '@inngest/test':
+        specifier: ^0.1.6
+        version: 0.1.6(encoding@0.1.13)(express@4.21.2)(typescript@4.9.5)
       '@swc/cli':
         specifier: ^0.1.57
         version: 0.1.65(@swc/core@1.10.4)(chokidar@3.6.0)
@@ -643,6 +646,9 @@ packages:
 
   '@inngest/ai@0.1.3':
     resolution: {integrity: sha512-J8R/pff6Nsm16e5V9UvcNO/wfaaNVS54/wN7cE8CREb1OOFzlCd3Y4TyGb0wyw3y+iTayOLa/KJEYziaGMPIbA==}
+
+  '@inngest/test@0.1.6':
+    resolution: {integrity: sha512-SDNjOlg0d1iz/8ZBi9dtd7sfOHFb8gqWXPGh0F+Lp8JtcVF+hzJBJn5ZOvdqdFzfNqsijVA3YwKCW9xFcC9ahg==}
 
   '@isaacs/cliui@8.0.2':
     resolution: {integrity: sha512-O8jcjabXaleOG9DQ0+ARXWZBTfnP4WNAqzuiJK7ll44AmxGKv/J2M4TPjxjY3znBCfvBXFzucm1twdyFybFqEA==}
@@ -4889,6 +4895,10 @@ packages:
   tinycolor2@1.6.0:
     resolution: {integrity: sha512-XPaBkWQJdsf3pLKJV9p4qN/S+fm2Oj8AIPo1BTUhg5oxkvm9+SVEGFdhyOz7tTdUTfvxMiAs4sp6/eZO2Ew+pw==}
 
+  tinyspy@3.0.2:
+    resolution: {integrity: sha512-n1cw8k1k0x4pgA2+9XrOkFydTerNcJ1zWCO5Nn9scWHTD+5tp8dghT2x1uduQePZTZgd3Tupf+x9BxJjeJi77Q==}
+    engines: {node: '>=14.0.0'}
+
   tmpl@1.0.5:
     resolution: {integrity: sha512-3f0uOEAQwIqGuWW2MVzYg8fV/QNnc/IpuJNG837rLuczAaLVHslWHZQj4IGiEl5Hs3kkbhwL9Ab7Hrsmuj+Smw==}
 
@@ -5037,6 +5047,10 @@ packages:
   typescript@5.8.2:
     resolution: {integrity: sha512-aJn6wq13/afZp/jT9QZmwEjDqqvSGp1VT5GVg+f/t6/oVyrgXM6BY1h9BRh/O5p3PlUPAe+WuiEZOmb/49RqoQ==}
     engines: {node: '>=14.17'}
+    hasBin: true
+
+  ulid@2.4.0:
+    resolution: {integrity: sha512-fIRiVTJNcSRmXKPZtGzFQv9WRrZ3M9eoptl/teFJvjOzmpU+/K/JH6HZ8deBfb5vMEpicJcLn7JmvdknlMq7Zg==}
     hasBin: true
 
   ulidx@2.4.1:
@@ -6131,6 +6145,25 @@ snapshots:
     dependencies:
       '@types/node': 22.13.10
       typescript: 5.8.2
+
+  '@inngest/test@0.1.6(encoding@0.1.13)(express@4.21.2)(typescript@4.9.5)':
+    dependencies:
+      inngest: 3.32.7(encoding@0.1.13)(express@4.21.2)(typescript@4.9.5)
+      tinyspy: 3.0.2
+      ulid: 2.4.0
+    transitivePeerDependencies:
+      - '@sveltejs/kit'
+      - '@vercel/node'
+      - aws-lambda
+      - encoding
+      - express
+      - fastify
+      - h3
+      - hono
+      - koa
+      - next
+      - supports-color
+      - typescript
 
   '@isaacs/cliui@8.0.2':
     dependencies:
@@ -11214,6 +11247,8 @@ snapshots:
 
   tinycolor2@1.6.0: {}
 
+  tinyspy@3.0.2: {}
+
   tmpl@1.0.5: {}
 
   to-regex-range@5.0.1:
@@ -11342,6 +11377,8 @@ snapshots:
   typescript@4.9.5: {}
 
   typescript@5.8.2: {}
+
+  ulid@2.4.0: {}
 
   ulidx@2.4.1:
     dependencies:
