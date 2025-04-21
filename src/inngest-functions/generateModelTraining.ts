@@ -648,7 +648,7 @@ export const generateModelTraining = inngest.createFunction(
         await updateUserBalance(
           eventData.telegram_id,
           newBalance,
-          'outcome',
+          'money_expense',
           `Оплата тренировки модели ${modelName} (шагов: ${steps})`,
           {
             payment_method: 'Training',
@@ -816,7 +816,7 @@ export const generateModelTraining = inngest.createFunction(
           await updateUserBalance(
             eventData.telegram_id,
             balanceCheck.currentBalance,
-            'money_income',
+            'money_expense',
             `Возврат средств за неудавшуюся тренировку модели ${eventData.modelName}`,
             {
               payment_method: 'Refund',
