@@ -366,25 +366,6 @@ export class GenerationController {
         zipUrl,
       })
 
-      // Для отладки - пробуем отправить событие также с названием .v2.requested
-      // Это поможет определить, с каким событием проблема
-      console.log(
-        '🔄 Отправка тестового события model/training.v2.requested для проверки'
-      )
-      await inngest.send({
-        name: 'model/training.v2.requested',
-        data: {
-          zipUrl,
-          triggerWord,
-          modelName,
-          steps,
-          telegram_id,
-          is_ru,
-          bot_name,
-          type,
-        },
-      })
-
       console.log('🔄 Отправка основного события model/training.start')
       await inngest.send({
         id: `train:${telegram_id}:${modelName}-${Date.now()}`,
