@@ -6,14 +6,14 @@ import {
   getUserBalance,
   createModelTraining,
   updateLatestModelTraining,
+  supabase,
 } from '@/core/supabase'
 import { getBotByName } from '@/core/bot'
 import { modeCosts, ModeEnum } from '@/price/helpers/modelsCost'
-import { inngest } from '@/core/inngest-client/clients'
+import { inngest } from '@/core/inngest/clients'
 import { API_URL } from '@/config'
 import { BalanceHelper } from '@/helpers/inngest'
 import { logger } from '@utils/logger'
-import { supabase } from '@/core/supabase'
 
 import type { Prediction } from 'replicate'
 
@@ -385,27 +385,6 @@ export const generateModelTraining = inngest.createFunction(
           }
         })
       },
-
-      updateBalance: async (newBalance: number) => {
-        return step.run('update-balance', async () => {
-          const current = await getUserBalance(eventData.telegram_id)
-          if (current === null) {
-            logger.error({
-              message: 'Пользователь не найден при обновлении баланса',
-              telegram_id: eventData.telegram_id,
-            })
-            throw new Error('User not found')
-          }
-          await updateUserBalance(eventData.telegram_id, newBalance)
-          logger.info({
-            message: 'Баланс обновлен',
-            telegram_id: eventData.telegram_id,
-            oldBalance: current,
-            newBalance,
-          })
-          return newBalance
-        })
-      },
     }
 
     // 🧩 Основные шаги процесса
@@ -455,7 +434,6 @@ export const generateModelTraining = inngest.createFunction(
             })
             return user
           }),
-          step.run('get-balance', () => getUserBalance(telegram_id)),
         ])
       },
 
@@ -559,7 +537,7 @@ export const generateModelTraining = inngest.createFunction(
     }
     let balanceCheck: { success?: boolean; currentBalance?: number } | null =
       null
-
+    let paymentAmount: number | null = null
     // 🚀 Основной процесс
     try {
       // Преобразуем is_ru к булевому типу если это строка
@@ -572,11 +550,10 @@ export const generateModelTraining = inngest.createFunction(
       const { modelName, steps } = await trainingSteps.validateInput()
 
       // 2. Проверка пользователя и баланса
-      const [user, initialBalance] = await trainingSteps.checkUserAndBalance()
+      const [user] = await trainingSteps.checkUserAndBalance()
       logger.info({
-        message: 'Баланс пользователя',
+        message: 'Пользователь найден',
         userId: user.id,
-        initialBalance,
         telegram_id: eventData.telegram_id,
       })
 
@@ -593,7 +570,7 @@ export const generateModelTraining = inngest.createFunction(
       }
 
       // 4. Расчет стоимости
-      const paymentAmount = (
+      paymentAmount = (
         modeCosts[ModeEnum.DigitalAvatarBody] as (steps: number) => number
       )(steps)
 
@@ -638,7 +615,56 @@ export const generateModelTraining = inngest.createFunction(
       }
 
       // 6. Списание средств
-      await helpers.updateBalance(balanceCheck.currentBalance - paymentAmount)
+      // Сначала логируем начало операции
+      logger.info({
+        message: '💰 Списание средств за тренировку модели',
+        telegram_id: eventData.telegram_id,
+        currentBalance: balanceCheck.currentBalance,
+        paymentAmount,
+        newBalance: balanceCheck.currentBalance - paymentAmount,
+        modelName,
+        steps,
+      })
+
+      // Затем выполняем списание в отдельном шаге
+      const chargeResult = await step.run('charge-user-balance', async () => {
+        const newBalance = balanceCheck.currentBalance - paymentAmount
+
+        // Обновляем баланс напрямую
+        const current = await getUserBalance(eventData.telegram_id)
+
+        if (current === null) {
+          throw new Error('User not found')
+        }
+
+        await updateUserBalance(
+          eventData.telegram_id,
+          newBalance,
+          'outcome',
+          `Оплата тренировки модели ${modelName} (шагов: ${steps})`,
+          {
+            payment_method: 'Training',
+            bot_name: eventData.bot_name,
+            language:
+              eventData.is_ru === true || eventData.is_ru === 'true'
+                ? 'ru'
+                : 'en',
+          }
+        )
+
+        return {
+          success: true,
+          oldBalance: current,
+          newBalance,
+          paymentAmount,
+        }
+      })
+
+      logger.info({
+        message: '✅ Средства успешно списаны',
+        chargeResult,
+        telegram_id: eventData.telegram_id,
+      })
 
       // 7. Создание/проверка модели Replicate
       const destination = await step.run('create-replicate-model', async () => {
@@ -760,13 +786,53 @@ export const generateModelTraining = inngest.createFunction(
         telegram_id: eventData.telegram_id,
       })
 
-      // Добавляем проверку через optional chainingИ где мы здесь сохраняем таблицу тренинг результат ID
-      if (balanceCheck?.success) {
-        await helpers.updateBalance(balanceCheck.currentBalance)
+      // Возврат средств в случае ошибки
+      if (balanceCheck?.success && paymentAmount) {
+        // Сначала логируем операцию
         logger.info({
-          message: 'Средства возвращены пользователю',
-          amount: balanceCheck.currentBalance,
+          message: '💸 Возврат средств за неудавшуюся тренировку',
           telegram_id: eventData.telegram_id,
+          currentBalance: balanceCheck.currentBalance,
+          refundAmount: paymentAmount,
+          modelName: eventData.modelName,
+        })
+
+        // Выполняем возврат в отдельном шаге
+        const refundResult = await step.run('refund-user-balance', async () => {
+          const current = await getUserBalance(eventData.telegram_id)
+
+          if (current === null) {
+            throw new Error('User not found')
+          }
+
+          await updateUserBalance(
+            eventData.telegram_id,
+            balanceCheck.currentBalance,
+            'income',
+            `Возврат средств за неудавшуюся тренировку модели ${eventData.modelName}`,
+            {
+              payment_method: 'Refund',
+              bot_name: eventData.bot_name,
+              language:
+                eventData.is_ru === true || eventData.is_ru === 'true'
+                  ? 'ru'
+                  : 'en',
+            }
+          )
+
+          return {
+            success: true,
+            oldBalance: current,
+            newBalance: balanceCheck.currentBalance,
+            refundAmount: paymentAmount,
+          }
+        })
+
+        logger.info({
+          message: '✅ Средства успешно возвращены',
+          refundResult,
+          telegram_id: eventData.telegram_id,
+          error: error.message,
         })
       }
 
@@ -789,3 +855,13 @@ export const generateModelTraining = inngest.createFunction(
     }
   }
 )
+// inngest event data
+// "data": {
+//   "bot_name": "neuro_blogger_bot",
+//   "is_ru": true,
+//   "modelName": "test_lora_model",
+//   "steps": 1500,
+//   "telegram_id": "144022504",
+//   "triggerWord": "person1",
+//   "zipUrl": "https://example.com/training-images.zip"
+// },

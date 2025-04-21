@@ -6,6 +6,7 @@ export type UpdateLatestModelTrainingQuick = {
   error?: string
   model_url?: string
   replicate_training_id?: string
+  weights?: string
 }
 
 export const updateLatestModelTrainingQuick = async (

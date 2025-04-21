@@ -1,5 +1,5 @@
 import { Request, Response } from 'express'
-import { inngest } from '@/core/inngest-client/clients'
+import { inngest } from '@/core/inngest/clients'
 import { updateLatestModelTrainingQuick } from '@/core/supabase'
 import { NotificationService } from '@/services'
 import { getTrainingWithUser } from '@/core/supabase/getTrainingWithUser'
@@ -59,13 +59,14 @@ export class ReplicateWebhookController {
         })
 
         // 🔄 Обработка всех терминальных статусов
-        const terminalStatuses = ['succeeded', 'failed', 'canceled']
+        const terminalStatuses = ['succeeded']
 
         if (terminalStatuses.includes(event.status)) {
           await updateLatestModelTrainingQuick(
             {
               status: 'SUCCESS',
-              model_url: event.output?.weights || event.output?.model_url,
+              model_url: event.output?.version,
+              weights: event.output?.weights,
               error: event.error,
               replicate_training_id: event.id,
             },
@@ -77,7 +78,7 @@ export class ReplicateWebhookController {
             predictionId: event.id,
             telegram_id: training.users.telegram_id,
             model_name: training.model_name,
-            status: event.status.toUpperCase(),
+            status: 'SUCCESS',
           })
         }
 

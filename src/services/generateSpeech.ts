@@ -17,12 +17,14 @@ export const generateSpeech = async ({
   telegram_id,
   is_ru,
   bot,
+  bot_name,
 }: {
   text: string
   voice_id: string
   telegram_id: string
   is_ru: boolean
   bot: Telegraf<MyContext>
+  bot_name: string
 }): Promise<{ audioUrl: string }> => {
   console.log('telegram_id', telegram_id)
   const userExists = await getUserByTelegramId(telegram_id)
@@ -40,6 +42,9 @@ export const generateSpeech = async ({
     paymentAmount: modeCosts[ModeEnum.TextToSpeech] as number,
     is_ru,
     bot,
+    bot_name,
+    description: `Payment for text to speech`,
+    type: 'Text to speech',
   })
   if (!balanceCheck.success) {
     throw new Error(balanceCheck.error)

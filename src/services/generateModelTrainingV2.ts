@@ -42,7 +42,8 @@ export async function generateModelTrainingV2(
   steps: number,
   telegram_id: string,
   is_ru: boolean,
-  bot: Telegraf<MyContext>
+  bot: Telegraf<MyContext>,
+  bot_name: string
 ): Promise<{ success: boolean; message: string }> {
   const userExists = await getUserByTelegramId(telegram_id)
   if (!userExists) {
@@ -64,6 +65,9 @@ export async function generateModelTrainingV2(
     paymentAmount,
     is_ru,
     bot,
+    bot_name,
+    description: `Payment for model training ${modelName} (steps: ${steps})`,
+    type: 'Training',
   })
 
   if (!balanceCheck.success) {
@@ -74,8 +78,6 @@ export async function generateModelTrainingV2(
     if (!process.env.REPLICATE_USERNAME) {
       throw new Error('REPLICATE_USERNAME is not set')
     }
-    // Обновляем баланс пользователя после успешной проверки
-    await updateUserBalance(telegram_id, currentBalance - paymentAmount)
 
     const encodedZip = await encodeFileToBase64(zipUrl)
 
@@ -129,7 +131,17 @@ export async function generateModelTrainingV2(
     }
   } catch (error) {
     // Возвращаем средства в случае ошибки
-    await updateUserBalance(telegram_id, currentBalance + paymentAmount)
+    await updateUserBalance(
+      telegram_id,
+      currentBalance + paymentAmount,
+      'income',
+      `Refund for model training ${modelName} (steps: ${steps})`,
+      {
+        payment_method: 'Training',
+        bot_name,
+        language: is_ru ? 'ru' : 'en',
+      }
+    )
     console.error('Training error details:', {
       error,
       modelName,

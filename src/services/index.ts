@@ -1,7 +1,6 @@
 export * from './createVoiceAvatar'
 export * from './generateImageToPrompt'
 export * from './generateImageToVideo'
-export * from '../core/inngest-client/helpers/generateModelTraining'
 export * from './generateNeuroImage'
 export * from './generateSpeech'
 export * from './generateTextToImage'

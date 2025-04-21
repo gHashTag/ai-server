@@ -41,6 +41,7 @@ export type CreateUserReturn = {
   userData: SupabaseUser[]
   telegram_id: string
   isUserExist: boolean
+  user_id: string
   error: any
 }
 

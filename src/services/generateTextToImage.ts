@@ -42,7 +42,8 @@ export const generateTextToImage = async (
   telegram_id: string,
   username: string,
   is_ru: boolean,
-  bot: Telegraf<MyContext>
+  bot: Telegraf<MyContext>,
+  bot_name: string
 ): Promise<GenerationResult[]> => {
   try {
     const modelKey = model_type.toLowerCase()
@@ -66,6 +67,11 @@ export const generateTextToImage = async (
       paymentAmount: modelConfig.costPerImage * num_images,
       is_ru,
       bot,
+      bot_name,
+      description: `Payment for generating ${num_images} image${
+        num_images === 1 ? '' : 's'
+      } with prompt: ${prompt.substring(0, 30)}...`,
+      type: 'Text to image',
     })
     console.log(balanceCheck, 'balanceCheck')
 

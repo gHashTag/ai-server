@@ -12,7 +12,8 @@ export async function generateImageToPrompt(
   telegram_id: string,
   username: string,
   is_ru: boolean,
-  bot: Telegraf<MyContext>
+  bot: Telegraf<MyContext>,
+  bot_name: string
 ): Promise<string> {
   console.log('generateImageToPrompt', imageUrl, telegram_id, username, is_ru)
   try {
@@ -36,6 +37,9 @@ export async function generateImageToPrompt(
       paymentAmount: costPerImage,
       is_ru,
       bot,
+      bot_name,
+      description: 'Payment for image to prompt',
+      type: 'NeuroPhoto',
     })
     if (!balanceCheck.success) {
       throw new Error('Not enough stars')

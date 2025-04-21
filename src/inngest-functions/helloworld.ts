@@ -1,4 +1,4 @@
-import { inngest } from '@/core/inngest-client/clients'
+import { inngest } from '@/core/inngest/clients'
 
 // 2. Тестовая функция
 export const helloWorld = inngest.createFunction(

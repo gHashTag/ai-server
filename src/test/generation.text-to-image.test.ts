@@ -2,6 +2,8 @@ import { App } from '@/app'
 import { GenerationRoute } from '@routes/generation.route'
 import { generateTextToImage } from '@/services/generateTextToImage'
 import request from 'supertest'
+import { Telegraf } from 'telegraf'
+import { MyContext } from '@/interfaces'
 
 jest.mock('@/services/generateTextToImage', () => ({
   generateTextToImage: jest
@@ -40,15 +42,19 @@ describe('GenerationController', () => {
       ;(generateTextToImage as jest.Mock).mockResolvedValue({
         image: 'mockedImageBuffer',
       })
+      const bot = new Telegraf<MyContext>(process.env.BOT_TOKEN as string)
+      const bot_name = 'testbot'
 
       // Вызовите функцию generateImage
       const result = await generateTextToImage(
         prompt,
         model_type,
         num_images,
-        telegramId,
+        telegramId.toString(),
         username,
-        is_ru
+        is_ru,
+        bot,
+        bot_name
       )
 
       // Проверка, что generateImage была вызвана с правильными аргументами

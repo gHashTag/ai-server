@@ -4,7 +4,6 @@ import { savePrompt } from '../core/supabase/savePrompt'
 import { getUserByTelegramId, updateUserLevelPlusOne } from '@/core/supabase'
 import { processApiResponse } from '@/helpers/processApiResponse'
 import { GenerationResult } from '@/interfaces'
-import { downloadFile } from '@/helpers/downloadFile'
 import { saveFileLocally } from '@/helpers'
 import { pulse } from '@/helpers/pulse'
 import { processBalanceOperation } from '@/price/helpers'
@@ -23,7 +22,8 @@ export async function generateNeuroImage(
   telegram_id: string,
   username: string,
   is_ru: boolean,
-  bot: Telegraf<MyContext>
+  bot: Telegraf<MyContext>,
+  bot_name: string
 ): Promise<GenerationResult | null> {
   try {
     const userExists = await getUserByTelegramId(telegram_id)
@@ -47,6 +47,11 @@ export async function generateNeuroImage(
       paymentAmount: costPerImage * num_images,
       is_ru,
       bot,
+      bot_name,
+      description: `Payment for generating ${num_images} image${
+        num_images === 1 ? '' : 's'
+      } with prompt: ${prompt.substring(0, 30)}...`,
+      type: 'NeuroPhoto',
     })
     if (!balanceCheck.success) {
       throw new Error(balanceCheck.error)
@@ -146,7 +151,8 @@ export async function generateNeuroImage(
         `/${model_url}`,
         telegram_id,
         username,
-        is_ru
+        is_ru,
+        bot_name
       )
     }
 

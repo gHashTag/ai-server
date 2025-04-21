@@ -4,19 +4,17 @@ import { generateSpeech } from '@/services/generateSpeech'
 import { generateTextToVideo } from '@/services/generateTextToVideo'
 import { generateImageToVideo } from '@/services/generateImageToVideo'
 import { generateImageToPrompt } from '@/services/generateImageToPrompt'
-import { generateNeuroImage } from '@/services/generateNeuroImage'
 import { createVoiceAvatar } from '@/services/createVoiceAvatar'
 
 import { validateUserParams } from '@/middlewares/validateUserParams'
 import { generateNeuroImageV2 } from '@/services/generateNeuroImageV2'
 import { generateLipSync } from '@/services/generateLipSync'
-import { generateModelTrainingV2 } from '@/services/generateModelTrainingV2'
 
 import { API_URL } from '@/config'
 import { deleteFile } from '@/helpers'
 import path from 'path'
 import { getBotByName } from '@/core/bot'
-import { inngest } from '@/core/inngest-client/clients'
+import { inngest } from '@/core/inngest/clients'
 export class GenerationController {
   public textToImage = async (
     req: Request,
@@ -53,14 +51,15 @@ export class GenerationController {
 
       const { bot } = getBotByName(bot_name)
 
-      generateTextToImage(
+      await generateTextToImage(
         prompt,
         model,
         num_images,
         telegram_id,
         username,
         is_ru,
-        bot
+        bot,
+        bot_name
       )
     } catch (error) {
       next(error)
@@ -97,17 +96,17 @@ export class GenerationController {
       validateUserParams(req)
       res.status(200).json({ message: 'Processing started' })
 
-      const { bot } = getBotByName(bot_name)
-      generateNeuroImage(
-        prompt,
-        model_url,
-        num_images,
-        telegram_id,
-        username,
-        is_ru,
-        bot
-      ).catch(error => {
-        console.error('Ошибка при генерации изображения:', error)
+      await inngest.send({
+        name: 'neuro/photo.generate',
+        data: {
+          prompt,
+          model_url,
+          num_images,
+          telegram_id,
+          username,
+          is_ru,
+          bot_name,
+        },
       })
     } catch (error) {
       next(error)
@@ -198,7 +197,14 @@ export class GenerationController {
       res.status(200).json({ message: 'Processing started' })
 
       const { bot } = getBotByName(bot_name)
-      generateSpeech({ text, voice_id, telegram_id, is_ru, bot })
+      await generateSpeech({
+        text,
+        voice_id,
+        telegram_id,
+        is_ru,
+        bot,
+        bot_name,
+      })
     } catch (error) {
       next(error)
     }
@@ -226,14 +232,12 @@ export class GenerationController {
       validateUserParams(req)
       res.status(200).json({ message: 'Processing started' })
 
-      const { bot } = getBotByName(bot_name)
-      generateTextToVideo(
+      await generateTextToVideo(
         prompt,
         videoModel,
         telegram_id,
         username,
         is_ru,
-        bot,
         bot_name
       )
     } catch (error) {
@@ -272,15 +276,14 @@ export class GenerationController {
       validateUserParams(req)
       res.status(200).json({ message: 'Processing started' })
 
-      const { bot } = getBotByName(bot_name)
-      generateImageToVideo(
+      await generateImageToVideo(
         imageUrl,
         prompt,
         videoModel,
         telegram_id,
         username,
         is_ru,
-        bot
+        bot_name
       )
     } catch (error) {
       next(error)
@@ -303,7 +306,7 @@ export class GenerationController {
       res.status(200).json({ message: 'Processing started' })
       const { bot } = getBotByName(bot_name)
 
-      generateImageToPrompt(image, telegram_id, username, is_ru, bot)
+      generateImageToPrompt(image, telegram_id, username, is_ru, bot, bot_name)
     } catch (error) {
       next(error)
     }
@@ -412,10 +415,7 @@ export class GenerationController {
         res.status(400).json({ message: 'telegram_id is required' })
         return
       }
-      if (!is_ru) {
-        res.status(400).json({ message: 'is_ru is required' })
-        return
-      }
+
       const zipFile = req.files?.find(file => file.fieldname === 'zipUrl')
       if (!zipFile) {
         res.status(400).json({ message: 'zipFile is required' })
@@ -423,16 +423,21 @@ export class GenerationController {
       }
       // Создаем URL для доступа к файлу
       const zipUrl = `https://${req.headers.host}/uploads/${telegram_id}/${type}/${zipFile.filename}`
-      const { bot } = getBotByName(bot_name)
-      await generateModelTrainingV2(
-        zipUrl,
-        triggerWord,
-        modelName,
-        steps,
-        telegram_id,
-        is_ru,
-        bot
-      )
+      console.log('zipUrl', zipUrl)
+      // Отправляем событие в Inngest вместо прямого вызова функции
+      await inngest.send({
+        name: 'model/training.v2.requested',
+        data: {
+          zipUrl,
+          triggerWord,
+          modelName,
+          steps,
+          telegram_id,
+          is_ru,
+          bot_name,
+          type,
+        },
+      })
 
       res.status(200).json({ message: 'Model training started' })
     } catch (error) {

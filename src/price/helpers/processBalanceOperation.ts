@@ -2,12 +2,16 @@ import { getUserBalance, updateUserBalance } from '@/core/supabase'
 import { BalanceOperationResult } from '@/interfaces/payments.interface'
 import { Telegraf } from 'telegraf'
 import { MyContext } from '@/interfaces'
+import { PaymentService } from '@/interfaces/payments.interface'
 
 type BalanceOperationProps = {
   telegram_id: string
   paymentAmount: number
   is_ru: boolean
   bot: Telegraf<MyContext>
+  bot_name?: string
+  description?: string
+  type: PaymentService
 }
 
 export const processBalanceOperation = async ({
@@ -15,6 +19,9 @@ export const processBalanceOperation = async ({
   paymentAmount,
   is_ru,
   bot,
+  bot_name = 'neuro_blogger_bot',
+  description,
+  type,
 }: BalanceOperationProps): Promise<BalanceOperationResult> => {
   try {
     // Получаем текущий баланс
@@ -36,8 +43,13 @@ export const processBalanceOperation = async ({
     // Рассчитываем новый баланс
     const newBalance = Number(currentBalance) - Number(paymentAmount)
 
-    // Обновляем баланс в БД
-    await updateUserBalance(telegram_id, newBalance)
+    // Обновляем баланс в БД и создаем запись о транзакции
+    await updateUserBalance(telegram_id, newBalance, 'outcome', description, {
+      stars: paymentAmount,
+      payment_method: type as PaymentService,
+      bot_name,
+      language: is_ru ? 'ru' : 'en',
+    })
 
     return {
       newBalance,
