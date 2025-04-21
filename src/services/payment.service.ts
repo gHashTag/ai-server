@@ -185,8 +185,15 @@ export class PaymentService {
         const bot_name = paymentData.bot_name
         // Нужны еще username и language для уведомления, получим их отдельно
         // TODO: Добавить получение username/language из users по telegram_id, если они нужны для sendPaymentNotification
-        const username = 'User' // Placeholder
-        const language_code = 'ru' // Placeholder
+
+        const { data: userData } = await supabase
+          .from('users')
+          .select('username, language_code')
+          .eq('telegram_id', telegram_id)
+          .maybeSingle()
+
+        const username = userData?.username || 'User' // Placeholder
+        const language_code = userData?.language_code || 'ru' // Placeholder
 
         // Обновляем подписку только если она была определена по сумме
         if (subscription) {

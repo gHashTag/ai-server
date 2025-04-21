@@ -48,7 +48,7 @@ export async function notifyBotOwners(
     const { bot: ownerBot } = ownerBotData
 
     // Формируем сообщение для владельца
-    const ownerMessage = `✅ Новый платеж в боте @${bot_name}!\nПользователь: @${
+    const ownerMessage = `✅ Новый платеж в боте @${bot_name}\nПользователь: @${
       paymentInfo.username || 'Без username'
     } (ID: ${paymentInfo.telegram_id})\nСумма: ${
       paymentInfo.amount
