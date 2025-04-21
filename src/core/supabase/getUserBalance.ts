@@ -11,7 +11,7 @@ export const getUserBalance = async (telegram_id: string): Promise<number> => {
     // Проверяем существует ли пользователь
     const { data: userData, error: userError } = await supabase
       .from('users')
-      .select('id')
+      .select('telegram_id')
       .eq('telegram_id', telegram_id)
       .single()
 
@@ -33,10 +33,10 @@ export const getUserBalance = async (telegram_id: string): Promise<number> => {
 
     // Получаем все записи доходов (income)
     const { data: incomeData, error: incomeError } = await supabase
-      .from('payments')
+      .from('payments_v2')
       .select('stars')
       .eq('telegram_id', telegram_id)
-      .eq('type', 'income')
+      .eq('type', 'money_income')
       .eq('status', 'COMPLETED')
 
     if (incomeError) {
@@ -50,10 +50,10 @@ export const getUserBalance = async (telegram_id: string): Promise<number> => {
 
     // Получаем все записи расходов (outcome)
     const { data: outcomeData, error: outcomeError } = await supabase
-      .from('payments')
+      .from('payments_v2')
       .select('stars')
       .eq('telegram_id', telegram_id)
-      .eq('type', 'outcome')
+      .eq('type', 'money_expense')
       .eq('status', 'COMPLETED')
 
     if (outcomeError) {
