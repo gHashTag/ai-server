@@ -72,7 +72,7 @@ export const modelTrainingV2 = inngest.createFunction(
       logger.info({
         message: '✅ User found',
         telegramId: telegram_id,
-        userId: user.id,
+        userId: user.user_id,
         step: 'check-user-exists',
       })
 

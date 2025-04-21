@@ -437,7 +437,7 @@ export const generateModelTraining = inngest.createFunction(
             }
             logger.info({
               message: 'Пользователь найден',
-              userId: user.id,
+              userId: user.user_id,
               telegram_id,
             })
             return user
@@ -561,7 +561,7 @@ export const generateModelTraining = inngest.createFunction(
       const [user] = await trainingSteps.checkUserAndBalance()
       logger.info({
         message: 'Пользователь найден',
-        userId: user.id,
+        userId: user.user_id,
         telegram_id: eventData.telegram_id,
       })
 
