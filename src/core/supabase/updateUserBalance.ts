@@ -22,7 +22,7 @@ type BalanceUpdateMetadata = {
 export const updateUserBalance = async (
   telegram_id: string,
   amount: number,
-  type: 'income' | 'outcome',
+  type: 'money_income' | 'money_expense',
   description?: string,
   metadata?: BalanceUpdateMetadata
 ): Promise<boolean> => {

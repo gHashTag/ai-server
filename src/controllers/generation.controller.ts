@@ -359,7 +359,35 @@ export class GenerationController {
       // Создаем URL для доступа к файлу
       const zipUrl = `https://${req.headers.host}/uploads/${telegram_id}/${type}/${zipFile.filename}`
 
+      console.log('⏳ Подготовка к отправке события модели тренировки:', {
+        eventName: 'model/training.start',
+        telegram_id,
+        modelName,
+        zipUrl,
+      })
+
+      // Для отладки - пробуем отправить событие также с названием .v2.requested
+      // Это поможет определить, с каким событием проблема
+      console.log(
+        '🔄 Отправка тестового события model/training.v2.requested для проверки'
+      )
       await inngest.send({
+        name: 'model/training.v2.requested',
+        data: {
+          zipUrl,
+          triggerWord,
+          modelName,
+          steps,
+          telegram_id,
+          is_ru,
+          bot_name,
+          type,
+        },
+      })
+
+      console.log('🔄 Отправка основного события model/training.start')
+      await inngest.send({
+        id: `train:${telegram_id}:${modelName}-${Date.now()}`,
         name: `model/training.start`,
         data: {
           zipUrl,
@@ -372,6 +400,7 @@ export class GenerationController {
           idempotencyKey: `train:${telegram_id}:${modelName}-${Date.now()}`,
         },
       })
+      console.log('✅ Событие model/training.start успешно отправлено')
 
       res.status(200).json({ message: 'Model training started' })
     } catch (error) {

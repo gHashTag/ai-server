@@ -195,6 +195,14 @@ export const generateModelTraining = inngest.createFunction(
   { event: 'model/training.start' },
   async ({ event, step }) => {
     // Добавляем информативный лог о входящем событии
+    console.log('🎯 СОБЫТИЕ ТРЕНИРОВКИ ПОЛУЧЕНО:', {
+      eventName: event.name,
+      eventId: event.id,
+      telegram_id: event.data.telegram_id,
+      modelName: event.data.modelName,
+      timestamp: new Date(event.ts).toISOString(),
+    })
+
     logger.info({
       message: 'Получено событие тренировки модели',
       eventId: event.id,
@@ -808,7 +816,7 @@ export const generateModelTraining = inngest.createFunction(
           await updateUserBalance(
             eventData.telegram_id,
             balanceCheck.currentBalance,
-            'income',
+            'money_income',
             `Возврат средств за неудавшуюся тренировку модели ${eventData.modelName}`,
             {
               payment_method: 'Refund',

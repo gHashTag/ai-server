@@ -7,6 +7,13 @@ import {
   processPayment,
 } from '../inngest-functions'
 
+console.log('🔍 Регистрация Inngest функций:', {
+  generateModelTrainingExists: !!generateModelTraining,
+  modelTrainingV2Exists: !!modelTrainingV2,
+  broadcastMessageExists: !!broadcastMessage,
+  processPaymentExists: !!processPayment,
+})
+
 // Регистрация ВСЕХ функций в одном месте
 export const inngestRouter = serve({
   client: inngest,
@@ -18,3 +25,5 @@ export const inngestRouter = serve({
   ],
   signingKey: process.env.INNGEST_SIGNING_KEY,
 })
+
+console.log('✅ Inngest маршруты настроены!')
