@@ -5,7 +5,7 @@ import { generateTextToVideo } from '@/services/generateTextToVideo'
 import { generateImageToVideo } from '@/services/generateImageToVideo'
 import { generateImageToPrompt } from '@/services/generateImageToPrompt'
 import { createVoiceAvatar } from '@/services/createVoiceAvatar'
-import { generateModelTraining } from '@/services/generateModelTraining'
+import { generateModelTraining } from '@/services/'
 import { errorMessageAdmin } from '@/helpers/errorMessageAdmin'
 
 import { validateUserParams } from '@/middlewares/validateUserParams'
@@ -317,8 +317,7 @@ export class GenerationController {
 
   public createModelTraining = async (
     req: Request,
-    res: Response,
-    next: NextFunction
+    res: Response
   ): Promise<void> => {
     const {
       type,
@@ -370,7 +369,9 @@ export class GenerationController {
       } catch (inngestError) {
         console.error('❌ План А (Inngest) не сработал:', inngestError)
         errorMessageAdmin(
-          `🚨 Ошибка Inngest (model/training.start) для ${telegram_id}, модель ${modelName}. Активирован План Б (прямой вызов). Проверьте Inngest функцию! Ошибка: ${inngestError.message}` as unknown as Error
+          new Error(
+            `🚨 Ошибка Inngest (model/training.start) для ${telegram_id}, модель ${modelName}. Активирован План Б (прямой вызов). Проверьте Inngest функцию! Ошибка: ${inngestError.message}`
+          )
         )
 
         console.log('🧘 План Б: Запуск прямого вызова generateModelTraining')
@@ -405,7 +406,9 @@ export class GenerationController {
           .json({ message: error.message || 'Validation or setup error' })
       } else {
         errorMessageAdmin(
-          `🚨 Критическая ошибка после отправки заголовков в createModelTraining для ${telegram_id}: ${error.message}` as unknown as Error
+          new Error(
+            `🚨 Критическая ошибка после отправки заголовков в createModelTraining для ${telegram_id}: ${error.message}`
+          )
         )
       }
     }
@@ -419,7 +422,7 @@ export class GenerationController {
     try {
       // Временно перенаправляем на основную версию
       console.log('⚠️ V2 версия временно отключена, используем основную версию')
-      return this.createModelTraining(req, res, next)
+      return this.createModelTraining(req, res)
     } catch (error) {
       console.error('Ошибка при обработке запроса:', error)
       next(error)
