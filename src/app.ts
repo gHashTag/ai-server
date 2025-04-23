@@ -28,6 +28,7 @@ import { fileUpload } from './utils/fileUpload'
 import { inngestRouter } from './routes/inngest.route'
 import { UploadRoute } from './routes/upload.route'
 import { inngest } from './core/inngest/clients'
+import TestRoute from './routes/test.route'
 // const nexrenderPort = NEXRENDER_PORT
 // const secret = process.env.NEXRENDER_SECRET
 
@@ -104,6 +105,7 @@ export class App {
   private initializeRoutes(routes: Routes[]) {
     this.app.use('/api/inngest', inngestRouter)
     this.app.use('/api/upload', new UploadRoute().router)
+    this.app.use('/api/test', new TestRoute().router)
     this.app.get('/trigger', async (req, res) => {
       await inngest.send({
         name: 'test/hello',

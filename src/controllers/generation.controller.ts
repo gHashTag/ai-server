@@ -5,6 +5,7 @@ import { generateTextToVideo } from '@/services/generateTextToVideo'
 import { generateImageToVideo } from '@/services/generateImageToVideo'
 import { generateImageToPrompt } from '@/services/generateImageToPrompt'
 import { createVoiceAvatar } from '@/services/createVoiceAvatar'
+import { generateModelTraining } from '@/services/generateModelTraining'
 
 import { validateUserParams } from '@/middlewares/validateUserParams'
 import { generateNeuroImageV2 } from '@/services/generateNeuroImageV2'
@@ -15,6 +16,7 @@ import { deleteFile } from '@/helpers'
 import path from 'path'
 import { getBotByName } from '@/core/bot'
 import { inngest } from '@/core/inngest/clients'
+
 export class GenerationController {
   public textToImage = async (
     req: Request,
@@ -359,29 +361,19 @@ export class GenerationController {
       // Создаем URL для доступа к файлу
       const zipUrl = `https://${req.headers.host}/uploads/${telegram_id}/${type}/${zipFile.filename}`
 
-      console.log('⏳ Подготовка к отправке события модели тренировки:', {
-        eventName: 'model/training.start',
-        telegram_id,
-        modelName,
+      const { bot } = getBotByName(bot_name)
+      if (!bot) {
+        throw new Error(`Bot ${bot_name} not found`)
+      }
+      await generateModelTraining(
         zipUrl,
-      })
-
-      console.log('🔄 Отправка основного события model/training.start')
-      await inngest.send({
-        id: `train:${telegram_id}:${modelName}-${Date.now()}`,
-        name: `model/training.start`,
-        data: {
-          zipUrl,
-          triggerWord,
-          modelName,
-          steps,
-          telegram_id,
-          is_ru,
-          bot_name,
-          idempotencyKey: `train:${telegram_id}:${modelName}-${Date.now()}`,
-        },
-      })
-      console.log('✅ Событие model/training.start успешно отправлено')
+        triggerWord,
+        modelName,
+        steps,
+        telegram_id,
+        is_ru,
+        bot
+      )
 
       res.status(200).json({ message: 'Model training started' })
     } catch (error) {
@@ -396,60 +388,9 @@ export class GenerationController {
     next: NextFunction
   ): Promise<void> => {
     try {
-      const {
-        type,
-        telegram_id,
-        triggerWord,
-        modelName,
-        steps,
-        is_ru,
-        bot_name,
-      } = req.body
-      if (!type) {
-        res.status(400).json({ message: 'type is required' })
-        return
-      }
-      if (!triggerWord) {
-        res.status(400).json({ message: 'triggerWord is required' })
-        return
-      }
-      if (!modelName) {
-        res.status(400).json({ message: 'modelName is required' })
-        return
-      }
-      if (!steps) {
-        res.status(400).json({ message: 'steps is required' })
-        return
-      }
-      if (!telegram_id) {
-        res.status(400).json({ message: 'telegram_id is required' })
-        return
-      }
-
-      const zipFile = req.files?.find(file => file.fieldname === 'zipUrl')
-      if (!zipFile) {
-        res.status(400).json({ message: 'zipFile is required' })
-        return
-      }
-      // Создаем URL для доступа к файлу
-      const zipUrl = `https://${req.headers.host}/uploads/${telegram_id}/${type}/${zipFile.filename}`
-      console.log('zipUrl', zipUrl)
-      // Отправляем событие в Inngest вместо прямого вызова функции
-      await inngest.send({
-        name: 'model/training.v2.requested',
-        data: {
-          zipUrl,
-          triggerWord,
-          modelName,
-          steps,
-          telegram_id,
-          is_ru,
-          bot_name,
-          type,
-        },
-      })
-
-      res.status(200).json({ message: 'Model training started' })
+      // Временно перенаправляем на основную версию
+      console.log('⚠️ V2 версия временно отключена, используем основную версию')
+      return this.createModelTraining(req, res, next)
     } catch (error) {
       console.error('Ошибка при обработке запроса:', error)
       next(error)
