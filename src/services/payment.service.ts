@@ -1,4 +1,4 @@
-import { Request, Response } from 'express'
+import { Response } from 'express'
 import { logger } from '@/utils/logger'
 import {
   updateUserSubscription,
@@ -164,7 +164,9 @@ export class PaymentService {
         // --- Обновляем статус платежа ---
         const { error: updateError } = await supabase
           .from('payments_v2')
-          .update({ status: 'COMPLETED', stars: stars }) // Обновляем статус и кол-во звезд
+          .update({
+            status: 'COMPLETED',
+          }) // Обновляем статус и кол-во звезд
           .eq('inv_id', invId)
 
         if (updateError) {
