@@ -3,6 +3,8 @@ import { inngest } from '@/core/inngest/clients'
 import { logger } from '@utils/logger'
 import { getBotByName } from '@/core/bot'
 import { avatarService } from '@/services/avatar.service'
+import { broadcastService } from '@/services/broadcast.service'
+import { errorMessageAdmin } from '@/helpers/errorMessageAdmin'
 
 interface BroadcastRequest {
   imageUrl?: string
@@ -143,57 +145,132 @@ export const broadcastController = {
         }
       }
 
-      // Вызываем Inngest-функцию для асинхронной рассылки
-      await inngest.send({
-        name: 'broadcast/send-message',
-        data: {
-          imageUrl,
-          textRu,
-          textEn,
-          bot_name,
-          sender_telegram_id: telegram_id,
-          test_mode: test_mode || false,
-          contentType,
-          postLink,
-          videoFileId,
-          parse_mode: contentType === 'post_link' ? 'HTML' : 'Markdown',
-        },
-      })
+      // План А: Попытка через Inngest
+      try {
+        logger.info(
+          '🚀 План А: Попытка отправить событие Inngest broadcast/send-message',
+          { telegram_id, bot_name, contentType }
+        )
+        // Вызываем Inngest-функцию для асинхронной рассылки
+        await inngest.send({
+          name: 'broadcast/send-message',
+          data: {
+            imageUrl,
+            textRu,
+            textEn,
+            bot_name,
+            sender_telegram_id: telegram_id,
+            test_mode: test_mode || false,
+            contentType,
+            postLink,
+            videoFileId,
+            parse_mode: contentType === 'post_link' ? 'HTML' : 'Markdown',
+          },
+        })
+        logger.info(
+          '✅ План А: Событие Inngest broadcast/send-message успешно отправлено',
+          { telegram_id, bot_name, contentType }
+        )
+        // Генерируем уникальный ID для события (можно оставить для совместимости или убрать)
+        const eventId = `broadcast_${Date.now()}_${Math.random()
+          .toString(36)
+          .substring(2, 7)}`
 
-      // Генерируем уникальный ID для события
-      const eventId = `broadcast_${Date.now()}_${Math.random()
-        .toString(36)
-        .substring(2, 7)}`
+        return {
+          success: true,
+          message: 'Broadcast initiated via Inngest (Plan A)',
+          eventId, // Можно вернуть ID для отслеживания
+        }
+      } catch (inngestError) {
+        // План Б: Прямой вызов сервиса
+        logger.error(
+          '❌ План А (Inngest) не сработал для broadcast/send-message:',
+          { error: inngestError.message, telegram_id, bot_name }
+        )
+        errorMessageAdmin(
+          new Error(
+            `🚨 Ошибка Inngest (broadcast/send-message) для ${telegram_id}, бот ${bot_name}. Активирован План Б (прямой вызов). Проверьте Inngest функцию! Ошибка: ${inngestError.message}`
+          )
+        )
 
-      logger.info('✅ Задача рассылки из Telegram поставлена в очередь', {
-        description: 'Broadcast task from Telegram queued',
-        eventId,
-        contentType: contentType || 'photo',
-        bot_name,
-        test_mode: test_mode || false,
-      })
+        logger.info(
+          '🧘 План Б: Запуск прямого вызова broadcastService.sendBroadcast',
+          { telegram_id, bot_name, contentType }
+        )
+        try {
+          const { bot } = getBotByName(bot_name)
+          if (!bot) {
+            logger.error(
+              '❌ План Б: Не удалось найти бота для прямого вызова рассылки',
+              { bot_name }
+            )
+            throw new Error(`Bot ${bot_name} not found for Plan B`)
+          }
 
-      return {
-        success: true,
-        message: test_mode
-          ? 'Задача тестовой рассылки поставлена в очередь'
-          : 'Задача рассылки поставлена в очередь и будет выполнена асинхронно',
-        eventId,
+          // Вызываем сервис напрямую
+          const result = await broadcastService.sendBroadcast({
+            imageUrl,
+            textRu,
+            textEn,
+            bot_name,
+            sender_telegram_id: telegram_id,
+            test_mode: test_mode || false,
+            contentType,
+            postLink,
+            videoFileId,
+            parse_mode: contentType === 'post_link' ? 'HTML' : 'Markdown',
+            bot, // Передаем экземпляр бота
+          })
+
+          logger.info(
+            '✅ План Б: Прямой вызов broadcastService.sendBroadcast завершен',
+            {
+              success: result.success,
+              successCount: result.successCount,
+              errorCount: result.errorCount,
+            }
+          )
+
+          // Возвращаем результат прямого вызова
+          return {
+            success: result.success,
+            message: result.success
+              ? 'Broadcast completed via fallback (Plan B)'
+              : 'Broadcast failed in fallback (Plan B)',
+            successCount: result.successCount,
+            errorCount: result.errorCount,
+          }
+        } catch (planBError) {
+          logger.error('❌ План Б (Прямой вызов) также не сработал:', {
+            error: planBError.message,
+            telegram_id,
+            bot_name,
+          })
+          errorMessageAdmin(
+            new Error(
+              `🚨 Критическая ошибка: План Б (прямой вызов broadcastService) для ${telegram_id}, бот ${bot_name} тоже не сработал! Ошибка: ${planBError.message}`
+            )
+          )
+          return {
+            success: false,
+            message: 'Broadcast failed in both Plan A and Plan B',
+          }
+        }
       }
     } catch (error) {
-      logger.error('❌ Ошибка при создании задачи рассылки из Telegram:', {
-        description: 'Error while creating broadcast task from Telegram',
-        error: error?.message || 'Unknown error',
+      logger.error('❌ Ошибка при подготовке рассылки владельцем:', {
+        description: 'Error preparing owner broadcast',
+        error: error.message,
         telegram_id,
         bot_name,
-        test_mode: test_mode || false,
       })
-
-      return {
-        success: false,
-        message: 'Произошла ошибка при создании задачи рассылки',
-        error: error?.message || 'Unknown error',
-      }
+      // Уведомляем администратора о самой внешней ошибке
+      errorMessageAdmin(
+        new Error(
+          `🚨 Внешняя ошибка в sendBroadcastByOwner для ${telegram_id}, бот ${bot_name}: ${error.message}`
+        )
+      )
+      return { success: false, message: 'Internal error preparing broadcast' }
     }
   },
 

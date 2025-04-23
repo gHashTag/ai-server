@@ -343,7 +343,7 @@ export async function generateModelTraining(
       )
       await supabase
         .from('model_trainings')
-        .update({ status: 'succeeded', model_url: model_url })
+        .update({ status: 'SUCCESS', model_url: model_url })
         .eq('replicate_training_id', currentTraining.id)
 
       bot.telegram.sendMessage(
