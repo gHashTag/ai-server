@@ -6,6 +6,7 @@ import { generateImageToVideo } from '@/services/generateImageToVideo'
 import { generateImageToPrompt } from '@/services/generateImageToPrompt'
 import { createVoiceAvatar } from '@/services/createVoiceAvatar'
 import { generateModelTraining } from '@/services/generateModelTraining'
+import { errorMessageAdmin } from '@/helpers/errorMessageAdmin'
 
 import { validateUserParams } from '@/middlewares/validateUserParams'
 import { generateNeuroImageV2 } from '@/services/generateNeuroImageV2'
@@ -319,66 +320,94 @@ export class GenerationController {
     res: Response,
     next: NextFunction
   ): Promise<void> => {
+    const {
+      type,
+      telegram_id,
+      triggerWord,
+      modelName,
+      steps,
+      is_ru,
+      bot_name,
+    } = req.body
+
     try {
-      const {
-        type,
-        telegram_id,
-        triggerWord,
-        modelName,
-        steps,
-        is_ru,
-        bot_name,
-      } = req.body
-      if (!type) {
-        res.status(400).json({ message: 'type is required' })
-        return
-      }
-      if (!triggerWord) {
-        res.status(400).json({ message: 'triggerWord is required' })
-        return
-      }
-      if (!modelName) {
-        res.status(400).json({ message: 'modelName is required' })
-        return
-      }
-      if (!steps) {
-        res.status(400).json({ message: 'steps is required' })
-        return
-      }
-      if (!telegram_id) {
-        res.status(400).json({ message: 'telegram_id is required' })
-        return
-      }
-      if (!bot_name) {
-        res.status(400).json({ message: 'bot_name is required' })
-        return
-      }
+      if (!type) throw new Error('type is required')
+      if (!triggerWord) throw new Error('triggerWord is required')
+      if (!modelName) throw new Error('modelName is required')
+      if (!steps) throw new Error('steps is required')
+      if (!telegram_id) throw new Error('telegram_id is required')
+      if (!bot_name) throw new Error('bot_name is required')
+
       const zipFile = req.files?.find(file => file.fieldname === 'zipUrl')
-      if (!zipFile) {
-        res.status(400).json({ message: 'zipFile is required' })
-        return
-      }
-      // Создаем URL для доступа к файлу
+      if (!zipFile) throw new Error('zipFile is required')
+
       const zipUrl = `https://${req.headers.host}/uploads/${telegram_id}/${type}/${zipFile.filename}`
 
-      const { bot } = getBotByName(bot_name)
-      if (!bot) {
-        throw new Error(`Bot ${bot_name} not found`)
-      }
-      await generateModelTraining(
-        zipUrl,
-        triggerWord,
-        modelName,
-        steps,
-        telegram_id,
-        is_ru,
-        bot
-      )
+      try {
+        console.log(
+          '🚀 План А: Попытка отправить событие Inngest model/training.start'
+        )
+        await inngest.send({
+          id: `train:${telegram_id}:${modelName}-${Date.now()}`,
+          name: `model/training.start`,
+          data: {
+            zipUrl,
+            triggerWord,
+            modelName,
+            steps,
+            telegram_id,
+            is_ru,
+            bot_name,
+            idempotencyKey: `train:${telegram_id}:${modelName}-${Date.now()}`,
+          },
+        })
+        console.log(
+          '✅ План А: Событие Inngest model/training.start успешно отправлено'
+        )
+        res
+          .status(200)
+          .json({ message: 'Model training started via Inngest (Plan A)' })
+      } catch (inngestError) {
+        console.error('❌ План А (Inngest) не сработал:', inngestError)
+        errorMessageAdmin(
+          `🚨 Ошибка Inngest (model/training.start) для ${telegram_id}, модель ${modelName}. Активирован План Б (прямой вызов). Проверьте Inngest функцию! Ошибка: ${inngestError.message}` as unknown as Error
+        )
 
-      res.status(200).json({ message: 'Model training started' })
+        console.log('🧘 План Б: Запуск прямого вызова generateModelTraining')
+        const { bot } = getBotByName(bot_name)
+        if (!bot) {
+          throw new Error(`Bot ${bot_name} not found for Plan B`)
+        }
+
+        await generateModelTraining(
+          zipUrl,
+          triggerWord,
+          modelName,
+          steps,
+          telegram_id,
+          is_ru,
+          bot
+        )
+        console.log(
+          '✅ План Б: Прямой вызов generateModelTraining завершен (ответ клиенту уже ушел бы от Replicate, здесь просто завершаем)'
+        )
+        if (!res.headersSent) {
+          res
+            .status(202)
+            .json({ message: 'Model training started via fallback (Plan B)' })
+        }
+      }
     } catch (error) {
-      console.error('Ошибка при обработке запроса:', error)
-      next(error)
+      console.error('Ошибка при подготовке к запуску тренировки:', error)
+      if (!res.headersSent) {
+        res
+          .status(400)
+          .json({ message: error.message || 'Validation or setup error' })
+      } else {
+        errorMessageAdmin(
+          `🚨 Критическая ошибка после отправки заголовков в createModelTraining для ${telegram_id}: ${error.message}` as unknown as Error
+        )
+      }
     }
   }
 
