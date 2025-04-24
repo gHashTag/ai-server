@@ -218,27 +218,65 @@ export class PaymentService {
           )
         }
 
-        // Отправляем уведомление (если нужно)
+        // --- ОТПРАВКА УВЕДОМЛЕНИЙ ---
         try {
           const botData = createBotByName(bot_name)
           if (botData) {
             const { bot, groupId } = botData
+
+            // 1. Уведомление ПОЛЬЗОВАТЕЛЮ
+            let userMessage = ''
+            if (language_code === 'ru') {
+              if (subscription) {
+                userMessage = `✅ Ваша подписка "${subscription}" успешно активирована! Приятного использования!`
+              } else {
+                userMessage = `✅ Ваш баланс успешно пополнен на ${stars} ⭐! Сумма оплаты: ${outSum} руб.`
+              }
+            } else {
+              if (subscription) {
+                userMessage = `✅ Your subscription "${subscription}" has been successfully activated! Enjoy!`
+              } else {
+                userMessage = `✅ Your balance has been successfully topped up by ${stars} ⭐! Amount paid: ${outSum} RUB.`
+              }
+            }
+
+            try {
+              await bot.telegram.sendMessage(
+                telegram_id.toString(),
+                userMessage
+              )
+              logger.info(
+                `[PaymentSuccess] User notification sent successfully to ${telegram_id}`
+              )
+            } catch (userNotifyError) {
+              logger.error(
+                `[PaymentSuccess] FAILED to send user notification to ${telegram_id}`,
+                { error: userNotifyError }
+              )
+              // Не прерываем процесс, если не удалось уведомить пользователя, но логируем
+            }
+
+            // 2. Уведомление АДМИНАМ/ВЛАДЕЛЬЦАМ (используем существующую функцию, которая шлет в группу)
             logger.info(
-              `[PaymentSuccess] Sending notification to user ${bot_name}, telegram_id: ${telegram_id}, amount: ${outSum}, stars: ${stars}, language_code: ${language_code}, username: ${username}, groupId: ${groupId}`
+              `[PaymentSuccess] Preparing group notification for ${bot_name}, telegram_id: ${telegram_id}, amount: ${outSum}, stars: ${stars}, language_code: ${language_code}, username: ${username}, groupId: ${groupId}`
             )
+            // Старый вызов sendPaymentNotification, который на самом деле шлет в группу
             await sendPaymentNotification({
               amount: outSum.toString(),
               stars,
-              telegramId: telegram_id.toString(),
+              telegramId: telegram_id.toString(), // telegramId пользователя все еще нужен для текста сообщения
               language_code,
               username,
-              groupId,
+              groupId, // ID группы для отправки
               bot,
               subscription,
             })
             logger.info(
-              `[PaymentSuccess] Notification sent to user ${telegram_id}`
+              `[PaymentSuccess] Group notification attempt logged via sendPaymentNotification for ${telegram_id}`
             )
+
+            // Можно также оставить вызов notifyBotOwners, если он выполняет другую логику
+            // или дублирует уведомление для надежности
             await notifyBotOwners(bot_name, {
               username,
               telegram_id: telegram_id.toString(),
@@ -246,6 +284,9 @@ export class PaymentService {
               stars,
               subscription: subscription,
             })
+            logger.info(
+              `[PaymentSuccess] notifyBotOwners called for ${telegram_id}`
+            )
           } else {
             logger.error(
               `[PaymentSuccess] Could not create bot instance for bot ${bot_name}`
