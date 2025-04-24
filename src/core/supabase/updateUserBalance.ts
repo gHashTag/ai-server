@@ -22,7 +22,7 @@ type BalanceUpdateMetadata = {
 export const updateUserBalance = async (
   telegram_id: string,
   amount: number,
-  type: 'money_income' | 'money_expense',
+  type: 'money_income' | 'money_outcome',
   description?: string,
   metadata?: BalanceUpdateMetadata
 ): Promise<boolean> => {
@@ -65,7 +65,7 @@ export const updateUserBalance = async (
     if (
       description &&
       description.includes('Payment for generating') &&
-      type === 'money_expense'
+      type === 'money_outcome'
     ) {
       // Извлекаем значение modePrice из metadata
       if (metadata?.modePrice && typeof metadata.modePrice === 'number') {
@@ -144,7 +144,7 @@ export const updateUserBalance = async (
       else if (
         metadata?.currentBalance &&
         Math.abs(metadata.currentBalance - safeAmount) < 100 &&
-        type === 'money_expense'
+        type === 'money_outcome'
       ) {
         // Вероятно передан новый баланс вместо суммы операции
         // Вычисляем разницу между текущим и новым балансом
@@ -161,7 +161,7 @@ export const updateUserBalance = async (
     }
 
     // Проверка на подозрительно большие суммы для outcome операций
-    if (type === 'money_expense' && safeAmount > 100) {
+    if (type === 'money_outcome' && safeAmount > 100) {
       logger.warn('⚠️ Подозрительно большая сумма списания, возможно ошибка:', {
         description: 'Suspiciously large amount for outcome operation',
         telegram_id,
@@ -204,7 +204,7 @@ export const updateUserBalance = async (
     })
 
     // Проверяем существование пользователя и его баланс для outcome операций
-    if (type === 'money_expense') {
+    if (type === 'money_outcome') {
       // Проверка существования пользователя
       const { data: userData, error: userError } = await supabase
         .from('users')

@@ -14,12 +14,12 @@ export interface UserModel {
 
 export type VideoModel =
   | 'minimax'
-  | 'haiper'
+  // | 'haiper' // Закомментировано или удалить, т.к. используется haiper-video-2
   | 'ray'
   | 'ray_v2'
   | 'i2vgen-xl'
   | 'wan-2.1'
   | 'kling-v1.6-pro'
   | 'hunyuan-video-fast'
-  | 'haiper-video-2'
+  | 'haiper-video-2' // Используем этот ID
   | 'wan-2.1-i2v-720p'

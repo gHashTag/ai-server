@@ -1,6 +1,7 @@
 // src/core/supabase/updateUserBalance.ts
 import { supabase } from '@/core/supabase'
 import { logger } from '@/utils/logger'
+import { invalidateBalanceCache } from './getUserBalance'
 
 type BalanceUpdateMetadata = {
   // ... разные метаданные
@@ -73,7 +74,7 @@ export const updateUserBalanceRobokassa = async (
 
     // --- ДОБАВЛЕНО: Инвалидация кэша ---
     // Нужно импортировать invalidateBalanceCache из ./getUserBalance
-    // invalidateBalanceCache(telegram_id);
+    invalidateBalanceCache(telegram_id)
 
     return true // Возвращает true в случае успеха
   } catch (error) {

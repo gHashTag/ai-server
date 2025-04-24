@@ -24,7 +24,7 @@ describe('POST /image-to-video', () => {
       imageUrl:
         'https://www.investopedia.com/thmb/YJBXk5A8fN78NMdeCk0IJKGNRuw=/750x0/filters:no_upscale():max_bytes(150000):strip_icc():format(webp)/GettyImages-453930217-42848c04ff58410d952e1a5b65a00929.jpg',
       prompt: 'Create a video of a dance',
-      videoModel: 'haiper',
+      videoModel: 'haiper-video-2',
       paymentAmount: 1,
       telegram_id: 123456789,
       username: 'testuser',

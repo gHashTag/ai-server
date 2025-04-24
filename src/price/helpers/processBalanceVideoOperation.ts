@@ -1,5 +1,5 @@
 import { getUserBalance, updateUserBalance } from '@/core/supabase'
-
+import { logger } from '@/utils/logger'
 import { BalanceOperationResult } from '@/interfaces/payments.interface'
 import { VIDEO_MODELS_CONFIG } from '@/helpers/VIDEO_MODELS'
 import { calculateFinalPrice } from './calculateFinalPrice'
@@ -39,6 +39,7 @@ export const processBalanceVideoOperation = async ({
         paymentAmount: 0,
         success: false,
         error: 'Invalid model',
+        modePrice: 0,
       }
     }
 
@@ -55,22 +56,72 @@ export const processBalanceVideoOperation = async ({
         paymentAmount,
         success: false,
         error: message,
+        modePrice: 0,
       }
     }
 
     // Рассчитываем новый баланс
     const newBalance = currentBalance - paymentAmount
 
-    // Обновляем баланс в БД
-    await updateUserBalance(telegram_id, newBalance, 'outcome', description, {
-      payment_method: 'Image to video',
-      bot_name,
-      language: is_ru ? 'ru' : 'en',
-    })
+    // Обновляем баланс в БД и создаем запись о списании
+    const updateSuccess = await updateUserBalance(
+      telegram_id,
+      paymentAmount,
+      'money_outcome',
+      description,
+      {
+        stars: paymentAmount,
+        payment_method: 'Image to video',
+        bot_name,
+        language: is_ru ? 'ru' : 'en',
+        service_type: 'IMAGE_TO_VIDEO',
+      }
+    )
 
-    return { newBalance, paymentAmount, success: true }
+    // Добавим проверку успеха операции обновления баланса
+    if (!updateSuccess) {
+      logger.warn(
+        '⚠️ Не удалось обновить баланс или записать транзакцию списания',
+        {
+          telegram_id,
+          amount: paymentAmount,
+          bot_name,
+        }
+      )
+      return {
+        newBalance: currentBalance,
+        paymentAmount,
+        success: false,
+        error: is_ru ? 'Ошибка списания средств' : 'Error deducting funds',
+        modePrice: paymentAmount,
+      }
+    }
+
+    return {
+      newBalance,
+      paymentAmount,
+      success: true,
+      modePrice: paymentAmount,
+    }
   } catch (error) {
-    console.error('Error in processBalanceOperation:', error)
-    throw error
+    const errorMessage =
+      error instanceof Error
+        ? error.message
+        : 'Unknown error processing balance'
+    logger.error('❌ Ошибка при обработке баланса для видео:', {
+      description: 'Error processing balance for video operation',
+      telegram_id,
+      videoModel,
+      error: errorMessage,
+      error_details: error,
+      bot_name,
+    })
+    return {
+      newBalance: 0,
+      paymentAmount: 0,
+      success: false,
+      error: is_ru ? 'Ошибка проверки баланса' : 'Error checking balance',
+      modePrice: 0,
+    }
   }
 }

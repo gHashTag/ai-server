@@ -53,3 +53,49 @@
       .eq('type', 'money_expense') // Corrected: Use PaymentType enum
       .eq('status', 'COMPLETED')
 ```
+
+### 3. Error: `Не удалось рассчитать баланс пользователя` during expense operation
+
+**Symptoms:**
+- Logs show `Error: Не удалось рассчитать баланс пользователя` originating from `getUserBalance`.
+- The application might crash if the error is not handled properly by the calling function.
+
+**Cause:**
+- The `getUserBalance` function calls the Supabase RPC function `get_user_balance`.
+- An error occurred during the RPC call (e.g., database issue, incorrect `telegram_id` format passed to the function, or an error within the SQL function itself).
+- The calling function (e.g., `processBalanceVideoOperation`) did not properly catch or handle the error thrown by `getUserBalance`, leading to an unhandled exception.
+
+**Solution:**
+1.  **Ensure Correct `telegram_id`:** Verify that the `telegram_id` being passed to `getUserBalance` is correctly normalized to a string using `normalizeTelegramId` before the RPC call.
+2.  **Handle Errors Gracefully:** Modify the calling function (e.g., in `src/price/helpers/processBalanceVideoOperation.ts`) to wrap the `getUserBalance` call in a `try...catch` block. In the `catch` block, log the error and return a failure result (e.g., `{ success: false, error: 'Balance check failed' }`) instead of re-throwing the error.
+    ```typescript
+    // Example in processBalanceVideoOperation.ts
+    try {
+      const currentBalance = await getUserBalance(telegram_id);
+      // ... rest of the logic ...
+    } catch (error) {
+      logger.error('❌ Ошибка при проверке баланса:', { error, telegram_id });
+      return {
+        newBalance: 0, 
+        paymentAmount: 0,
+        success: false,
+        error: is_ru ? 'Ошибка проверки баланса' : 'Error checking balance',
+        modePrice: 0,
+      };
+    }
+    ```
+3.  **Investigate SQL Function:** If the error persists, investigate the `get_user_balance` SQL function in Supabase for potential issues.
+
+### 4. Error: `TelegramError: 401: Unauthorized` when sending messages
+
+**Symptoms:**
+- The application crashes with a `TelegramError: 401: Unauthorized`.
+- Logs indicate the error occurs when the bot tries to call a Telegram API method like `sendMessage`.
+
+**Cause:**
+- The Telegram Bot Token provided to the Telegraf instance (likely via environment variables like `TELEGRAM_BOT_TOKEN_AI_KOSHEY_BOT`) is invalid, revoked, or incorrect.
+
+**Solution:**
+1.  **Verify Token:** Double-check the Telegram Bot Token in your environment configuration (e.g., `.env` file).
+2.  **Generate New Token:** If necessary, generate a new token from BotFather on Telegram and update your configuration.
+3.  **Restart Application:** Ensure the application is restarted after updating the token for the changes to take effect.

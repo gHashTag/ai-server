@@ -239,7 +239,7 @@ export class PaymentService {
             logger.info(
               `[PaymentSuccess] Notification sent to user ${telegram_id}`
             )
-            notifyBotOwners(bot_name, {
+            await notifyBotOwners(bot_name, {
               username,
               telegram_id: telegram_id.toString(),
               amount: outSum,

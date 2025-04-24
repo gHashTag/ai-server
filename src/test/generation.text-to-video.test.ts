@@ -22,7 +22,7 @@ describe('POST /text-to-video', () => {
   it('should return 200 and start processing when valid data is provided', async () => {
     const requestBody = {
       prompt: 'Create a video of a sunset',
-      videoModel: 'haiper',
+      videoModel: 'haiper-video-2',
       telegram_id: 123456789,
       username: 'testuser',
       is_ru: true,
