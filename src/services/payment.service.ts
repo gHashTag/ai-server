@@ -9,6 +9,7 @@ import { createBotByName } from '@/config' // Убедись, что путь и
 import { errorMessageAdmin } from '@/helpers/errorMessageAdmin' // Убедись, что путь импорта верен
 import { supabase } from '@/core/supabase'
 import { notifyBotOwners } from '@/core/supabase'
+import { ADMIN_GROUP_ID } from '@/config'
 // --- КОНСТАНТЫ (из предоставленного кода) ---
 const PAYMENT_OPTIONS = [
   { amount: 500, stars: 217 },
@@ -260,27 +261,26 @@ export class PaymentService {
               // Не прерываем процесс, если не удалось уведомить пользователя, но логируем
             }
 
-            // 2. Уведомление АДМИНАМ/ВЛАДЕЛЬЦАМ (используем существующую функцию, которая шлет в группу)
+            // 2. Уведомление АДМИНАМ/ВЛАДЕЛЬЦАМ
             logger.info(
-              `[PaymentSuccess] Preparing group notification for ${bot_name}, telegram_id: ${telegram_id}, amount: ${outSum}, stars: ${stars}, language_code: ${language_code}, username: ${username}, groupId: ${groupId}`
+              `[PaymentSuccess] Preparing group notification for ${bot_name}, telegram_id: ${telegram_id}, amount: ${outSum}, stars: ${stars}, language_code: ${language_code}, username: ${username}, groupId: ${ADMIN_GROUP_ID}`
             )
-            // Старый вызов sendPaymentNotification, который на самом деле шлет в группу
+            // Вызов sendPaymentNotification, который шлет в группу
             await sendPaymentNotification({
               amount: outSum.toString(),
               stars,
-              telegramId: telegram_id.toString(), // telegramId пользователя все еще нужен для текста сообщения
+              telegramId: telegram_id.toString(),
               language_code,
               username,
-              groupId, // ID группы для отправки
+              groupId: ADMIN_GROUP_ID,
               bot,
               subscription,
             })
             logger.info(
-              `[PaymentSuccess] Group notification attempt logged via sendPaymentNotification for ${telegram_id}`
+              `[PaymentSuccess] Group notification attempt logged via sendPaymentNotification for ${telegram_id} to group ${ADMIN_GROUP_ID}`
             )
 
-            // Можно также оставить вызов notifyBotOwners, если он выполняет другую логику
-            // или дублирует уведомление для надежности
+            // 3. Уведомление ВЛАДЕЛЬЦУ БОТА В ЛС (остается без изменений)
             await notifyBotOwners(bot_name, {
               username,
               telegram_id: telegram_id.toString(),

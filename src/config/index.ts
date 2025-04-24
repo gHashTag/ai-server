@@ -113,6 +113,8 @@ export const AVATARS_GROUP_ID = {
   ['Gaia_Kamskaia_bot']: '@neuromeets',
 }
 
+export const ADMIN_GROUP_ID = '@neuro_blogger_pulse'
+
 export const BOT_TOKENS =
   NODE_ENV === 'production' ? BOT_TOKENS_PROD : BOT_TOKENS_TEST
 
@@ -194,17 +196,17 @@ export const AERENDER_PATH = process.env.AERENDER_PATH
 export const INNGEST_WEBHOOK_URL = process.env.INNGEST_WEBHOOK_URL
 
 export interface SupabaseConfig {
-  url: string;
-  key: string;
+  url: string
+  key: string
 }
 
 export interface AppConfig {
-  supabase: SupabaseConfig;
+  supabase: SupabaseConfig
 }
 
 export const appConfig: AppConfig = {
   supabase: {
     url: process.env.SUPABASE_URL || 'https://yuukfqcsdhkyxegfwlcb.supabase.co',
     key: process.env.SUPABASE_KEY || '',
-  }
-};
+  },
+}
