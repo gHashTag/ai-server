@@ -8,7 +8,7 @@ import { saveVideoUrlToSupabase } from '@/core/supabase/saveVideoUrlToSupabase'
 import path from 'path'
 import { getBotByName } from '@/core/bot'
 import { getUserByTelegramId, updateUserLevelPlusOne } from '@/core/supabase'
-import { VIDEO_MODELS_CONFIG } from '@/helpers/VIDEO_MODELS'
+import { VIDEO_MODELS_CONFIG } from '@/config/models.config'
 
 export const processVideoGeneration = async (
   videoModel: string,
@@ -61,16 +61,33 @@ export const generateTextToVideo = async (
     }
     const { bot } = getBotByName(bot_name)
     // Проверка баланса для всех изображений
-    const { newBalance, paymentAmount } = await processBalanceVideoOperation({
+    const balanceResult = await processBalanceVideoOperation({
       videoModel,
       telegram_id,
       is_ru,
-      bot,
       bot_name,
-      description: `Payment for generating video`,
     })
 
-    bot.telegram.sendMessage(
+    // Проверяем результат проверки баланса
+    if (!balanceResult.success) {
+      // Отправляем сообщение об ошибке пользователю
+      if (balanceResult.error) {
+        await bot.telegram.sendMessage(
+          telegram_id.toString(),
+          balanceResult.error
+        )
+      }
+      // Прерываем выполнение, так как баланс некорректен или недостаточен
+      throw new Error(
+        balanceResult.error ||
+          (is_ru ? 'Ошибка проверки баланса' : 'Balance check failed')
+      )
+    }
+
+    // Используем данные из успешного результата
+    const { newBalance, paymentAmount } = balanceResult
+
+    await bot.telegram.sendMessage(
       telegram_id,
       is_ru ? '⏳ Генерация видео...' : '⏳ Generating video...',
       {

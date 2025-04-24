@@ -4,7 +4,7 @@ type VideoModelConfig = {
   title: string
   description: string
   inputType: ('text' | 'image')[]
-  basePrice: number
+  basePrice: number // Base price in dollars
   api: {
     model: string
     input: Record<string, any>

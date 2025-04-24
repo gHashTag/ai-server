@@ -9,7 +9,7 @@ import { getUserByTelegramId, updateUserLevelPlusOne } from '@/core/supabase'
 import { mkdir, writeFile } from 'fs/promises'
 import path from 'path'
 import { getBotByName } from '@/core/bot'
-import { VIDEO_MODELS_CONFIG } from '@/helpers/VIDEO_MODELS'
+import { VIDEO_MODELS_CONFIG } from '@/config/models.config'
 
 interface ReplicateResponse {
   id: string
@@ -64,16 +64,29 @@ export const generateImageToVideo = async (
 
     const { bot } = getBotByName(bot_name)
 
-    const { newBalance, paymentAmount } = await processBalanceVideoOperation({
+    const balanceResult = await processBalanceVideoOperation({
       videoModel,
       telegram_id,
       is_ru,
-      bot,
       bot_name,
-      description: `Payment for generating video`,
     })
 
-    bot.telegram.sendMessage(
+    if (!balanceResult.success) {
+      if (balanceResult.error) {
+        await bot.telegram.sendMessage(
+          telegram_id.toString(),
+          balanceResult.error
+        )
+      }
+      throw new Error(
+        balanceResult.error ||
+          (is_ru ? 'Ошибка проверки баланса' : 'Balance check failed')
+      )
+    }
+
+    const { newBalance, paymentAmount } = balanceResult
+
+    await bot.telegram.sendMessage(
       telegram_id,
       is_ru ? '⏳ Генерация видео...' : '⏳ Generating video...',
       {
