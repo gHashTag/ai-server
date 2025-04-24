@@ -22,7 +22,11 @@ export class PaymentSuccessController {
 
       const roundedIncSum = Number(IncSum)
       console.log('💰 processPayment: округленная сумма', roundedIncSum)
-      await this.paymentService.processPayment(roundedIncSum, inv_id, res)
+      await this.paymentService.processPayment(
+        roundedIncSum.toString(),
+        inv_id,
+        res
+      )
     } catch (error) {
       logger.error('Ошибка обработки успешного платежа:', error)
       res.status(500).send('Internal Server Error')

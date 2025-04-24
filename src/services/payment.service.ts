@@ -57,33 +57,37 @@ const SUBSCRIPTION_AMOUNTS = SUBSCRIPTION_PLANS.reduce((acc, plan) => {
 
 export class PaymentService {
   public async processPayment(
-    roundedIncSum: number,
+    IncSum: string,
     inv_id: string,
     res: Response
   ): Promise<void> {
-    // --- ДОБАВЛЕНО: Базовые проверки ---
-    if (!roundedIncSum || !inv_id) {
-      logger.error('[PaymentSuccess] Missing required parameters', {
-        roundedIncSum,
-        inv_id,
-      })
-      // Отвечаем ошибкой, а не OK
-      throw new Error('Missing parameters')
-      return
-    }
+    logger.info('[Service Debug] Received parameters:', { IncSum, inv_id })
 
     let invId: number
     let outSum: number
+
     try {
       invId = parseInt(inv_id, 10)
-      outSum = parseFloat(roundedIncSum.toString()) // Используем parseFloat для суммы
+      outSum = parseFloat(IncSum)
+
       if (isNaN(invId) || isNaN(outSum)) {
-        throw new Error('Invalid InvId or OutSum format')
+        logger.error(
+          '[PaymentSuccess] Invalid parameter format after parsing',
+          {
+            inv_id,
+            IncSum,
+            parsed_invId: invId,
+            parsed_outSum: outSum,
+          }
+        )
+        throw new Error('Invalid InvId or IncSum format')
       }
+
+      logger.info('[Service Debug] Parsed parameters:', { invId, outSum })
     } catch (parseError) {
-      logger.error('[PaymentSuccess] Error parsing InvId or OutSum', {
+      logger.error('[PaymentSuccess] Error parsing InvId or IncSum', {
         inv_id,
-        roundedIncSum,
+        IncSum,
         error: parseError,
       })
       throw new Error('Invalid parameter format')

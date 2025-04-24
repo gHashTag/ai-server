@@ -3,36 +3,33 @@ description:
 globs: 
 alwaysApply: true
 ---
-# Current Task: Refactor Balance Handling Logic
+# Current Task: Debug Robokassa User Payment Notification (Issue Persists)
 
-**Goal:** Ensure consistent balance checking, error handling, and user notification logic across all features that deduct or add stars/balance, following the pattern established for video operations.
+**Goal:** Diagnose and fix the reason why the user is still not receiving a notification upon successful payment via Robokassa, despite previous attempts to fix it.
 
 **Decomposition:**
 
-1.  **Identify Functions Interacting with Balance:**
-    *   Search the codebase for functions that modify or check user balance (e.g., using `updateUserBalance`, `getUserBalance`, `processBalanceOperation`, `modeCosts`, `paymentAmount`, `newBalance`).
-    *   Focus on generation services (`generate...`), Inngest functions (`modelTrainingV2`, `paymentProcessing`), controllers, etc.
+1.  **Re-examine `payment.service.ts`:**
+    *   Focus on the `try...catch` block around `bot.telegram.sendMessage(telegram_id.toString(), userMessage)` ([payment.service.ts](mdc:src/services/payment.service.ts)).
+    *   Is the `catch` block being triggered? Check logs for `FAILED to send user notification`.
+    *   Verify `telegram_id` retrieval from `paymentData`.
+    *   Verify successful bot instance creation via `createBotByName`. Check logs for `Could not create bot instance`.
 
-2.  **Analyze Each Identified Function:**
-    *   How is balance checked (centralized function vs. custom logic)?
-    *   How are errors (insufficient funds, etc.) handled?
-    *   Where/how is the user notified about errors?
-    *   Where/how is the user notified about success (cost, new balance)?
+2.  **Detailed Log Analysis (Needs User Action):**
+    *   Request the user to perform **another Robokassa test payment**.
+    *   Carefully analyze the server logs (`ai-server` container) immediately after the payment for:
+        *   `[PaymentSuccess] User notification sent successfully to ...`
+        *   `[PaymentSuccess] FAILED to send user notification to ...` (and the associated error).
+        *   `[PaymentSuccess] Could not create bot instance ...`
+        *   Any other errors within the `processPayment` function context.
 
-3.  **Refactor to Match Pattern:**
-    *   Use a centralized balance check function (`processBalanceOperation` or `processBalanceVideoOperation`).
-    *   Ensure the balance check function does **not** use `ctx` or send messages; it should return `{ success: boolean, error?: string, ... }`.
-    *   Modify the **calling function** to:
-        *   Check the result of the balance function.
-        *   If `!success`, send the `error` message to the user using the available `bot` instance and stop processing.
-        *   If `success`, use `newBalance` and `paymentAmount` for logic and the success notification.
-    *   Standardize success messages to include cost and remaining balance.
-
-4.  **Create/Update `processBalanceOperation`:**
-    *   Verify or create a generic `processBalanceOperation` function in `src/price/helpers` that follows the new pattern (no `ctx`, returns result object with potential error).
+3.  **Investigate Potential Causes:**
+    *   **Silent Send Failure:** Could `sendMessage` fail without throwing an error caught by the `try...catch`?
+    *   **Incorrect ID / Bot Blocked:** Is the `telegram_id` definitely correct? Has the user potentially blocked the bot?
+    *   **Bot Instance Issue:** Is the `bot` instance retrieved by `createBotByName` valid and capable of sending messages?
+    *   **Environment/Configuration:** Are all necessary environment variables (like bot tokens) correctly configured in the **production/docker environment** where the test is happening?
 
 **Next Steps:**
 
-*   Begin by searching for functions that interact with user balance.
-*   Analyze and refactor `src/price/helpers/processBalanceOperation.ts` if it exists and needs changes.
-*   Analyze and refactor calling functions like `src/inngest-functions/modelTrainingV2.ts`.
+*   Re-read the user notification code block in [payment.service.ts](mdc:src/services/payment.service.ts).
+*   Ask the user to perform a test payment and provide relevant server logs.
