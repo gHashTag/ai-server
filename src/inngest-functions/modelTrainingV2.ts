@@ -12,6 +12,7 @@ import { modeCosts, ModeEnum } from '@/price/helpers/modelsCost'
 import { errorMessageAdmin } from '@/helpers/errorMessageAdmin'
 import axios from 'axios'
 import { logger } from '@/utils/logger'
+import { PaymentType } from '@/interfaces/payments.interface'
 
 interface TrainingResponse {
   id: string
@@ -121,6 +122,7 @@ export const modelTrainingV2 = inngest.createFunction(
         logger.info({
           message: '💰 Checking user balance',
           telegramId: telegram_id,
+          botName: bot_name,
           step: 'check-balance',
         })
 
@@ -149,33 +151,45 @@ export const modelTrainingV2 = inngest.createFunction(
           telegram_id,
           paymentAmount,
           is_ru,
-          bot,
           bot_name,
-          description: `Payment for model training ${modelName} (steps: ${steps})`,
-          type: 'Training',
         })
 
         if (!balanceCheck.success) {
           logger.error({
-            message: '⚠️ Insufficient balance',
+            message: '⚠️ Balance check failed or insufficient funds',
             telegramId: telegram_id,
             requiredAmount: paymentAmount,
-            currentBalance: currentBalance,
+            currentBalance: balanceCheck.currentBalance,
+            error: balanceCheck.error,
             step: 'check-balance',
           })
 
-          throw new Error('Not enough stars')
+          if (balanceCheck.error) {
+            try {
+              await bot.telegram.sendMessage(
+                telegram_id.toString(),
+                balanceCheck.error
+              )
+            } catch (notifyError) {
+              logger.error(
+                'Failed to send balance error notification to user',
+                { telegramId: telegram_id, error: notifyError }
+              )
+            }
+          }
+
+          throw new Error(balanceCheck.error || 'Balance check failed')
         }
 
         logger.info({
           message: '✅ Balance check successful',
           telegramId: telegram_id,
-          currentBalance: currentBalance,
+          currentBalance: balanceCheck.currentBalance,
           requiredAmount: paymentAmount,
           step: 'check-balance',
         })
 
-        return { currentBalance, paymentAmount }
+        return { currentBalance: balanceCheck.currentBalance, paymentAmount }
       }
     )
 
@@ -348,6 +362,50 @@ export const modelTrainingV2 = inngest.createFunction(
         })
       })
 
+      // Отправляем уведомление пользователю об успехе и списании
+      await step.run('deduct-balance', async () => {
+        logger.info({
+          message: '💸 Deducting balance after successful training start',
+          telegramId: telegram_id,
+          paymentAmount: paymentAmount,
+          currentBalance: currentBalance,
+          step: 'deduct-balance',
+        })
+
+        const newBalance = currentBalance - paymentAmount
+
+        await updateUserBalance(
+          telegram_id,
+          newBalance,
+          PaymentType.MONEY_OUTCOME,
+          `Model training ${modelName} (steps: ${steps})`,
+          {
+            stars: paymentAmount,
+            payment_method: 'Internal',
+            bot_name,
+            language: is_ru ? 'ru' : 'en',
+            operation_id: training.id,
+          }
+        )
+
+        logger.info({
+          message: '✅ Balance updated successfully',
+          telegramId: telegram_id,
+          newBalance: newBalance,
+          step: 'deduct-balance',
+        })
+
+        const successMessage = is_ru
+          ? `✅ Тренировка модели ${modelName} успешно запущена! С вашего баланса списано ${paymentAmount} ⭐. Ваш новый баланс: ${newBalance.toFixed(
+              2
+            )} ⭐.`
+          : `✅ Model training ${modelName} started successfully! ${paymentAmount} ⭐ deducted from your balance. Your new balance: ${newBalance.toFixed(
+              2
+            )} ⭐.`
+
+        await bot.telegram.sendMessage(telegram_id.toString(), successMessage)
+      })
+
       logger.info({
         message: '🏁 Model training process completed successfully',
         telegramId: telegram_id,
@@ -374,7 +432,7 @@ export const modelTrainingV2 = inngest.createFunction(
         await updateUserBalance(
           telegram_id,
           currentBalance + paymentAmount,
-          'income',
+          PaymentType.MONEY_INCOME,
           `Refund for model training ${modelName} (steps: ${steps})`,
           {
             payment_method: 'Training',

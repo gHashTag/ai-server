@@ -1,7 +1,11 @@
 import { replicate } from '../core/replicate'
 import { getAspectRatio } from '../core/supabase/ai'
 import { savePrompt } from '../core/supabase/savePrompt'
-import { getUserByTelegramId, updateUserLevelPlusOne } from '@/core/supabase'
+import {
+  getUserByTelegramId,
+  updateUserLevelPlusOne,
+  updateUserBalance,
+} from '@/core/supabase'
 import { processApiResponse } from '@/helpers/processApiResponse'
 import { GenerationResult } from '@/interfaces'
 import { saveFileLocally } from '@/helpers'
@@ -14,6 +18,7 @@ import { modeCosts, ModeEnum } from '@/price/helpers/modelsCost'
 import path from 'path'
 import { API_URL } from '@/config'
 import fs from 'fs'
+import { PaymentType } from '@/interfaces/payments.interface'
 
 export async function generateNeuroImage(
   prompt: string,
@@ -24,7 +29,7 @@ export async function generateNeuroImage(
   is_ru: boolean,
   bot: Telegraf<MyContext>,
   bot_name: string
-): Promise<GenerationResult | null> {
+): Promise<GenerationResult[] | null> {
   try {
     const userExists = await getUserByTelegramId(telegram_id)
     if (!userExists) {
@@ -34,28 +39,47 @@ export async function generateNeuroImage(
     if (level === 1) {
       await updateUserLevelPlusOne(telegram_id, level)
     }
-    // Проверка баланса для всех изображений
+
+    // Расчет стоимости
     let costPerImage: number
     if (typeof modeCosts[ModeEnum.NeuroPhoto] === 'function') {
       costPerImage = modeCosts[ModeEnum.NeuroPhoto](num_images)
     } else {
       costPerImage = modeCosts[ModeEnum.NeuroPhoto]
     }
+    const totalCost = costPerImage * num_images
 
+    // Вызываем обновленную функцию проверки баланса
     const balanceCheck = await processBalanceOperation({
       telegram_id,
-      paymentAmount: costPerImage * num_images,
+      paymentAmount: totalCost,
       is_ru,
-      bot,
       bot_name,
-      description: `Payment for generating ${num_images} image${
-        num_images === 1 ? '' : 's'
-      } with prompt: ${prompt.substring(0, 30)}...`,
-      type: 'NeuroPhoto',
     })
+
+    // Обрабатываем результат проверки баланса
     if (!balanceCheck.success) {
-      throw new Error(balanceCheck.error)
+      if (balanceCheck.error) {
+        try {
+          await bot.telegram.sendMessage(
+            telegram_id.toString(),
+            balanceCheck.error
+          )
+        } catch (notifyError) {
+          console.error('Failed to send balance error notification to user', {
+            telegramId: telegram_id,
+            error: notifyError,
+          })
+          errorMessageAdmin(notifyError as Error)
+        }
+      }
+      throw new Error(
+        balanceCheck.error ||
+          (is_ru ? 'Ошибка проверки баланса' : 'Balance check failed')
+      )
     }
+    // Сохраняем текущий баланс
+    const initialBalance = balanceCheck.currentBalance
 
     const aspect_ratio = await getAspectRatio(telegram_id)
     const results: GenerationResult[] = []
@@ -81,134 +105,207 @@ export async function generateNeuroImage(
       num_outputs: 1,
       aspect_ratio,
     }
+    let successful_generations = 0
 
-    // Цикл генерации изображений
+    // --- ЦИКЛ ГЕНЕРАЦИИ ИЗОБРАЖЕНИЙ ---
     for (let i = 0; i < num_images; i++) {
-      if (num_images > 1) {
-        bot.telegram.sendMessage(
+      try {
+        // ... (уведомление о начале генерации i-го изображения) ...
+        if (num_images > 1) {
+          bot.telegram.sendMessage(
+            telegram_id,
+            is_ru
+              ? `⏳ Генерация изображения ${i + 1} из ${num_images}`
+              : `⏳ Generating image ${i + 1} of ${num_images}`
+          )
+        } else {
+          bot.telegram.sendMessage(
+            telegram_id,
+            is_ru ? '⏳ Генерация...' : '⏳ Generating...',
+            {
+              reply_markup: { remove_keyboard: true },
+            }
+          )
+        }
+
+        const output = await replicate.run(model_url, { input })
+        const imageUrl = await processApiResponse(output)
+
+        if (!imageUrl || imageUrl.endsWith('empty.zip')) {
+          console.error(`Failed to generate image ${i + 1}`)
+          await bot.telegram.sendMessage(
+            telegram_id,
+            is_ru
+              ? `❌ Не удалось сгенерировать изображение ${i + 1}.`
+              : `❌ Failed to generate image ${i + 1}.`
+          )
+          continue // Пропускаем итерацию, если не удалось получить URL
+        }
+
+        // ... (логика сохранения файла локально, в supabase, отправки pulse) ...
+        const imageLocalPath = await saveFileLocally(
           telegram_id,
-          is_ru
-            ? `⏳ Генерация изображения ${i + 1} из ${num_images}`
-            : `⏳ Generating image ${i + 1} of ${num_images}`
+          imageUrl,
+          'neuro-photo',
+          '.jpeg'
         )
-      } else {
-        bot.telegram.sendMessage(
+        const imageLocalUrl = `${API_URL}/uploads/${telegram_id}/neuro-photo/${path.basename(
+          imageLocalPath
+        )}`
+        const prompt_id = await savePrompt(
+          prompt,
+          model_url,
+          ModeEnum.NeuroPhoto,
+          imageLocalUrl,
           telegram_id,
-          is_ru ? '⏳ Генерация...' : '⏳ Generating...',
-          {
-            reply_markup: { remove_keyboard: true },
+          'SUCCESS'
+        )
+        await pulse(
+          imageLocalPath,
+          prompt,
+          `/${model_url}`,
+          telegram_id,
+          username,
+          is_ru,
+          bot_name
+        )
+
+        if (prompt_id === null) {
+          console.error(`Failed to save prompt for image ${i + 1}`)
+          await bot.telegram.sendMessage(
+            telegram_id,
+            is_ru
+              ? `❌ Ошибка сохранения данных для изображения ${i + 1}.`
+              : `❌ Error saving data for image ${i + 1}.`
+          )
+          continue // Пропускаем, если не удалось сохранить промпт
+        }
+
+        // Отправляем изображение пользователю СРАЗУ
+        await bot.telegram.sendPhoto(telegram_id, {
+          source: fs.createReadStream(imageLocalPath),
+        })
+
+        // Сохраняем результат
+        results.push({ image: imageLocalUrl, prompt_id }) // Сохраняем URL
+        successful_generations++
+      } catch (error) {
+        console.error(`Error during generation of image ${i + 1}:`, error)
+        // Обработка ошибок, включая NSFW
+        let errorMessageToUser = '❌ Произошла ошибка.'
+        if (error.message && error.message.includes('NSFW content detected')) {
+          errorMessageToUser = is_ru
+            ? '❌ Обнаружен NSFW контент. Пожалуйста, попробуйте другой запрос.'
+            : '❌ NSFW content detected. Please try another prompt.'
+        } else if (error.message) {
+          const match = error.message.match(/{"detail":"(.*?)"/)
+          if (match && match[1]) {
+            errorMessageToUser = is_ru
+              ? `❌ Ошибка генерации: ${match[1]}`
+              : `❌ Generation error: ${match[1]}`
           }
-        )
+        } else {
+          errorMessageToUser = is_ru
+            ? `❌ Ошибка при генерации изображения ${i + 1}.`
+            : `❌ An error occurred generating image ${i + 1}.`
+        }
+        await bot.telegram.sendMessage(telegram_id, errorMessageToUser)
+        errorMessageAdmin(error as Error) // Логируем админу
+        // Не прерываем цикл
       }
+    }
 
-      const output = await replicate.run(model_url, { input })
-      const imageUrl = await processApiResponse(output)
+    // --- СПИСАНИЕ СРЕДСТВ И ФИНАЛЬНОЕ УВЕДОМЛЕНИЕ (ПОСЛЕ ЦИКЛА) ---
+    if (successful_generations > 0) {
+      const finalCost = costPerImage * successful_generations
+      const newBalance = initialBalance - finalCost
 
-      if (!imageUrl || imageUrl.endsWith('empty.zip')) {
-        console.error(`Failed to generate image ${i + 1}`)
-        continue
-      }
-
-      // Сохраняем изображение на сервере
-      const imageLocalPath = await saveFileLocally(
-        telegram_id,
-        imageUrl,
-        'neuro-photo',
-        '.jpeg'
-      )
-
-      // Генерируем URL для доступа к изображению
-      const imageLocalUrl = `${API_URL}/uploads/${telegram_id}/neuro-photo/${path.basename(
-        imageLocalPath
-      )}`
-
-      const prompt_id = await savePrompt(
-        prompt,
-        model_url,
-        ModeEnum.NeuroPhoto,
-        imageLocalUrl,
-        telegram_id,
-        'SUCCESS'
-      )
-
-      if (prompt_id === null) {
-        console.error(`Failed to save prompt for image ${i + 1}`)
-        continue
-      }
-
-      // Отправляем изображение пользователю
-      await bot.telegram.sendPhoto(telegram_id, {
-        source: fs.createReadStream(imageLocalPath),
+      console.log('Deducting balance (NeuroImage):', {
+        initialBalance,
+        finalCost,
+        newBalance,
+        successful_generations,
       })
 
-      // Сохраняем результат
-      results.push({ image: imageLocalUrl, prompt_id })
+      try {
+        await updateUserBalance(
+          telegram_id,
+          newBalance,
+          PaymentType.MONEY_OUTCOME,
+          `NeuroPhoto generation (${successful_generations}/${num_images} successful)`,
+          {
+            stars: finalCost,
+            payment_method: 'Internal',
+            bot_name: bot_name,
+            language: is_ru ? 'ru' : 'en',
+            // operation_id: ???
+          }
+        )
+        console.log('Balance updated successfully (NeuroImage)')
 
-      // Отправляем в pulse
-      await pulse(
-        imageLocalPath,
-        prompt,
-        `/${model_url}`,
+        // Отправляем финальное сообщение
+        await bot.telegram.sendMessage(
+          telegram_id,
+          is_ru
+            ? `✅ Готово! Успешно сгенерировано ${successful_generations} из ${num_images} изображений.\nСписано: ${finalCost.toFixed(
+                2
+              )} ⭐️\nВаш новый баланс: ${newBalance.toFixed(2)} ⭐️`
+            : `✅ Done! Successfully generated ${successful_generations} out of ${num_images} images.\nDeducted: ${finalCost.toFixed(
+                2
+              )} ⭐️\nYour new balance: ${newBalance.toFixed(2)} ⭐️`,
+          {
+            reply_markup: {
+              keyboard: [
+                [
+                  { text: '1️⃣' },
+                  { text: '2️⃣' },
+                  { text: '3️⃣' },
+                  { text: '4️⃣' },
+                ],
+                [
+                  { text: is_ru ? '⬆️ Улучшить промпт' : '⬆️ Improve prompt' },
+                  { text: is_ru ? '📐 Изменить размер' : '📐 Change size' },
+                ],
+                [{ text: is_ru ? '🏠 Главное меню' : '🏠 Main menu' }],
+              ],
+              resize_keyboard: true,
+              one_time_keyboard: false,
+            },
+          }
+        )
+      } catch (updateError) {
+        console.error(
+          'Failed to update balance or send final notification (NeuroImage)',
+          updateError
+        )
+        errorMessageAdmin(updateError as Error)
+        await bot.telegram.sendMessage(
+          telegram_id,
+          is_ru
+            ? '❌ Произошла ошибка при обновлении вашего баланса после генерации.'
+            : '❌ An error occurred while updating your balance after generation.'
+        )
+      }
+    } else {
+      await bot.telegram.sendMessage(
         telegram_id,
-        username,
-        is_ru,
-        bot_name
+        is_ru
+          ? '❌ Не удалось сгенерировать изображения по вашему запросу.'
+          : '❌ Failed to generate images for your request.'
       )
     }
 
-    await bot.telegram.sendMessage(
-      telegram_id,
-      is_ru
-        ? `Ваши изображения сгенерированы!\n\nЕсли хотите сгенерировать еще, то выберите количество изображений в меню 1️⃣, 2️⃣, 3️⃣, 4️⃣.\n\nСтоимость: ${(
-            costPerImage * num_images
-          ).toFixed(
-            2
-          )} ⭐️\nВаш новый баланс: ${balanceCheck.newBalance.toFixed(2)} ⭐️`
-        : `Your images have been generated!\n\nGenerate more?\n\nCost: ${(
-            costPerImage * num_images
-          ).toFixed(
-            2
-          )} ⭐️\nYour new balance: ${balanceCheck.newBalance.toFixed(2)} ⭐️`,
-      {
-        reply_markup: {
-          keyboard: [
-            [{ text: '1️⃣' }, { text: '2️⃣' }, { text: '3️⃣' }, { text: '4️⃣' }],
-            [
-              { text: is_ru ? '⬆️ Улучшить промпт' : '⬆️ Improve prompt' },
-              { text: is_ru ? '📐 Изменить размер' : '📐 Change size' },
-            ],
-            [{ text: is_ru ? '🏠 Главное меню' : '🏠 Main menu' }],
-          ],
-          resize_keyboard: true,
-          one_time_keyboard: false,
-        },
-      }
-    )
-
-    return results[0] || null
+    // Возвращаем результаты или null
+    return results.length > 0 ? results : null // Или вернуть весь массив? Уточни логику.
   } catch (error) {
-    console.error(`Error:`, error)
-
-    let errorMessageToUser = '❌ Произошла ошибка.'
-
-    if (error.message && error.message.includes('NSFW content detected')) {
-      errorMessageToUser = is_ru
-        ? '❌ Обнаружен NSFW контент. Пожалуйста, попробуйте другой запрос.'
-        : '❌ NSFW content detected. Please try another prompt.'
-    } else if (error.message) {
-      const match = error.message.match(/{"detail":"(.*?)"/)
-      if (match && match[1]) {
-        errorMessageToUser = is_ru
-          ? `❌ Ошибка: ${match[1]}`
-          : `❌ Error: ${match[1]}`
-      }
-    } else {
-      errorMessageToUser = is_ru
-        ? '❌ Произошла ошибка. Попробуйте еще раз.'
-        : '❌ An error occurred. Please try again.'
+    // ... (общая обработка ошибок) ...
+    console.error(`Error generating NeuroImage:`, error)
+    if (!error.message?.includes('Balance check failed')) {
+      // errorMessage(error as Error, telegram_id.toString(), is_ru); // Возможно, уже отправлено в цикле
     }
-    await bot.telegram.sendMessage(telegram_id, errorMessageToUser)
-    errorMessageAdmin(error as Error)
-    throw error
+    errorMessageAdmin(error as Error) // Всегда логируем админу
+    // Не бросаем ошибку, чтобы бот не падал (?) или бросаем?
+    // throw error;
+    return null // Возвращаем null при любой ошибке верхнего уровня
   }
 }

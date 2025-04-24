@@ -1,11 +1,16 @@
-import { processBalanceOperation, sendBalanceMessage } from '@/price/helpers'
+import { processBalanceOperation } from '@/price/helpers'
 import axios from 'axios'
-import { getUserByTelegramId, updateUserLevelPlusOne } from '@/core/supabase'
+import {
+  getUserByTelegramId,
+  updateUserLevelPlusOne,
+  updateUserBalance,
+} from '@/core/supabase'
 import { errorMessage, errorMessageAdmin } from '@/helpers'
 import { Telegraf } from 'telegraf'
 import { MyContext } from '@/interfaces'
 import { modeCosts, ModeEnum } from '@/price/helpers/modelsCost'
 import { levels } from '@/helpers/levels'
+import { PaymentType } from '@/interfaces/payments.interface'
 
 export async function generateImageToPrompt(
   imageUrl: string,
@@ -36,16 +41,31 @@ export async function generateImageToPrompt(
       telegram_id,
       paymentAmount: costPerImage,
       is_ru,
-      bot,
       bot_name,
-      description: 'Payment for image to prompt',
-      type: 'NeuroPhoto',
     })
     if (!balanceCheck.success) {
-      throw new Error('Not enough stars')
+      if (balanceCheck.error) {
+        try {
+          await bot.telegram.sendMessage(
+            telegram_id.toString(),
+            balanceCheck.error
+          )
+        } catch (notifyError) {
+          console.error('Failed to send balance error notification to user', {
+            telegramId: telegram_id,
+            error: notifyError,
+          })
+          errorMessageAdmin(notifyError as Error)
+        }
+      }
+      throw new Error(
+        balanceCheck.error ||
+          (is_ru ? 'Ошибка проверки баланса' : 'Balance check failed')
+      )
     }
+    const initialBalance = balanceCheck.currentBalance
 
-    bot.telegram.sendMessage(
+    await bot.telegram.sendMessage(
       telegram_id,
       is_ru ? '⏳ Генерация промпта...' : '⏳ Generating prompt...'
     )
@@ -97,6 +117,7 @@ export async function generateImageToPrompt(
 
     const responseText = resultResponse.data as string
     const lines = responseText.split('\n')
+    let captionFound: string | null = null
 
     for (const line of lines) {
       if (line.startsWith('data: ')) {
@@ -104,46 +125,8 @@ export async function generateImageToPrompt(
           const data = JSON.parse(line.slice(6))
           console.log('Parsed data:', data)
           if (Array.isArray(data) && data.length > 1) {
-            const caption = data[1]
-            await bot.telegram.sendMessage(
-              telegram_id,
-              '```\n' + caption + '\n```',
-              {
-                parse_mode: 'MarkdownV2',
-                reply_markup: {
-                  keyboard: [
-                    // [
-                    //   {
-                    //     text: is_ru ? levels[2].title_ru : levels[2].title_en,
-                    //   },
-                    // ],
-                    // [
-                    //   {
-                    //     text: is_ru ? levels[11].title_ru : levels[11].title_en,
-                    //   },
-                    // ],
-                    [
-                      {
-                        text: is_ru
-                          ? levels[104].title_ru
-                          : levels[104].title_en,
-                      },
-                    ],
-                  ],
-                  resize_keyboard: true,
-                  one_time_keyboard: false,
-                },
-              }
-            )
-
-            await sendBalanceMessage(
-              telegram_id,
-              balanceCheck.newBalance,
-              costPerImage,
-              is_ru,
-              bot
-            )
-            return caption
+            captionFound = data[1]
+            break
           }
         } catch (e) {
           console.error('Error parsing JSON from line:', line, e)
@@ -151,10 +134,77 @@ export async function generateImageToPrompt(
       }
     }
 
-    throw new Error('No valid caption found in response')
+    if (captionFound) {
+      const newBalance = initialBalance - costPerImage
+
+      try {
+        await updateUserBalance(
+          telegram_id,
+          newBalance,
+          PaymentType.MONEY_OUTCOME,
+          'Image-to-Prompt generation',
+          {
+            stars: costPerImage,
+            payment_method: 'Internal',
+            bot_name: bot_name,
+            language: is_ru ? 'ru' : 'en',
+          }
+        )
+        console.log('Balance updated successfully for Image-to-Prompt')
+
+        await bot.telegram.sendMessage(
+          telegram_id,
+          '```\n' + captionFound + '\n```',
+          {
+            parse_mode: 'MarkdownV2',
+            reply_markup: {
+              keyboard: [
+                [
+                  {
+                    text: is_ru ? levels[104].title_ru : levels[104].title_en,
+                  },
+                ],
+              ],
+              resize_keyboard: true,
+              one_time_keyboard: false,
+            },
+          }
+        )
+
+        await bot.telegram.sendMessage(
+          telegram_id,
+          is_ru
+            ? `✅ Промпт успешно сгенерирован!\nСписано: ${costPerImage.toFixed(
+                2
+              )} ⭐️\nВаш новый баланс: ${newBalance.toFixed(2)} ⭐️`
+            : `✅ Prompt generated successfully!\nDeducted: ${costPerImage.toFixed(
+                2
+              )} ⭐️\nYour new balance: ${newBalance.toFixed(2)} ⭐️`
+        )
+
+        return captionFound
+      } catch (updateError) {
+        console.error(
+          'Failed to update balance or send result notification',
+          updateError
+        )
+        errorMessageAdmin(updateError as Error)
+        await bot.telegram.sendMessage(
+          telegram_id,
+          is_ru
+            ? '❌ Произошла ошибка при обновлении вашего баланса после генерации промпта.'
+            : '❌ An error occurred while updating your balance after prompt generation.'
+        )
+        return captionFound
+      }
+    } else {
+      throw new Error('No valid caption found in response')
+    }
   } catch (error) {
-    console.error('Joy Caption API error:', error)
-    errorMessage(error as Error, telegram_id.toString(), is_ru)
+    console.error('Image-to-Prompt Error:', error)
+    if (!error.message?.includes('Balance check failed')) {
+      errorMessage(error as Error, telegram_id.toString(), is_ru)
+    }
     errorMessageAdmin(error as Error)
     throw error
   }

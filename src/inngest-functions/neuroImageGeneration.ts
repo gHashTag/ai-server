@@ -2,7 +2,11 @@ import { inngest } from '@/core/inngest/clients'
 import { replicate } from '@/core/replicate'
 import { getAspectRatio } from '@/core/supabase/ai'
 import { savePrompt } from '@/core/supabase/savePrompt'
-import { getUserByTelegramId, updateUserLevelPlusOne } from '@/core/supabase'
+import {
+  getUserByTelegramId,
+  updateUserLevelPlusOne,
+  updateUserBalance,
+} from '@/core/supabase'
 import { processApiResponse } from '@/helpers/processApiResponse'
 
 import { saveFileLocally } from '@/helpers'
@@ -15,6 +19,7 @@ import { API_URL } from '@/config'
 import fs from 'fs'
 import { logger } from '@/utils/logger'
 import { getBotByName } from '@/core/bot'
+import { PaymentType } from '@/interfaces/payments.interface'
 
 export const neuroImageGeneration = inngest.createFunction(
   {
@@ -110,24 +115,57 @@ export const neuroImageGeneration = inngest.createFunction(
           telegram_id,
           paymentAmount: costPerImage * num_images,
           is_ru,
-          bot,
           bot_name,
-          description: `Payment for generating ${num_images} image${
-            num_images === 1 ? '' : 's'
-          } with prompt: ${prompt.substring(0, 30)}...`,
-          type: 'NeuroPhoto',
         })
 
         if (!result.success) {
           logger.error({
-            message: '⚠️ Payment processing failed',
+            message: '⚠️ Balance check failed or insufficient funds',
+            telegramId: telegram_id,
+            requiredAmount: costPerImage * num_images,
+            currentBalance: result.currentBalance,
             error: result.error,
+            step: 'process-payment',
           })
-          throw new Error(result.error)
-        }
 
-        return result
+          if (result.error) {
+            try {
+              const { bot } = getBotByName(bot_name)
+              if (bot) {
+                await bot.telegram.sendMessage(
+                  telegram_id.toString(),
+                  result.error
+                )
+              } else {
+                logger.error(
+                  'Failed to get bot instance for error notification',
+                  { bot_name }
+                )
+              }
+            } catch (notifyError) {
+              logger.error(
+                'Failed to send balance error notification to user',
+                { telegramId: telegram_id, error: notifyError }
+              )
+            }
+          }
+          throw new Error(result.error || 'Balance check failed')
+        }
+        logger.info({
+          message: '✅ Balance check successful',
+          telegramId: telegram_id,
+          currentBalance: result.currentBalance,
+          requiredAmount: costPerImage * num_images,
+          step: 'process-payment',
+        })
+        return {
+          currentBalance: result.currentBalance,
+          paymentAmount: result.paymentAmount,
+        }
       })
+
+      const initialBalance = balanceCheck.currentBalance
+      const totalCost = balanceCheck.paymentAmount
 
       const aspect_ratio = await step.run('get-aspect-ratio', async () => {
         const ratio = await getAspectRatio(telegram_id)
@@ -231,21 +269,50 @@ export const neuroImageGeneration = inngest.createFunction(
         generatedImages.push(generationResult.url)
       }
 
+      const finalBalance = await step.run('deduct-balance-final', async () => {
+        logger.info({
+          message: '💸 Deducting balance after successful image generation',
+          telegramId: telegram_id,
+          paymentAmount: totalCost,
+          currentBalance: initialBalance,
+          step: 'deduct-balance-final',
+        })
+
+        const newBalance = initialBalance - totalCost
+
+        await updateUserBalance(
+          telegram_id,
+          newBalance,
+          PaymentType.MONEY_OUTCOME,
+          `NeuroPhoto generation (${num_images} images)`,
+          {
+            stars: totalCost,
+            payment_method: 'Internal',
+            bot_name: bot_name,
+            language: is_ru ? 'ru' : 'en',
+          }
+        )
+
+        logger.info({
+          message: '✅ Balance updated successfully',
+          telegramId: telegram_id,
+          newBalance: newBalance,
+          step: 'deduct-balance-final',
+        })
+        return newBalance
+      })
+
       await step.run('final-notification', async () => {
         const { bot } = getBotByName(bot_name)
         await bot.telegram.sendMessage(
           telegram_id,
           is_ru
-            ? `Ваши изображения сгенерированы! Стоимость: ${(
-                costPerImage * num_images
-              ).toFixed(
+            ? `Ваши изображения сгенерированы! Стоимость: ${totalCost.toFixed(
                 2
-              )} ⭐️\nНовый баланс: ${balanceCheck.newBalance.toFixed(2)} ⭐️`
-            : `Your images generated! Cost: ${(
-                costPerImage * num_images
-              ).toFixed(2)} ⭐️\nNew balance: ${balanceCheck.newBalance.toFixed(
+              )} ⭐️\nНовый баланс: ${finalBalance.toFixed(2)} ⭐️`
+            : `Your images generated! Cost: ${totalCost.toFixed(
                 2
-              )} ⭐️`,
+              )} ⭐️\nNew balance: ${finalBalance.toFixed(2)} ⭐️`,
           {
             reply_markup: {
               keyboard: [

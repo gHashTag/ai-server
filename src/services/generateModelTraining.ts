@@ -5,15 +5,16 @@ import {
   updateLatestModelTraining,
   updateUserLevelPlusOne,
   supabase,
+  createModelTraining,
 } from '@/core/supabase'
 import { errorMessage } from '@/helpers'
 import { errorMessageAdmin } from '@/helpers/errorMessageAdmin'
 import { processBalanceOperation } from '@/price/helpers'
-import { getUserBalance } from '@/core/supabase'
-import { createModelTraining } from '@/core/supabase/'
+
 import { Telegraf } from 'telegraf'
 import { MyContext } from '@/interfaces'
 import { modeCosts, ModeEnum } from '@/price/helpers/modelsCost'
+import { PaymentType } from '@/interfaces/payments.interface'
 
 export interface ApiError extends Error {
   response?: {
@@ -89,7 +90,8 @@ export async function generateModelTraining(
   steps: number,
   telegram_id: string,
   is_ru: boolean,
-  bot: Telegraf<MyContext>
+  bot: Telegraf<MyContext>,
+  bot_name: string
 ): Promise<ModelTrainingResult> {
   const userExists = await getUserByTelegramId(telegram_id)
   if (!userExists) {
@@ -101,7 +103,7 @@ export async function generateModelTraining(
   }
   let currentTraining: TrainingResponse | null = null
   console.log(`currentTraining: ${currentTraining}`)
-  const currentBalance = await getUserBalance(telegram_id)
+
   const paymentAmount = (
     modeCosts[ModeEnum.DigitalAvatarBody] as (steps: number) => number
   )(steps)
@@ -110,14 +112,30 @@ export async function generateModelTraining(
     telegram_id,
     paymentAmount,
     is_ru,
-    bot,
-    type: 'Training',
-    description: `Проверка баланса перед тренировкой ${modelName}`,
+    bot_name,
   })
 
   if (!balanceCheck.success) {
-    throw new Error('Not enough stars')
+    if (balanceCheck.error) {
+      try {
+        await bot.telegram.sendMessage(
+          telegram_id.toString(),
+          balanceCheck.error
+        )
+      } catch (notifyError) {
+        console.error(
+          'Failed to send balance error notification to user (Training)',
+          { telegramId: telegram_id, error: notifyError }
+        )
+        errorMessageAdmin(notifyError as Error)
+      }
+    }
+    throw new Error(
+      balanceCheck.error ||
+        (is_ru ? 'Ошибка проверки баланса' : 'Balance check failed')
+    )
   }
+  const initialBalance = balanceCheck.currentBalance
 
   try {
     const username = process.env.REPLICATE_USERNAME
@@ -163,20 +181,6 @@ export async function generateModelTraining(
       }
     }
 
-    await updateUserBalance(
-      telegram_id,
-      currentBalance - paymentAmount,
-      'money_expense',
-      `Списание за начало тренировки модели ${modelName}`,
-      {
-        service: 'modelTraining',
-        modelName,
-        steps,
-        paymentAmount,
-        replicateUsername: username,
-      }
-    )
-
     const dbTrainingRecord = await createModelTraining({
       telegram_id: telegram_id,
       model_name: modelName,
@@ -218,6 +222,35 @@ export async function generateModelTraining(
       })
       .eq('id', dbTrainingRecord.id)
 
+    const newBalance = initialBalance - paymentAmount
+    await updateUserBalance(
+      telegram_id,
+      newBalance,
+      PaymentType.MONEY_OUTCOME,
+      `Model training start ${modelName} (steps: ${steps})`,
+      {
+        stars: paymentAmount,
+        payment_method: 'Internal',
+        bot_name: bot_name,
+        language: is_ru ? 'ru' : 'en',
+        operation_id: currentTraining.id,
+      }
+    )
+    console.log(
+      `Balance updated after training start. New balance: ${newBalance}`
+    )
+
+    await bot.telegram.sendMessage(
+      telegram_id,
+      is_ru
+        ? `✅ Тренировка модели ${modelName} успешно запущена! Списано: ${paymentAmount} ⭐️. Ваш новый баланс: ${newBalance.toFixed(
+            2
+          )} ⭐️.`
+        : `✅ Model training ${modelName} started successfully! Deducted: ${paymentAmount} ⭐️. Your new balance: ${newBalance.toFixed(
+            2
+          )} ⭐️.`
+    )
+
     const trainingProcess = {
       cancel: () => {
         activeTrainings.delete(telegram_id)
@@ -254,79 +287,6 @@ export async function generateModelTraining(
       `Training ${currentTraining.id} finished with status: ${status}`
     )
 
-    if (status === 'failed') {
-      console.error('Training failed details:', {
-        error: (await replicate.trainings.get(currentTraining.id)).error,
-        status: status,
-        id: currentTraining.id,
-      })
-
-      await updateUserBalance(
-        telegram_id,
-        currentBalance,
-        'money_income',
-        `Возврат средств за неудачную тренировку ${modelName}`,
-        {
-          service: 'modelTraining',
-          modelName,
-          steps,
-          reason: 'failed',
-          error:
-            (await replicate.trainings.get(currentTraining.id)).error ||
-            'Unknown error',
-          trainingId: currentTraining?.id,
-        }
-      )
-      await supabase
-        .from('model_trainings')
-        .update({
-          status: 'failed',
-          error:
-            (await replicate.trainings.get(currentTraining.id)).error ||
-            'Unknown error',
-        })
-        .eq('replicate_training_id', currentTraining.id)
-
-      throw new Error(
-        `Training failed: ${
-          (await replicate.trainings.get(currentTraining.id)).error ||
-          'Unknown error'
-        }`
-      )
-    }
-
-    if (status === 'canceled') {
-      console.log('Training canceled')
-      await updateUserBalance(
-        telegram_id,
-        currentBalance,
-        'money_income',
-        `Возврат средств за отмененную тренировку ${modelName}`,
-        {
-          service: 'modelTraining',
-          modelName,
-          steps,
-          reason: 'canceled',
-          trainingId: currentTraining?.id,
-        }
-      )
-      await supabase
-        .from('model_trainings')
-        .update({ status: 'canceled' })
-        .eq('replicate_training_id', currentTraining.id)
-
-      bot.telegram.sendMessage(
-        telegram_id,
-        is_ru ? 'Генерация была отменена.' : 'Generation was canceled.',
-        {
-          reply_markup: { remove_keyboard: true },
-        }
-      )
-      return {
-        model_id: currentTraining.id,
-      }
-    }
-
     if (status === 'succeeded') {
       console.log('Training succeeded!')
       const model_url = await getLatestModelUrl(modelName)
@@ -349,74 +309,47 @@ export async function generateModelTraining(
       bot.telegram.sendMessage(
         telegram_id,
         is_ru
-          ? `⏳ Модель ${modelName} успешно создана! Результаты работы можно проверить в разделе Нейрофото в главном меню.`
-          : `⏳ Model ${modelName} successfully created! You can check the results of its work in the Neurophoto section in the main menu.`
+          ? `✅ Модель ${modelName} успешно обучена!\nВаш уникальный ключ: ${triggerWord}`
+          : `✅ Model ${modelName} trained successfully!\nYour unique keyword: ${triggerWord}`
       )
       return {
         model_id: currentTraining.id,
         model_url: model_url,
       }
+    } else {
+      console.error(
+        `Training ${currentTraining.id} failed or canceled. Status: ${status}`
+      )
+      const errorMessageText = is_ru
+        ? `❌ Тренировка модели ${modelName} не удалась (статус: ${status}). Средства НЕ списаны (или будут возвращены, если логика возврата есть).`
+        : `❌ Model training ${modelName} failed or canceled (status: ${status}). Funds were NOT deducted (or will be refunded if refund logic exists).`
+      await bot.telegram.sendMessage(telegram_id, errorMessageText)
+      throw new Error(`Training failed or canceled with status: ${status}`)
     }
   } catch (error) {
-    const balanceAfterPotentialCharge = await getUserBalance(telegram_id)
-    if (balanceAfterPotentialCharge < currentBalance) {
-      await updateUserBalance(
-        telegram_id,
-        currentBalance,
-        'money_income',
-        `Возврат средств за ошибку тренировки ${modelName}`,
-        {
-          service: 'modelTraining',
-          modelName,
-          steps,
-          reason: 'error',
-          errorMessage: error.message,
-          trainingId: currentTraining?.id,
-        }
-      )
-    }
-    console.error('Training error details:', {
-      error,
-      username: process.env.REPLICATE_USERNAME,
-      modelName,
-      triggerWord,
-      trainingId: currentTraining?.id,
-    })
-
+    console.error('Error during model training process:', error)
     if (currentTraining?.id) {
-      await supabase
-        .from('model_trainings')
-        .update({ status: 'failed', error: error.message })
-        .eq('replicate_training_id', currentTraining.id)
-    } else {
-      const { data: latestTraining } = await supabase
-        .from('model_trainings')
-        .select('id')
-        .eq('telegram_id', telegram_id)
-        .eq('model_name', modelName)
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .single()
-      if (latestTraining) {
+      try {
+        console.log(
+          `Attempting to cancel training ${currentTraining.id} due to error...`
+        )
+        await replicate.trainings.cancel(currentTraining.id)
+        console.log(`Training ${currentTraining.id} cancellation requested.`)
         await supabase
           .from('model_trainings')
-          .update({ status: 'failed', error: error.message })
-          .eq('id', latestTraining.id)
+          .update({ status: 'canceled' })
+          .eq('replicate_training_id', currentTraining.id)
+      } catch (cancelError) {
+        console.error(
+          `Failed to cancel training ${currentTraining.id}:`,
+          cancelError
+        )
       }
     }
-
-    bot.telegram.sendMessage(
-      telegram_id,
-      is_ru
-        ? `Произошла ошибка при генерации модели. Попробуйте еще раз.\n\nОшибка: ${error.message}`
-        : `An error occurred during model generation. Please try again.\n\nError: ${error.message}`
-    )
-    errorMessageAdmin(error as Error)
-    if ((error as ApiError).response?.status === 404) {
-      throw new Error(
-        `Ошибка при создании или доступе к модели Replicate. Проверьте REPLICATE_USERNAME (${process.env.REPLICATE_USERNAME}) и права доступа.`
-      )
+    if (!error.message?.includes('Balance check failed')) {
+      errorMessage(error as Error, telegram_id.toString(), is_ru)
     }
+    errorMessageAdmin(error as Error)
     throw error
   } finally {
     activeTrainings.delete(telegram_id)

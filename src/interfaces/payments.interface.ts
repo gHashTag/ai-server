@@ -1,42 +1,12 @@
 import { ModeEnum } from '@/interfaces/modes'
-import { TelegramId, SubscriptionType } from '@/interfaces'
+import { TelegramId } from './telegram.interface'
+import { SubscriptionType } from './subscription.interface'
 
-export interface BalanceOperationResult {
-  newBalance: number
-  paymentAmount: number
-  success: boolean
-  error?: string
-}
-export interface Payment {
-  id: string
+export interface SelectedPayment {
   amount: number
-  date: string
-}
-
-export type PaymentService =
-  | 'NeuroPhoto'
-  | 'Text to speech'
-  | 'Image to video'
-  | 'Text to image'
-  | 'Training'
-  | 'Refund'
-  | 'System'
-  | 'Telegram'
-  | 'Robokassa'
-  | 'Unknown'
-
-//
-export enum TransactionType {
-  MONEY_INCOME = 'money_income',
-  MONEY_EXPENSE = 'money_expense',
-  SUBSCRIPTION_PURCHASE = 'subscription_purchase',
-  SUBSCRIPTION_RENEWAL = 'subscription_renewal',
-  REFUND = 'refund',
-  BONUS = 'bonus',
-  REFERRAL = 'referral',
-  SYSTEM = 'system',
-  SUBSCRIPTION_PAYMENT = 'subscription_payment',
-  TRANSFER = 'transfer',
+  stars: number
+  subscription: SubscriptionType | null
+  type?: PaymentType
 }
 
 /**
@@ -70,14 +40,14 @@ export enum PaymentStatus {
 }
 
 export enum PaymentType {
-  MONEY_INCOME = 'money_income',
-  MONEY_EXPENSE = 'money_expense',
-  SUBSCRIPTION_PURCHASE = 'subscription_purchase',
-  SUBSCRIPTION_RENEWAL = 'subscription_renewal',
-  REFUND = 'refund',
-  BONUS = 'bonus',
-  REFERRAL = 'referral',
-  SYSTEM = 'system',
+  MONEY_INCOME = 'MONEY_INCOME',
+  MONEY_OUTCOME = 'MONEY_OUTCOME',
+  SUBSCRIPTION_PURCHASE = 'SUBSCRIPTION_PURCHASE',
+  SUBSCRIPTION_RENEWAL = 'SUBSCRIPTION_RENEWAL',
+  REFUND = 'REFUND',
+  BONUS = 'BONUS',
+  REFERRAL = 'REFERRAL',
+  SYSTEM = 'SYSTEM',
 }
 
 export interface BasePayment {
@@ -115,6 +85,7 @@ export interface PaymentCreateParams extends Omit<BasePayment, 'status'> {
   operation_id?: string
   inv_id?: string
   metadata?: Record<string, any>
+  currency: Currency
 }
 
 export interface PaymentProcessResult {
@@ -145,11 +116,9 @@ export const PAYMENT_SUCCESS_MESSAGES = {
  * в нижний регистр для совместимости с БД
  *
  * ПРИМЕЧАНИЕ: Эта функция остается для обратной совместимости,
- * теперь значения TransactionType уже в нижнем регистре
+ * теперь значения PaymentType уже в нижнем регистре
  */
-export function normalizeTransactionType(
-  type: TransactionType | string
-): string {
+export function normalizeTransactionType(type: PaymentType | string): string {
   // Простое приведение к строке и нижнему регистру
   return (type as string).toLowerCase()
 }
@@ -168,8 +137,8 @@ export interface PaymentProcessParams {
   /** Количество звезд (ВСЕГДА положительное число, если указано) */
   stars?: number
 
-  /** Тип транзакции из TransactionType */
-  type: TransactionType | string
+  /** Тип транзакции из PaymentType */
+  type: PaymentType | string
 
   /** Описание транзакции */
   description: string
@@ -210,5 +179,10 @@ export interface SessionPayment {
   amount: number
   stars: number
   subscription: SubscriptionType | null
-  type?: TransactionType
+  type?: PaymentType
+}
+
+export enum Currency {
+  XTR = 'XTR', // Telegram Stars
+  RUB = 'RUB', // Russian Ruble
 }

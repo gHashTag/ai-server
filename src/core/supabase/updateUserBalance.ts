@@ -1,13 +1,14 @@
 import { supabase } from './index'
 import { logger } from '@/utils/logger'
-import { PaymentService } from '@/interfaces/payments.interface'
+import { PaymentType } from '@/interfaces/payments.interface'
+import { ModeEnum } from '@/price/helpers/modelsCost'
 
 type BalanceUpdateMetadata = {
   stars?: number
-  payment_method?: PaymentService
+  payment_method?: string
   bot_name?: string
   language?: string
-  service_type?: PaymentService
+  service_type?: ModeEnum
   inv_id?: string
   modePrice?: number
   currentBalance?: number
@@ -22,7 +23,7 @@ type BalanceUpdateMetadata = {
 export const updateUserBalance = async (
   telegram_id: string,
   amount: number,
-  type: 'money_income' | 'money_outcome',
+  type: PaymentType,
   description?: string,
   metadata?: BalanceUpdateMetadata
 ): Promise<boolean> => {
@@ -65,7 +66,7 @@ export const updateUserBalance = async (
     if (
       description &&
       description.includes('Payment for generating') &&
-      type === 'money_outcome'
+      type === PaymentType.MONEY_OUTCOME
     ) {
       // Извлекаем значение modePrice из metadata
       if (metadata?.modePrice && typeof metadata.modePrice === 'number') {
@@ -144,7 +145,7 @@ export const updateUserBalance = async (
       else if (
         metadata?.currentBalance &&
         Math.abs(metadata.currentBalance - safeAmount) < 100 &&
-        type === 'money_outcome'
+        type === PaymentType.MONEY_OUTCOME
       ) {
         // Вероятно передан новый баланс вместо суммы операции
         // Вычисляем разницу между текущим и новым балансом
@@ -161,7 +162,7 @@ export const updateUserBalance = async (
     }
 
     // Проверка на подозрительно большие суммы для outcome операций
-    if (type === 'money_outcome' && safeAmount > 100) {
+    if (type === PaymentType.MONEY_OUTCOME && safeAmount > 100) {
       logger.warn('⚠️ Подозрительно большая сумма списания, возможно ошибка:', {
         description: 'Suspiciously large amount for outcome operation',
         telegram_id,
@@ -204,7 +205,7 @@ export const updateUserBalance = async (
     })
 
     // Проверяем существование пользователя и его баланс для outcome операций
-    if (type === 'money_outcome') {
+    if (type === PaymentType.MONEY_OUTCOME) {
       // Проверка существования пользователя
       const { data: userData, error: userError } = await supabase
         .from('users')
@@ -388,8 +389,7 @@ export const updateUserBalance = async (
           type,
           description: description || `Balance ${type}`,
           payment_method:
-            metadata?.payment_method ||
-            (metadata?.service_type as PaymentService),
+            metadata?.payment_method || (metadata?.service_type as ModeEnum),
           bot_name: metadata?.bot_name || 'neuro_blogger_bot',
           language: metadata?.language || 'ru',
         })

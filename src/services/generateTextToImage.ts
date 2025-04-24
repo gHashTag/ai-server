@@ -4,7 +4,11 @@ import { getAspectRatio, savePrompt } from '@/core/supabase'
 import { downloadFile } from '@/helpers/downloadFile'
 import { processApiResponse } from '@/helpers/processApiResponse'
 import { pulse } from '@/helpers/pulse'
-import { getUserByTelegramId, updateUserLevelPlusOne } from '@/core/supabase'
+import {
+  getUserByTelegramId,
+  updateUserLevelPlusOne,
+  updateUserBalance,
+} from '@/core/supabase'
 import { IMAGES_MODELS } from '@/helpers/IMAGES_MODELS'
 import { ModeEnum } from '@/price/helpers/modelsCost'
 import { processBalanceOperation } from '@/price/helpers'
@@ -16,6 +20,7 @@ import { saveFileLocally } from '@/helpers/saveFileLocally'
 import { API_URL } from '@/config'
 import path from 'path'
 import fs from 'fs'
+import { PaymentType } from '@/interfaces/payments.interface'
 
 const supportedSizes = [
   '1024x1024',
@@ -62,22 +67,37 @@ export const generateTextToImage = async (
       throw new Error(`Неподдерживаемый тип модели: ${model_type}`)
     }
 
+    const totalCost = modelConfig.costPerImage * num_images
     const balanceCheck = await processBalanceOperation({
       telegram_id,
-      paymentAmount: modelConfig.costPerImage * num_images,
+      paymentAmount: totalCost,
       is_ru,
-      bot,
       bot_name,
-      description: `Payment for generating ${num_images} image${
-        num_images === 1 ? '' : 's'
-      } with prompt: ${prompt.substring(0, 30)}...`,
-      type: 'Text to image',
     })
     console.log(balanceCheck, 'balanceCheck')
 
     if (!balanceCheck.success) {
-      throw new Error('Not enough stars')
+      if (balanceCheck.error) {
+        try {
+          await bot.telegram.sendMessage(
+            telegram_id.toString(),
+            balanceCheck.error
+          )
+        } catch (notifyError) {
+          console.error('Failed to send balance error notification to user', {
+            telegramId: telegram_id,
+            error: notifyError,
+          })
+          errorMessageAdmin(notifyError as Error)
+        }
+      }
+      throw new Error(
+        balanceCheck.error ||
+          (is_ru ? 'Ошибка проверки баланса' : 'Balance check failed')
+      )
     }
+
+    const initialBalance = balanceCheck.currentBalance
 
     const aspect_ratio = await getAspectRatio(telegram_id)
 
@@ -105,6 +125,7 @@ export const generateTextToImage = async (
     console.log(input, 'input')
 
     const results: GenerationResult[] = []
+    let successful_generations = 0
 
     for (let i = 0; i < num_images; i++) {
       try {
@@ -134,7 +155,6 @@ export const generateTextToImage = async (
         })) as ApiImageResponse
         const imageUrl = await processApiResponse(output)
 
-        // Сохраняем изображение на сервере
         const imageLocalPath = await saveFileLocally(
           telegram_id,
           imageUrl,
@@ -142,7 +162,6 @@ export const generateTextToImage = async (
           '.jpeg'
         )
 
-        // Генерируем URL для доступа к изображению
         const imageLocalUrl = `${API_URL}/uploads/${telegram_id}/text-to-image/${path.basename(
           imageLocalPath
         )}`
@@ -161,15 +180,65 @@ export const generateTextToImage = async (
         await bot.telegram.sendPhoto(telegram_id, {
           source: fs.createReadStream(imageLocalPath),
         })
+
+        results.push({ image, prompt_id })
+        successful_generations++
+
+        await pulse(
+          imageLocalPath,
+          prompt,
+          'text-to-image',
+          telegram_id,
+          username,
+          is_ru,
+          bot_name
+        )
+      } catch (error) {
+        console.error(`Failed to generate image ${i + 1}:`, error)
         await bot.telegram.sendMessage(
           telegram_id,
           is_ru
-            ? `Ваши изображения сгенерированы!\n\nЕсли хотите сгенерировать еще, то выберите количество изображений в меню 1️⃣, 2️⃣, 3️⃣, 4️⃣.\n\nВаш новый баланс: ${balanceCheck.newBalance.toFixed(
+            ? `❌ Ошибка при генерации изображения ${i + 1}. Продолжаем...`
+            : `❌ Error generating image ${i + 1}. Continuing...`
+        )
+      }
+    }
+
+    if (successful_generations > 0) {
+      const finalCost = modelConfig.costPerImage * successful_generations
+      const newBalance = initialBalance - finalCost
+
+      console.log('Deducting balance:', {
+        initialBalance,
+        finalCost,
+        newBalance,
+        successful_generations,
+      })
+
+      try {
+        await updateUserBalance(
+          telegram_id,
+          newBalance,
+          PaymentType.MONEY_OUTCOME,
+          `Text-to-Image generation (${successful_generations}/${num_images} successful)`,
+          {
+            stars: finalCost,
+            payment_method: 'Internal',
+            bot_name: bot_name,
+            language: is_ru ? 'ru' : 'en',
+          }
+        )
+        console.log('Balance updated successfully')
+
+        await bot.telegram.sendMessage(
+          telegram_id,
+          is_ru
+            ? `✅ Готово! Успешно сгенерировано ${successful_generations} из ${num_images} изображений.\nСписано: ${finalCost.toFixed(
                 2
-              )} ⭐️`
-            : `Your images have been generated!\n\nGenerate more?\n\nYour new balance: ${balanceCheck.newBalance.toFixed(
+              )} ⭐️\nВаш новый баланс: ${newBalance.toFixed(2)} ⭐️`
+            : `✅ Done! Successfully generated ${successful_generations} out of ${num_images} images.\nDeducted: ${finalCost.toFixed(
                 2
-              )} ⭐️`,
+              )} ⭐️\nYour new balance: ${newBalance.toFixed(2)} ⭐️`,
           {
             reply_markup: {
               keyboard: [
@@ -190,47 +259,34 @@ export const generateTextToImage = async (
             },
           }
         )
-
-        await pulse(
-          imageLocalPath,
-          prompt,
-          `/${model_type}`,
-          telegram_id,
-          username,
-          is_ru
+      } catch (updateError) {
+        console.error(
+          'Failed to update balance or send final notification',
+          updateError
         )
-
-        results.push({ image, prompt_id })
-      } catch (error) {
-        console.error(`Попытка не удалась для изображения ${i + 1}:`, error)
-
-        let errorMessageToUser = '❌ Произошла ошибка.'
-
-        if (error.message && error.message.includes('NSFW content detected')) {
-          errorMessageToUser = is_ru
-            ? '❌ Обнаружен NSFW контент. Пожалуйста, попробуйте другой запрос.'
-            : '❌ NSFW content detected. Please try another prompt.'
-        } else if (error.message) {
-          const match = error.message.match(/{"detail":"(.*?)"/)
-          if (match && match[1]) {
-            errorMessageToUser = is_ru
-              ? `❌ Ошибка: ${match[1]}`
-              : `❌ Error: ${match[1]}`
-          }
-        } else {
-          errorMessageToUser = is_ru
-            ? '❌ Произошла ошибка. Попробуйте еще раз.'
-            : '❌ An error occurred. Please try again.'
-        }
-        await bot.telegram.sendMessage(telegram_id, errorMessageToUser)
-        throw error
+        errorMessageAdmin(updateError as Error)
+        await bot.telegram.sendMessage(
+          telegram_id,
+          is_ru
+            ? '❌ Произошла ошибка при обновлении вашего баланса после генерации.'
+            : '❌ An error occurred while updating your balance after generation.'
+        )
       }
+    } else {
+      await bot.telegram.sendMessage(
+        telegram_id,
+        is_ru
+          ? '❌ Не удалось сгенерировать изображения по вашему запросу.'
+          : '❌ Failed to generate images for your request.'
+      )
     }
 
     return results
   } catch (error) {
     console.error('Error generating images:', error)
-    errorMessage(error as Error, telegram_id.toString(), is_ru)
+    if (!error.message?.includes('Balance check failed')) {
+      errorMessage(error as Error, telegram_id.toString(), is_ru)
+    }
     errorMessageAdmin(error as Error)
     throw error
   }

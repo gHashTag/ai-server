@@ -3,40 +3,36 @@ description:
 globs: 
 alwaysApply: true
 ---
-# Current Task: Debug Robokassa Payment Notification for User
+# Current Task: Refactor Balance Handling Logic
 
-**Goal:** Ensure the user receives a notification upon successful payment via Robokassa, in addition to the bot owner.
+**Goal:** Ensure consistent balance checking, error handling, and user notification logic across all features that deduct or add stars/balance, following the pattern established for video operations.
 
 **Decomposition:**
 
-1.  **Verify Robokassa Success Callback:**
-    *   Locate the endpoint/handler that receives the success callback from Robokassa. ([webhook.handler.ts](mdc:src/webhook/webhook.handler.ts) is a likely candidate).
-    *   Examine the logic within this handler. Does it correctly identify the user associated with the payment?
-    *   Check if there's code specifically designed to send a notification *to the user*.
+1.  **Identify Functions Interacting with Balance:**
+    *   Search the codebase for functions that modify or check user balance (e.g., using `updateUserBalance`, `getUserBalance`, `processBalanceOperation`, `modeCosts`, `paymentAmount`, `newBalance`).
+    *   Focus on generation services (`generate...`), Inngest functions (`modelTrainingV2`, `paymentProcessing`), controllers, etc.
 
-2.  **Trace User Identification:**
-    *   How is the `userId` or `chatId` obtained during the callback process? Is it stored in the payment metadata passed to Robokassa (e.g., in `shp_`) or retrieved from the database using the `invoiceId` (`InvId`)?
-    *   Ensure this identification mechanism is functioning correctly and reliably retrieves the user's Telegram ID.
+2.  **Analyze Each Identified Function:**
+    *   How is balance checked (centralized function vs. custom logic)?
+    *   How are errors (insufficient funds, etc.) handled?
+    *   Where/how is the user notified about errors?
+    *   Where/how is the user notified about success (cost, new balance)?
 
-3.  **Inspect Notification Sending Logic:**
-    *   Find the code block responsible for sending the success notification message (likely using `ctx.telegram.sendMessage` or a similar service method).
-    *   Confirm that it *attempts* to send a message to the identified user's `chatId`.
-    *   Look for any conditional logic (if statements, flags) that might be preventing the user notification from being sent under certain circumstances.
-    *   Check the error handling around the `sendMessage` call for the user. Are potential errors being caught and logged?
+3.  **Refactor to Match Pattern:**
+    *   Use a centralized balance check function (`processBalanceOperation` or `processBalanceVideoOperation`).
+    *   Ensure the balance check function does **not** use `ctx` or send messages; it should return `{ success: boolean, error?: string, ... }`.
+    *   Modify the **calling function** to:
+        *   Check the result of the balance function.
+        *   If `!success`, send the `error` message to the user using the available `bot` instance and stop processing.
+        *   If `success`, use `newBalance` and `paymentAmount` for logic and the success notification.
+    *   Standardize success messages to include cost and remaining balance.
 
-4.  **Check Database Interaction:**
-    *   Verify that the payment record in the database (e.g., in the `payment` table) is correctly updated upon successful payment and includes the necessary `userId`.
-    *   Ensure the logic retrieving user details based on the `userId` from the database before sending the notification is working.
-
-5.  **Review Recent Changes:**
-    *   Examine recent commits related to payment processing ([webhook.handler.ts](mdc:src/webhook/webhook.handler.ts), payment services, user models) using [Git History](mdc:GIT_HISTORY) to see if any modifications might have unintentionally broken the user notification.
-
-6.  **Consult README for Common Issues:**
-    *   Before diving deep, check the [README.md](mdc:README.md) section "Common Testing Issues & Solutions" for potentially relevant known problems and solutions, as per our sacred rule "Память об ошибках".
-
-7.  **Logging:**
-    *   If the issue isn't immediately apparent, enhance logging within the callback handler, specifically logging the retrieved `userId`, the attempt to send the user notification, and any errors encountered.
+4.  **Create/Update `processBalanceOperation`:**
+    *   Verify or create a generic `processBalanceOperation` function in `src/price/helpers` that follows the new pattern (no `ctx`, returns result object with potential error).
 
 **Next Steps:**
 
-*   Begin by examining the Robokassa success callback handler, likely in [webhook.handler.ts](mdc:src/webhook/webhook.handler.ts), focusing on user identification and the notification sending block.
+*   Begin by searching for functions that interact with user balance.
+*   Analyze and refactor `src/price/helpers/processBalanceOperation.ts` if it exists and needs changes.
+*   Analyze and refactor calling functions like `src/inngest-functions/modelTrainingV2.ts`.
