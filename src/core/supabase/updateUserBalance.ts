@@ -1,7 +1,7 @@
 import { supabase } from './index'
 import { logger } from '@/utils/logger'
 import { PaymentType } from '@/interfaces/payments.interface'
-import { ModeEnum } from '@/price/helpers/modelsCost'
+import { ModeEnum } from '@/interfaces/modes'
 
 type BalanceUpdateMetadata = {
   stars?: number

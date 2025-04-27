@@ -10,7 +10,7 @@ import {
   updateUserBalance,
 } from '@/core/supabase'
 import { IMAGES_MODELS } from '@/helpers/IMAGES_MODELS'
-import { ModeEnum } from '@/price/helpers/modelsCost'
+import { ModeEnum } from '@/interfaces/modes'
 import { processBalanceOperation } from '@/price/helpers'
 import { errorMessageAdmin } from '@/helpers/errorMessageAdmin'
 import { errorMessage } from '@/helpers'
