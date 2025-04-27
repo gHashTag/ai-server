@@ -99,6 +99,15 @@ export function calculateCost(
   }
 }
 
+// НОВАЯ ФУНКЦИЯ: Расчет конечной стоимости в звездах из базовой в долларах
+function calculateFinalStarCostFromDollars(baseDollarCost: number): number {
+  // Предполагаем, что interestRate - это множитель наценки (например, 1.2 для 20%)
+  // Если interestRate - это процент (например, 20), то формула будет (baseDollarCost / starCost) * (1 + SYSTEM_CONFIG.interestRate / 100)
+  // Используем текущую логику расчета рублей как пример: умножаем на interestRate
+  const finalCost = (baseDollarCost / starCost) * SYSTEM_CONFIG.interestRate
+  return parseFloat(finalCost.toFixed(2))
+}
+
 export const BASE_COSTS: Partial<Record<ModeEnum, CostValue>> = {
   [ModeEnum.DigitalAvatarBody]: (steps: number) => {
     const cost = calculateCost(steps, 'v1')
@@ -108,28 +117,22 @@ export const BASE_COSTS: Partial<Record<ModeEnum, CostValue>> = {
     const cost = calculateCost(steps, 'v2')
     return cost.stars
   },
-  [ModeEnum.NeuroPhoto]: calculateCostInStars(0.08, conversionRates),
-  [ModeEnum.NeuroPhotoV2]: calculateCostInStars(0.14, conversionRatesV2),
-  [ModeEnum.ImageToPrompt]: calculateCostInStars(0.03, conversionRates),
+  [ModeEnum.NeuroPhoto]: calculateFinalStarCostFromDollars(0.08),
+  [ModeEnum.NeuroPhotoV2]: calculateFinalStarCostFromDollars(0.14),
+  [ModeEnum.NeuroAudio]: calculateFinalStarCostFromDollars(0.12),
+  [ModeEnum.ImageToPrompt]: calculateFinalStarCostFromDollars(0.03),
   [ModeEnum.Avatar]: 0,
-  [ModeEnum.ChatWithAvatar]: calculateCostInStars(0, conversionRates),
-  [ModeEnum.SelectModel]: calculateCostInStars(0, conversionRates),
-  [ModeEnum.Voice]: calculateCostInStars(0.9, conversionRates),
-  [ModeEnum.TextToSpeech]: calculateCostInStars(0.12, conversionRates),
-  [ModeEnum.ImageToVideo]: calculateCostInStars(0, conversionRates),
-  [ModeEnum.TextToVideo]: calculateCostInStars(0, conversionRates),
-  [ModeEnum.TextToImage]: calculateCostInStars(0, conversionRates),
-  [ModeEnum.LipSync]: calculateCostInStars(0.9, conversionRates),
-  [ModeEnum.VoiceToText]: calculateCostInStars(0, conversionRates),
-  [ModeEnum.SelectAiTextModel]: calculateCostInStars(0, conversionRates),
-  [ModeEnum.SelectModelWizard]: calculateCostInStars(0, conversionRates),
-  [ModeEnum.Subscribe]: calculateCostInStars(0, conversionRates),
-  [ModeEnum.NeuroAudio]: calculateCostInStars(0, conversionRates),
-  [ModeEnum.ChangeSize]: calculateCostInStars(0, conversionRates),
-  [ModeEnum.Invite]: calculateCostInStars(0, conversionRates),
-  [ModeEnum.CheckBalanceScene]: calculateCostInStars(0, conversionRates),
+  [ModeEnum.ChatWithAvatar]: 0,
+  [ModeEnum.SelectModel]: 0,
+  [ModeEnum.SelectAiTextModel]: 0,
+  [ModeEnum.Voice]: calculateFinalStarCostFromDollars(0.9),
+  [ModeEnum.TextToSpeech]: calculateFinalStarCostFromDollars(0.12),
+  [ModeEnum.ImageToVideo]: 0,
+  [ModeEnum.TextToVideo]: 0,
+  [ModeEnum.TextToImage]: 0,
+  [ModeEnum.LipSync]: calculateFinalStarCostFromDollars(0.9),
+  [ModeEnum.VoiceToText]: calculateFinalStarCostFromDollars(0.08),
 }
-
 export interface CostCalculationParams {
   mode: ModeEnum | string
   steps?: number
