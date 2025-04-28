@@ -231,7 +231,7 @@ export function calculateModeCost(
   }
 }
 
-export const modeCosts: Record<string, number | ((param?: any) => number)> = {
+export const modeCosts: Record<ModeEnum, CostValue> = {
   [ModeEnum.DigitalAvatarBody]: (steps: number) =>
     calculateModeCost({ mode: ModeEnum.DigitalAvatarBody, steps }).stars,
   [ModeEnum.DigitalAvatarBodyV2]: (steps: number) =>
@@ -240,7 +240,6 @@ export const modeCosts: Record<string, number | ((param?: any) => number)> = {
   [ModeEnum.NeuroPhotoV2]: calculateModeCost({ mode: ModeEnum.NeuroPhotoV2 })
     .stars,
   [ModeEnum.NeuroAudio]: calculateModeCost({ mode: ModeEnum.NeuroAudio }).stars,
-  neuro_photo_2: calculateModeCost({ mode: ModeEnum.NeuroPhotoV2 }).stars,
   [ModeEnum.ImageToPrompt]: calculateModeCost({ mode: ModeEnum.ImageToPrompt })
     .stars,
   [ModeEnum.Avatar]: calculateModeCost({ mode: ModeEnum.Avatar }).stars,
@@ -264,16 +263,50 @@ export const modeCosts: Record<string, number | ((param?: any) => number)> = {
   [ModeEnum.LipSync]: calculateModeCost({ mode: ModeEnum.LipSync }).stars,
   [ModeEnum.VoiceToText]: calculateModeCost({ mode: ModeEnum.VoiceToText })
     .stars,
+  [ModeEnum.Subscribe]: 0,
+  [ModeEnum.SelectModelWizard]: 0,
+  [ModeEnum.SelectNeuroPhoto]: 0,
+  [ModeEnum.ChangeSize]: 0,
+  [ModeEnum.Invite]: 0,
+  [ModeEnum.Help]: 0,
+  [ModeEnum.MainMenu]: 0,
+  [ModeEnum.Balance]: 0,
+  [ModeEnum.ImprovePrompt]: 0,
+  [ModeEnum.TopUpBalance]: 0,
+  [ModeEnum.VideoInUrl]: 0,
+  [ModeEnum.Support]: 0,
+  [ModeEnum.Stats]: 0,
+  [ModeEnum.BroadcastWizard]: 0,
+  [ModeEnum.SubscriptionCheckScene]: 0,
+  [ModeEnum.ImprovePromptWizard]: 0,
+  [ModeEnum.SizeWizard]: 0,
+  [ModeEnum.PaymentScene]: 0,
+  [ModeEnum.InviteScene]: 0,
+  [ModeEnum.BalanceScene]: 0,
+  [ModeEnum.Step0]: 0,
+  [ModeEnum.NeuroCoderScene]: 0,
+  [ModeEnum.CheckBalanceScene]: 0,
+  [ModeEnum.HelpScene]: 0,
+  [ModeEnum.CancelPredictionsWizard]: 0,
+  [ModeEnum.EmailWizard]: 0,
+  [ModeEnum.GetRuBillWizard]: 0,
+  [ModeEnum.SubscriptionScene]: 0,
+  [ModeEnum.CreateUserScene]: 0,
+  [ModeEnum.StartScene]: 0,
+  [ModeEnum.Price]: 0,
+  [ModeEnum.RublePaymentScene]: 0,
+  [ModeEnum.StarPaymentScene]: 0,
+  [ModeEnum.MenuScene]: 0,
 }
 // Найдите минимальную и максимальную стоимость среди всех моделей
 export const minCost = Math.min(
   ...Object.values(modeCosts).map(cost =>
-    typeof cost === 'function' ? cost() : cost
+    typeof cost === 'function' ? cost(1) : cost
   )
 )
 export const maxCost = Math.max(
   ...Object.values(modeCosts).map(cost =>
-    typeof cost === 'function' ? cost() : cost
+    typeof cost === 'function' ? cost(1) : cost
   )
 )
 export const checkBalanceScene = new Scenes.BaseScene<MyContext>(
@@ -281,6 +314,6 @@ export const checkBalanceScene = new Scenes.BaseScene<MyContext>(
 )
 
 // Функция для получения числового значения стоимости
-function getCostValue(cost: number | ((param?: any) => number)): number {
-  return typeof cost === 'function' ? cost() : cost
+export function getCostValue(cost: number | ((param?: any) => number)): number {
+  return typeof cost === 'function' ? cost(1) : cost
 }
