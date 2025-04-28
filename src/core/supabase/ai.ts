@@ -5,7 +5,7 @@ import os from 'os'
 import path from 'path'
 import { v4 as uuidv4 } from 'uuid'
 import FormData from 'form-data'
-import { ModeEnum } from '@/price/helpers/modelsCost'
+import { ModeEnum } from '@/interfaces/modes'
 // Удалите старый импорт
 // import fetch from "node-fetch";
 

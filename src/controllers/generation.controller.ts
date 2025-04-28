@@ -387,7 +387,8 @@ export class GenerationController {
           steps,
           telegram_id,
           is_ru,
-          bot
+          bot,
+          bot_name
         )
         console.log(
           '✅ План Б: Прямой вызов generateModelTraining завершен (ответ клиенту уже ушел бы от Replicate, здесь просто завершаем)'

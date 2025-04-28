@@ -8,7 +8,9 @@ import {
   createModelTrainingV2,
 } from '@/core/supabase'
 import { processBalanceOperation } from '@/price/helpers'
-import { modeCosts, ModeEnum } from '@/price/helpers/modelsCost'
+// import { modeCosts } from '@/price/helpers/modelsCost' // Проверьте, нужен ли modeCosts здесь
+import { ModeEnum } from '@/interfaces/modes'
+import { calculateModeCost } from '@/price/helpers/modelsCost' // Импортируем calculateModeCost, если он нужен
 import { errorMessageAdmin } from '@/helpers/errorMessageAdmin'
 import axios from 'axios'
 import { logger } from '@/utils/logger'
@@ -136,7 +138,9 @@ export const modelTrainingV2 = inngest.createFunction(
         })
 
         const paymentAmount = (
-          modeCosts[ModeEnum.DigitalAvatarBodyV2] as (steps: number) => number
+          calculateModeCost[ModeEnum.DigitalAvatarBodyV2] as (
+            steps: number
+          ) => number
         )(steps)
 
         logger.info({

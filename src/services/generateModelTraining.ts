@@ -13,7 +13,8 @@ import { processBalanceOperation } from '@/price/helpers'
 
 import { Telegraf } from 'telegraf'
 import { MyContext } from '@/interfaces'
-import { modeCosts, ModeEnum } from '@/price/helpers/modelsCost'
+import { ModeEnum } from '@/interfaces/modes'
+import { calculateModeCost } from '@/price/helpers/modelsCost'
 import { PaymentType } from '@/interfaces/payments.interface'
 
 export interface ApiError extends Error {
@@ -105,7 +106,7 @@ export async function generateModelTraining(
   console.log(`currentTraining: ${currentTraining}`)
 
   const paymentAmount = (
-    modeCosts[ModeEnum.DigitalAvatarBody] as (steps: number) => number
+    calculateModeCost[ModeEnum.DigitalAvatarBody] as (steps: number) => number
   )(steps)
 
   const balanceCheck = await processBalanceOperation({

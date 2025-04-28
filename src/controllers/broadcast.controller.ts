@@ -1,4 +1,4 @@
-import { Request, Response } from 'express'
+import { Request, Response, NextFunction } from 'express'
 import { inngest } from '@/core/inngest/clients'
 import { logger } from '@utils/logger'
 import { getBotByName } from '@/core/bot'
@@ -22,9 +22,13 @@ interface BroadcastRequest {
 
 export const broadcastController = {
   /**
-   * Создает задачу на рассылку для всех пользователей через Inngest
+   * Метод для API: Создает задачу на рассылку для всех пользователей через Inngest
    */
-  sendBroadcast: async (req: Request, res: Response) => {
+  createBroadcastTask: async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ) => {
     try {
       const requestData = req.body as BroadcastRequest
 
@@ -101,11 +105,7 @@ export const broadcastController = {
         error: error?.message || 'Unknown error',
       })
 
-      return res.status(500).json({
-        success: false,
-        message: 'Ошибка при запуске рассылки',
-        error: error?.message || 'Unknown error',
-      })
+      next(error) // Передаем ошибку дальше
     }
   },
 
@@ -164,22 +164,17 @@ export const broadcastController = {
             contentType,
             postLink,
             videoFileId,
-            parse_mode: contentType === 'post_link' ? 'HTML' : 'Markdown',
+            // Убираем parse_mode, пусть Inngest функция решает
           },
         })
         logger.info(
           '✅ План А: Событие Inngest broadcast/send-message успешно отправлено',
           { telegram_id, bot_name, contentType }
         )
-        // Генерируем уникальный ID для события (можно оставить для совместимости или убрать)
-        const eventId = `broadcast_${Date.now()}_${Math.random()
-          .toString(36)
-          .substring(2, 7)}`
 
         return {
           success: true,
           message: 'Broadcast initiated via Inngest (Plan A)',
-          eventId, // Можно вернуть ID для отслеживания
         }
       } catch (inngestError) {
         // План Б: Прямой вызов сервиса
@@ -194,36 +189,28 @@ export const broadcastController = {
         )
 
         logger.info(
-          '🧘 План Б: Запуск прямого вызова broadcastService.sendBroadcast',
+          '🧘 План Б: Запуск прямого вызова broadcastService.sendToAllUsers',
           { telegram_id, bot_name, contentType }
         )
         try {
-          const { bot } = getBotByName(bot_name)
-          if (!bot) {
-            logger.error(
-              '❌ План Б: Не удалось найти бота для прямого вызова рассылки',
-              { bot_name }
-            )
-            throw new Error(`Bot ${bot_name} not found for Plan B`)
-          }
-
-          // Вызываем сервис напрямую
-          const result = await broadcastService.sendBroadcast({
+          // Вызываем сервис напрямую с правильным именем метода
+          const result = await broadcastService.sendToAllUsers(
             imageUrl,
             textRu,
-            textEn,
-            bot_name,
-            sender_telegram_id: telegram_id,
-            test_mode: test_mode || false,
-            contentType,
-            postLink,
-            videoFileId,
-            parse_mode: contentType === 'post_link' ? 'HTML' : 'Markdown',
-            bot, // Передаем экземпляр бота
-          })
+            {
+              // Передаем опции правильно
+              textEn,
+              bot_name,
+              sender_telegram_id: telegram_id,
+              test_mode: test_mode || false,
+              contentType,
+              postLink,
+              videoFileId,
+            }
+          )
 
           logger.info(
-            '✅ План Б: Прямой вызов broadcastService.sendBroadcast завершен',
+            '✅ План Б: Прямой вызов broadcastService.sendToAllUsers завершен',
             {
               success: result.success,
               successCount: result.successCount,
@@ -248,29 +235,65 @@ export const broadcastController = {
           })
           errorMessageAdmin(
             new Error(
-              `🚨 Критическая ошибка: План Б (прямой вызов broadcastService) для ${telegram_id}, бот ${bot_name} тоже не сработал! Ошибка: ${planBError.message}`
+              `🚨 Критическая ошибка ПЛАНА Б (прямой вызов sendToAllUsers) для ${telegram_id}, бот ${bot_name}. Ошибка: ${planBError.message}`
             )
           )
           return {
             success: false,
-            message: 'Broadcast failed in both Plan A and Plan B',
+            message: 'Broadcast failed completely (Inngest and fallback)',
+            error: planBError.message,
           }
         }
       }
     } catch (error) {
-      logger.error('❌ Ошибка при подготовке рассылки владельцем:', {
-        description: 'Error preparing owner broadcast',
-        error: error.message,
+      logger.error('❌ Ошибка при отправке рассылки владельцем:', {
+        description: 'Error sending broadcast by owner',
+        error: error?.message || 'Unknown error',
         telegram_id,
         bot_name,
       })
-      // Уведомляем администратора о самой внешней ошибке
-      errorMessageAdmin(
-        new Error(
-          `🚨 Внешняя ошибка в sendBroadcastByOwner для ${telegram_id}, бот ${bot_name}: ${error.message}`
-        )
-      )
-      return { success: false, message: 'Internal error preparing broadcast' }
+      return {
+        success: false,
+        message: 'Internal server error during broadcast',
+        error: error?.message || 'Unknown error',
+      }
+    }
+  },
+
+  // Переименованный и исправленный метод, который добавился ранее
+  sendBroadcastMessage: async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> => {
+    try {
+      const { imageUrl, textRu, options } = req.body
+
+      if (!textRu) {
+        res.status(400).json({ message: 'TextRu is required' })
+        return
+      }
+
+      // Отправляем ответ клиенту немедленно
+      res.status(200).json({ message: 'Broadcast processing started' })
+
+      // Выполняем рассылку асинхронно
+      broadcastService
+        .sendToAllUsers(imageUrl, textRu, options)
+        .then(result => {
+          console.log('Broadcast result:', result) // Логируем результат
+        })
+        .catch(error => {
+          // Логируем ошибку, но не пытаемся отправить ответ, т.к. он уже ушел
+          console.error('Error in background sendToAllUsers:', error)
+          errorMessageAdmin(error as Error)
+        })
+    } catch (error) {
+      console.error('Error preparing broadcast message:', error)
+      // Если заголовки еще не отправлены (например, ошибка до res.status(200))
+      if (!res.headersSent) {
+        next(error) // Передаем ошибку в middleware
+      }
     }
   },
 

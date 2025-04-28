@@ -9,7 +9,8 @@ import {
   updateUserBalance,
 } from '@/core/supabase'
 import { processBalanceOperation } from '@/price/helpers'
-import { modeCosts, ModeEnum } from '@/price/helpers/modelsCost'
+import { modeCosts, getCostValue } from '@/price/helpers/modelsCost'
+import { ModeEnum } from '@/interfaces/modes'
 import { PaymentType } from '@/interfaces/payments.interface'
 
 export async function createVoiceAvatar(
@@ -29,7 +30,7 @@ export async function createVoiceAvatar(
       await updateUserLevelPlusOne(telegram_id, level)
     }
 
-    const cost = modeCosts[ModeEnum.Voice] as number
+    const cost = getCostValue(modeCosts[ModeEnum.Voice])
     console.log(`Cost for ${ModeEnum.Voice}: ${cost} stars`)
 
     const balanceCheck = await processBalanceOperation({

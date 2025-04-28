@@ -1,7 +1,8 @@
 import { Router } from 'express'
-import { broadcastController } from '@/controllers'
+import { Routes } from '@interfaces/routes.interface'
+import { broadcastController } from '@/controllers/broadcast.controller'
 
-export class BroadcastRoute {
+export class BroadcastRoute implements Routes {
   public path = '/broadcast'
   public router: Router = Router()
   public broadcastController = broadcastController
@@ -11,7 +12,7 @@ export class BroadcastRoute {
   }
 
   private initializeRoutes() {
-    this.router.post(this.path, this.broadcastController.sendBroadcast)
+    this.router.post(this.path, this.broadcastController.createBroadcastTask)
     this.router.get(
       `${this.path}/check-bots`,
       this.broadcastController.checkBots

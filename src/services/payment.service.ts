@@ -227,7 +227,7 @@ export class PaymentService {
         try {
           const botData = createBotByName(bot_name)
           if (botData) {
-            const { bot, groupId } = botData
+            const { bot } = botData
 
             // 1. Уведомление ПОЛЬЗОВАТЕЛЮ
             let userMessage = ''

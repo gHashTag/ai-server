@@ -14,7 +14,8 @@ import { processBalanceOperation } from '@/price/helpers'
 import { errorMessageAdmin } from '@/helpers/errorMessageAdmin'
 import { Telegraf } from 'telegraf'
 import { MyContext } from '@/interfaces'
-import { modeCosts, ModeEnum } from '@/price/helpers/modelsCost'
+import { ModeEnum } from '@/interfaces/modes'
+import { calculateModeCost } from '@/price/helpers/modelsCost'
 import path from 'path'
 import { API_URL } from '@/config'
 import fs from 'fs'
@@ -42,10 +43,10 @@ export async function generateNeuroImage(
 
     // Расчет стоимости
     let costPerImage: number
-    if (typeof modeCosts[ModeEnum.NeuroPhoto] === 'function') {
-      costPerImage = modeCosts[ModeEnum.NeuroPhoto](num_images)
+    if (typeof calculateModeCost[ModeEnum.NeuroPhoto] === 'function') {
+      costPerImage = calculateModeCost[ModeEnum.NeuroPhoto](num_images)
     } else {
-      costPerImage = modeCosts[ModeEnum.NeuroPhoto]
+      costPerImage = calculateModeCost[ModeEnum.NeuroPhoto]
     }
     const totalCost = costPerImage * num_images
 

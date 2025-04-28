@@ -13,7 +13,8 @@ import { saveFileLocally } from '@/helpers'
 import { pulse } from '@/helpers/pulse'
 import { processBalanceOperation } from '@/price/helpers'
 
-import { modeCosts, ModeEnum } from '@/price/helpers/modelsCost'
+import { ModeEnum } from '@/interfaces/modes'
+import { calculateModeCost } from '@/price/helpers/modelsCost'
 import path from 'path'
 import { API_URL } from '@/config'
 import fs from 'fs'
@@ -95,25 +96,24 @@ export const neuroImageGeneration = inngest.createFunction(
         })
       }
 
-      const costPerImage = await step.run('calculate-cost', async () => {
-        const cost =
-          typeof modeCosts[ModeEnum.NeuroPhoto] === 'function'
-            ? modeCosts[ModeEnum.NeuroPhoto](num_images)
-            : modeCosts[ModeEnum.NeuroPhoto]
+      const totalCost = await step.run('calculate-total-cost', async () => {
+        const costResult = calculateModeCost({
+          mode: ModeEnum.NeuroPhoto,
+          numImages: num_images,
+        })
 
         logger.info({
           message: '💸 Calculated image cost',
-          costPerImage: cost,
           num_images,
-          totalCost: cost * num_images,
+          totalCost: costResult.stars,
         })
-        return cost
+        return costResult.stars
       })
 
       const balanceCheck = await step.run('process-payment', async () => {
         const result = await processBalanceOperation({
           telegram_id,
-          paymentAmount: costPerImage * num_images,
+          paymentAmount: totalCost,
           is_ru,
           bot_name,
         })
@@ -122,7 +122,7 @@ export const neuroImageGeneration = inngest.createFunction(
           logger.error({
             message: '⚠️ Balance check failed or insufficient funds',
             telegramId: telegram_id,
-            requiredAmount: costPerImage * num_images,
+            requiredAmount: totalCost,
             currentBalance: result.currentBalance,
             error: result.error,
             step: 'process-payment',
@@ -155,17 +155,16 @@ export const neuroImageGeneration = inngest.createFunction(
           message: '✅ Balance check successful',
           telegramId: telegram_id,
           currentBalance: result.currentBalance,
-          requiredAmount: costPerImage * num_images,
+          requiredAmount: totalCost,
           step: 'process-payment',
         })
         return {
           currentBalance: result.currentBalance,
-          paymentAmount: result.paymentAmount,
+          paymentAmount: totalCost,
         }
       })
 
       const initialBalance = balanceCheck.currentBalance
-      const totalCost = balanceCheck.paymentAmount
 
       const aspect_ratio = await step.run('get-aspect-ratio', async () => {
         const ratio = await getAspectRatio(telegram_id)

@@ -8,7 +8,8 @@ import {
 import { errorMessage, errorMessageAdmin } from '@/helpers'
 import { Telegraf } from 'telegraf'
 import { MyContext } from '@/interfaces'
-import { modeCosts, ModeEnum } from '@/price/helpers/modelsCost'
+import { ModeEnum } from '@/interfaces/modes'
+import { calculateModeCost } from '@/price/helpers/modelsCost'
 import { levels } from '@/helpers/levels'
 import { PaymentType } from '@/interfaces/payments.interface'
 
@@ -32,10 +33,10 @@ export async function generateImageToPrompt(
       await updateUserLevelPlusOne(telegram_id, level)
     }
     let costPerImage: number
-    if (typeof modeCosts[ModeEnum.ImageToPrompt] === 'function') {
-      costPerImage = modeCosts[ModeEnum.ImageToPrompt](1)
+    if (typeof calculateModeCost[ModeEnum.ImageToPrompt] === 'function') {
+      costPerImage = calculateModeCost[ModeEnum.ImageToPrompt](1)
     } else {
-      costPerImage = modeCosts[ModeEnum.ImageToPrompt]
+      costPerImage = calculateModeCost[ModeEnum.ImageToPrompt]
     }
     const balanceCheck = await processBalanceOperation({
       telegram_id,

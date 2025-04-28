@@ -9,11 +9,13 @@ import {
   supabase,
 } from '@/core/supabase'
 import { getBotByName } from '@/core/bot'
-import { modeCosts, ModeEnum } from '@/price/helpers/modelsCost'
+import { ModeEnum } from '@/interfaces/modes'
+import { calculateModeCost } from '@/price/helpers/modelsCost'
 import { inngest } from '@/core/inngest/clients'
 import { API_URL } from '@/config'
 import { BalanceHelper } from '@/helpers/inngest'
 import { logger } from '@utils/logger'
+import { PaymentType } from '@/interfaces/payments.interface'
 
 import type { Prediction } from 'replicate'
 
@@ -579,7 +581,9 @@ export const generateModelTraining = inngest.createFunction(
 
       // 4. Расчет стоимости
       paymentAmount = (
-        modeCosts[ModeEnum.DigitalAvatarBody] as (steps: number) => number
+        calculateModeCost[ModeEnum.DigitalAvatarBody] as (
+          steps: number
+        ) => number
       )(steps)
 
       logger.info({
@@ -648,7 +652,7 @@ export const generateModelTraining = inngest.createFunction(
         await updateUserBalance(
           eventData.telegram_id,
           newBalance,
-          'money_expense',
+          PaymentType.MONEY_OUTCOME,
           `Оплата тренировки модели ${modelName} (шагов: ${steps})`,
           {
             payment_method: 'Training',
@@ -816,7 +820,7 @@ export const generateModelTraining = inngest.createFunction(
           await updateUserBalance(
             eventData.telegram_id,
             balanceCheck.currentBalance,
-            'money_expense',
+            PaymentType.MONEY_INCOME,
             `Возврат средств за неудавшуюся тренировку модели ${eventData.modelName}`,
             {
               payment_method: 'Refund',

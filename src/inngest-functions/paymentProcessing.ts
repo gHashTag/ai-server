@@ -9,6 +9,7 @@ import { updateUserSubscription } from '@/core/supabase'
 import { logger } from '@/utils/logger'
 import { Telegraf } from 'telegraf'
 import { MyContext } from '@/interfaces'
+import { PaymentType } from '@/interfaces/payments.interface'
 
 // Константы для вариантов оплаты
 const PAYMENT_OPTIONS = [
@@ -161,7 +162,7 @@ export const processPayment = inngest.createFunction(
           const result = await updateUserBalance(
             telegram_id.toString(),
             Number(roundedIncSum),
-            'money_income',
+            PaymentType.MONEY_INCOME,
             description,
             {
               payment_method: 'Robokassa',

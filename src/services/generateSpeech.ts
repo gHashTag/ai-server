@@ -8,8 +8,9 @@ import { getUserByTelegramId, updateUserLevelPlusOne } from '@/core/supabase'
 import { errorMessageAdmin, errorMessage } from '@/helpers'
 import { Telegraf } from 'telegraf'
 import { MyContext } from '@/interfaces'
-import { modeCosts, ModeEnum } from '@/price/helpers/modelsCost'
+import { calculateModeCost } from '@/price/helpers/modelsCost'
 import { processBalanceOperation, sendBalanceMessage } from '@/price/helpers'
+import { ModeEnum } from '@/interfaces/modes'
 
 export const generateSpeech = async ({
   text,
@@ -39,12 +40,9 @@ export const generateSpeech = async ({
   // Проверка баланса для всех изображений
   const balanceCheck = await processBalanceOperation({
     telegram_id,
-    paymentAmount: modeCosts[ModeEnum.TextToSpeech] as number,
+    paymentAmount: calculateModeCost({ mode: ModeEnum.TextToSpeech }).stars,
     is_ru,
-    bot,
     bot_name,
-    description: `Payment for text to speech`,
-    type: 'Text to speech',
   })
   if (!balanceCheck.success) {
     throw new Error(balanceCheck.error)
@@ -89,8 +87,8 @@ export const generateSpeech = async ({
         })
         sendBalanceMessage(
           telegram_id,
-          balanceCheck.newBalance,
-          modeCosts[ModeEnum.TextToSpeech] as number,
+          balanceCheck.currentBalance,
+          calculateModeCost({ mode: ModeEnum.TextToSpeech }).stars,
           is_ru,
           bot
         )
