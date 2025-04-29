@@ -3,26 +3,8 @@ description:
 globs: 
 alwaysApply: true
 ---
-# Current Task: Fix Remaining TypeScript Errors
+# Current Task:
 
-**Goal:** Resolve the outstanding TypeScript errors identified by `tsc --noEmit`.
-
-**Status:**
-- [x] Fixed errors related to `generateSpeech.ts` and `processBalanceOperation`.
-- [x] Corrected most `ModeEnum` imports to point to `@/interfaces/modes.ts`.
-- [x] Added missing `bot_name` argument to `generateModelTraining` call in `generation.controller.ts`.
-- [x] Corrected `PaymentType` usage (used enum members instead of strings).
-- [x] Corrected `calculateModeCost` usage in `neuroImageGeneration.ts`.
-- [x] Fixed remaining incorrect `ModeEnum` imports (`generateNeuroImage.ts`, `generateNeuroImageV2.ts`).
-- [x] Fixed `CONFIG`/`appConfig` usage in `client.ts`.
-- [x] Fixed `sendBroadcast` usage in `broadcast.controller.ts` and `broadcast.route.ts`.
-- [x] Added explicit type annotation for `router` in `broadcast.route.ts` (Verified fix applied).
-- [ ] Address errors related to Stripe in `paymentProcessing.ts` (Skipped for now).
-- [ ] Investigate and resolve type conflicts (`AbortSignal`, `Server`, Telegraf, UUID) (Dependency errors remaining).
-- [x] Verified all fixes in `src/` with `tsc --noEmit` (8 dependency errors remain).
-
-**Next Step:**
-- ▶️ **Decide** whether to address the remaining 8 dependency type errors now or create a separate task for them.
-- ⏸️ *(Optional)* Address errors related to Stripe in `paymentProcessing.ts`.
+d
 
 

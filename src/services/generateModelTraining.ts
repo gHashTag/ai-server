@@ -105,9 +105,11 @@ export async function generateModelTraining(
   let currentTraining: TrainingResponse | null = null
   console.log(`currentTraining: ${currentTraining}`)
 
-  const paymentAmount = (
-    calculateModeCost[ModeEnum.DigitalAvatarBody] as (steps: number) => number
-  )(steps)
+  const costResult = calculateModeCost({
+    mode: ModeEnum.DigitalAvatarBody,
+    steps: steps,
+  })
+  const paymentAmount = costResult.stars
 
   const balanceCheck = await processBalanceOperation({
     telegram_id,
