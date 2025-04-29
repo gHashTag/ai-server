@@ -16,6 +16,8 @@ services:
       - CREDENTIALS=true
       - ORIGIN=https://ai-server-new-u14194.vm.elestio.app
       - LOG_FORMAT=combined
+    volumes:
+      - ./persistent_uploads:/app/dist/uploads
     restart: always
 
   proxy:

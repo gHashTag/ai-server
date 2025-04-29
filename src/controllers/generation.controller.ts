@@ -248,48 +248,137 @@ export class GenerationController {
     }
   }
 
+  // Код обработчика маршрута public imageToVideo в api-server
+
   public imageToVideo = async (
     req: Request,
     res: Response,
     next: NextFunction
   ): Promise<void> => {
     try {
+      // 1. Извлекаем ВСЕ возможные параметры из тела запроса
       const {
         imageUrl,
+        imageAUrl, // <--- Добавлено
+        imageBUrl, // <--- Добавлено
         prompt,
         videoModel,
         telegram_id,
         username,
-        is_ru,
+        is_ru, // Важно: убедись, что бот передает это поле (is_ru, а не isRu)
         bot_name,
+        is_morphing, // <--- Добавлено
       } = req.body
-      if (!imageUrl) {
-        res.status(400).json({ message: 'Image is required' })
-        return
-      }
-      if (!prompt) {
-        res.status(400).json({ message: 'Prompt is required' })
-        return
-      }
-      if (!videoModel) {
-        res.status(400).json({ message: 'Model is required' })
+
+      // Логируем полученное тело запроса для отладки
+      console.log('API Server: Received /generate/image-to-video request', {
+        body: req.body,
+      })
+
+      // 2. Условная Валидация
+      // Общие параметры
+      if (
+        !videoModel ||
+        !telegram_id ||
+        !username ||
+        !bot_name /* || is_ru === undefined */
+      ) {
+        // Возможно, стоит добавить is_ru в обязательную проверку
+        console.log('API Server: Missing required common parameters', {
+          body: req.body,
+        })
+        res.status(400).json({
+          message:
+            'Missing required common parameters (model, user info, bot name)',
+        })
         return
       }
 
-      validateUserParams(req)
-      res.status(200).json({ message: 'Processing started' })
+      // Параметры в зависимости от режима
+      if (is_morphing) {
+        // --- Валидация для Морфинга ---
+        if (!imageAUrl || !imageBUrl) {
+          console.log(
+            'API Server: Missing imageAUrl or imageBUrl for morphing request',
+            { telegram_id }
+          )
+          res.status(400).json({
+            message: 'imageAUrl and imageBUrl are required for morphing',
+          })
+          return
+        }
+        // Для морфинга imageUrl и prompt не нужны
+        console.log('API Server: Morphing request validated', { telegram_id })
+      } else {
+        // --- Валидация для Стандартной Генерации ---
+        if (!imageUrl) {
+          // <--- Теперь эта проверка только для НЕ морфинга
+          console.log('API Server: Missing imageUrl for standard request', {
+            telegram_id,
+          })
+          res
+            .status(400)
+            .json({ message: 'Image URL is required for standard generation' })
+          return
+        }
+        if (!prompt) {
+          // <--- Теперь эта проверка только для НЕ морфинга
+          console.log('API Server: Missing prompt for standard request', {
+            telegram_id,
+          })
+          res
+            .status(400)
+            .json({ message: 'Prompt is required for standard generation' })
+          return
+        }
+        console.log('API Server: Standard request validated', { telegram_id })
+      }
 
-      await generateImageToVideo(
-        imageUrl,
-        prompt,
-        videoModel,
+      // --- Нужно ли здесь validateUserParams(req)? Возможно, нет, т.к. бот уже проверил баланс ---
+      // validateUserParams(req);
+
+      // 3. Отправляем ответ 202 Accepted СРАЗУ
+      console.log('API Server: Sending 202 Accepted response', { telegram_id })
+      res.status(202).json({ message: 'Request accepted, processing started.' })
+
+      // 4. Вызываем СЕРВЕРНУЮ функцию generateImageToVideo АСИНХРОННО (в фоне)
+      //    Передаем ей все необходимые параметры, включая новые.
+      //    Используем .catch для логирования ошибок фоновой задачи.
+      console.log('API Server: Starting background task generateImageToVideo', {
         telegram_id,
-        username,
-        is_ru,
-        bot_name
-      )
+        is_morphing,
+      })
+      generateImageToVideo(
+        // Передаем аргументы по порядку, как в сигнатуре функции
+        imageUrl, // string | null
+        prompt, // string | null
+        videoModel, // string
+        telegram_id, // string
+        username, // string
+        is_ru, // boolean
+        bot_name, // string
+        is_morphing, // boolean (new)
+        imageAUrl, // string | null (new)
+        imageBUrl // string | null (new)
+      ).catch(backgroundError => {
+        // Эта ошибка случилась уже ПОСЛЕ отправки ответа 202
+        console.log(
+          'API Server: Error in background generateImageToVideo task',
+          { telegram_id, error: backgroundError }
+        )
+        // Здесь нельзя отправить ответ клиенту. Нужно логировать или уведомлять админа.
+        // errorMessageAdmin(backgroundError); // Например
+      })
     } catch (error) {
-      next(error)
+      // Эта ошибка случилась ДО отправки ответа 202
+      console.log(
+        'API Server: Error in imageToVideo handler before sending 202',
+        { error }
+      )
+      // Передаем ошибку в express/fastify middleware, если ответ еще не был отправлен
+      if (!res.headersSent) {
+        next(error)
+      }
     }
   }
 
