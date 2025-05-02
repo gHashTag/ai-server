@@ -30,6 +30,7 @@ module.exports = {
         BOT_TOKEN_5: process.env.BOT_TOKEN_5,
         BOT_TOKEN_6: process.env.BOT_TOKEN_6,
         BOT_TOKEN_7: process.env.BOT_TOKEN_7,
+        BOT_TOKEN_8: process.env.BOT_TOKEN_8,
         BOT_TOKEN_TEST_1: process.env.BOT_TOKEN_TEST_1,
         BOT_TOKEN_TEST_2: process.env.BOT_TOKEN_TEST_2,
       },
