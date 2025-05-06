@@ -114,6 +114,7 @@ export const AVATARS_GROUP_ID = {
   ['NeuroLenaAssistant_bot']: '@neuroLenka',
   ['NeurostylistShtogrina_bot']: '@neirostylist',
   ['Gaia_Kamskaia_bot']: '@neuromeets',
+  ['ai_koshey_bot']: '@ai_koshey',
 }
 
 export const ADMIN_GROUP_ID = '@neuro_blogger_pulse'

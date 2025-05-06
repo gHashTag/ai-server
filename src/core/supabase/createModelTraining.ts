@@ -13,6 +13,7 @@ export interface TrainingData {
   status?: string
   api?: string
   error?: string
+  gender?: string
 }
 
 /**
@@ -38,6 +39,7 @@ export async function createModelTraining(trainingData: TrainingData) {
       api: trainingData.api || 'replicate',
       cancel_url: trainingData.cancel_url,
       error: trainingData.error,
+      gender: trainingData.gender,
     }
 
     // Создаем запись в таблице model_trainings

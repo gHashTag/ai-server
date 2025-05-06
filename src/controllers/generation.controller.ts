@@ -410,13 +410,15 @@ export class GenerationController {
   ): Promise<void> => {
     const {
       type,
-      telegram_id,
       triggerWord,
       modelName,
       steps,
+      telegram_id,
       is_ru,
       bot_name,
+      gender,
     } = req.body
+    console.log(req.body, 'req.body')
 
     try {
       if (!type) throw new Error('type is required')
@@ -425,6 +427,7 @@ export class GenerationController {
       if (!steps) throw new Error('steps is required')
       if (!telegram_id) throw new Error('telegram_id is required')
       if (!bot_name) throw new Error('bot_name is required')
+      if (!gender) throw new Error('gender is required')
 
       const zipFile = req.files?.find(file => file.fieldname === 'zipUrl')
       if (!zipFile) throw new Error('zipFile is required')
@@ -446,6 +449,7 @@ export class GenerationController {
             telegram_id,
             is_ru,
             bot_name,
+            gender,
             idempotencyKey: `train:${telegram_id}:${modelName}-${Date.now()}`,
           },
         })
@@ -464,6 +468,7 @@ export class GenerationController {
         )
 
         console.log('🧘 План Б: Запуск прямого вызова generateModelTraining')
+        console.log('Полное тело запроса для диагностики:', req.body)
         const { bot } = getBotByName(bot_name)
         if (!bot) {
           throw new Error(`Bot ${bot_name} not found for Plan B`)
@@ -477,7 +482,8 @@ export class GenerationController {
           telegram_id,
           is_ru,
           bot,
-          bot_name
+          bot_name,
+          gender
         )
         console.log(
           '✅ План Б: Прямой вызов generateModelTraining завершен (ответ клиенту уже ушел бы от Replicate, здесь просто завершаем)'

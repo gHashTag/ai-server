@@ -92,7 +92,8 @@ export async function generateModelTraining(
   telegram_id: string,
   is_ru: boolean,
   bot: Telegraf<MyContext>,
-  bot_name: string
+  bot_name: string,
+  gender: string
 ): Promise<ModelTrainingResult> {
   const userExists = await getUserByTelegramId(telegram_id)
   if (!userExists) {
@@ -191,6 +192,7 @@ export async function generateModelTraining(
       zip_url: zipUrl,
       steps,
       status: 'starting',
+      gender,
     })
     console.log(`Created DB training record ID: ${dbTrainingRecord.id}`)
 

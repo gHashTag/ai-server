@@ -31,6 +31,15 @@ export async function generateNeuroImage(
   bot: Telegraf<MyContext>,
   bot_name: string
 ): Promise<GenerationResult[] | null> {
+  console.log('>>> generateNeuroImage called with args:', {
+    prompt,
+    model_url,
+    num_images,
+    telegram_id,
+    username,
+    is_ru,
+    bot_name,
+  })
   try {
     const userExists = await getUserByTelegramId(telegram_id)
     if (!userExists) {
