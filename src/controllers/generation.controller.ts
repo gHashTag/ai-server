@@ -5,8 +5,6 @@ import { generateTextToVideo } from '@/services/generateTextToVideo'
 import { generateImageToVideo } from '@/services/generateImageToVideo'
 import { generateImageToPrompt } from '@/services/generateImageToPrompt'
 import { createVoiceAvatar } from '@/services/createVoiceAvatar'
-import { generateModelTraining } from '@/services/'
-import { errorMessageAdmin } from '@/helpers/errorMessageAdmin'
 import { generateNeuroImage } from '@/services/generateNeuroImage'
 import { validateUserParams } from '@/middlewares/validateUserParams'
 import { generateNeuroImageV2 } from '@/services/generateNeuroImageV2'
@@ -17,6 +15,7 @@ import { deleteFile } from '@/helpers'
 import path from 'path'
 import { getBotByName } from '@/core/bot'
 import { inngest } from '@/core/inngest/clients'
+import { logger } from '@/utils/logger'
 
 export class GenerationController {
   public textToImage = async (
@@ -446,8 +445,16 @@ export class GenerationController {
 
   public createModelTraining = async (
     req: Request,
-    res: Response
+    res: Response,
+    next: NextFunction
   ): Promise<void> => {
+    logger.info('Received /create-model-training request')
+    logger.debug({ message: 'Request Headers:', headers: req.headers })
+    logger.debug({ message: 'Request Body (raw):', body: req.body })
+    // Log files if multer has processed them
+    logger.debug({ message: 'Request File (single):', file: req.file })
+    logger.debug({ message: 'Request Files (array):', files: req.files })
+
     const {
       type,
       triggerWord,
@@ -458,25 +465,69 @@ export class GenerationController {
       bot_name,
       gender,
     } = req.body
-    console.log(req.body, 'req.body')
+    // console.log(req.body, 'req.body') // Original console.log, can be removed or kept
 
     try {
+      logger.info('Attempting to process model training request data:')
+      logger.info({
+        type,
+        triggerWord,
+        modelName,
+        steps,
+        telegram_id,
+        bot_name,
+        gender,
+      })
+
       if (!type) throw new Error('type is required')
       if (!triggerWord) throw new Error('triggerWord is required')
       if (!modelName) throw new Error('modelName is required')
       if (!steps) throw new Error('steps is required')
       if (!telegram_id) throw new Error('telegram_id is required')
       if (!bot_name) throw new Error('bot_name is required')
-      if (!gender) throw new Error('gender is required')
+      // if (!gender) throw new Error('gender is required') // Gender is optional
 
-      const zipFile = req.files?.find(file => file.fieldname === 'zipUrl')
-      if (!zipFile) throw new Error('zipFile is required')
+      // Multer puts single file in req.file, multiple in req.files
+      const anies = req.files as any[] // Type assertion to handle mixed array
+      const zipFile =
+        req.file ||
+        (anies?.length > 0
+          ? anies.find(f => f.fieldname === 'zipUrl')
+          : undefined)
+
+      logger.info({
+        message: 'Attempting to find zipFile. req.file:',
+        singleFile: req.file,
+        allFiles: req.files,
+      })
+
+      if (!zipFile) {
+        logger.error(
+          'zipFile is required but not found. req.file:',
+          req.file,
+          'req.files:',
+          req.files
+        )
+        throw new Error('zipFile is required')
+      }
+      logger.info({ message: 'zipFile found:', zipFile })
 
       const zipUrl = `https://${req.headers.host}/uploads/${telegram_id}/${type}/${zipFile.filename}`
+      logger.info(`Constructed zipUrl: ${zipUrl}`)
 
       try {
-        console.log(
-          '🚀 План А: Попытка отправить событие Inngest model/training.start'
+        logger.info(
+          '🚀 План А: Попытка отправить событие Inngest model/training.start',
+          {
+            zipUrl,
+            triggerWord,
+            modelName,
+            steps,
+            telegram_id,
+            is_ru,
+            bot_name,
+            gender,
+          }
         )
         await inngest.send({
           id: `train:${telegram_id}:${modelName}-${Date.now()}`,
@@ -490,62 +541,38 @@ export class GenerationController {
             is_ru,
             bot_name,
             gender,
-            idempotencyKey: `train:${telegram_id}:${modelName}-${Date.now()}`,
+            // idempotencyKey: `train:${telegram_id}:${modelName}-${Date.now()}`,
           },
         })
-        console.log(
+        logger.info(
           '✅ План А: Событие Inngest model/training.start успешно отправлено'
         )
         res
           .status(200)
           .json({ message: 'Model training started via Inngest (Plan A)' })
       } catch (inngestError) {
-        console.error('❌ План А (Inngest) не сработал:', inngestError)
-        errorMessageAdmin(
-          new Error(
-            `🚨 Ошибка Inngest (model/training.start) для ${telegram_id}, модель ${modelName}. Активирован План Б (прямой вызов). Проверьте Inngest функцию! Ошибка: ${inngestError.message}`
-          )
+        logger.error(
+          '❌ Ошибка при отправке события в Inngest (План А):',
+          inngestError
         )
-
-        console.log('🧘 План Б: Запуск прямого вызова generateModelTraining')
-        console.log('Полное тело запроса для диагностики:', req.body)
-        const { bot } = getBotByName(bot_name)
-        if (!bot) {
-          throw new Error(`Bot ${bot_name} not found for Plan B`)
-        }
-
-        await generateModelTraining(
-          zipUrl,
-          triggerWord,
-          modelName,
-          steps,
-          telegram_id,
-          is_ru,
-          bot,
-          bot_name,
-          gender
-        )
-        console.log(
-          '✅ План Б: Прямой вызов generateModelTraining завершен (ответ клиенту уже ушел бы от Replicate, здесь просто завершаем)'
-        )
-        if (!res.headersSent) {
-          res
-            .status(202)
-            .json({ message: 'Model training started via fallback (Plan B)' })
-        }
+        // Decide if we should call next(inngestError) or handle differently
+        // For now, let's send a 500 response directly
+        res.status(500).json({
+          message: 'Failed to send training task to Inngest',
+          error: inngestError.message,
+        })
       }
     } catch (error) {
-      console.error('Ошибка при подготовке к запуску тренировки:', error)
+      logger.error('❌ Ошибка в createModelTraining контроллере:', {
+        error: error.message,
+        stack: error.stack,
+        body: req.body,
+        file: req.file,
+        files: req.files,
+      })
+      // Pass error to the next error-handling middleware if not already sent response
       if (!res.headersSent) {
-        res
-          .status(400)
-          .json({ message: error.message || 'Validation or setup error' })
-      } else {
-        errorMessageAdmin(
-          new Error(
-            `🚨 Критическая ошибка после отправки заголовков в createModelTraining для ${telegram_id}: ${error.message}`
-          )
-        )
+        next(error)
       }
     }
   }
@@ -558,7 +585,7 @@ export class GenerationController {
     try {
       // Временно перенаправляем на основную версию
       console.log('⚠️ V2 версия временно отключена, используем основную версию')
-      return this.createModelTraining(req, res)
+      return this.createModelTraining(req, res, next)
     } catch (error) {
       console.error('Ошибка при обработке запроса:', error)
       next(error)
