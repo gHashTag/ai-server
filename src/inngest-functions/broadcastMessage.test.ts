@@ -1,5 +1,4 @@
 import { inngest } from '@/core/inngest/clients'
-import { broadcastMessage } from './broadcastMessage'
 import { broadcastService } from '@/services/broadcast.service'
 
 // Мокаем модули

@@ -16,6 +16,7 @@ import { API_URL } from '@/config'
 import { BalanceHelper } from '@/helpers/inngest'
 import { logger } from '@utils/logger'
 import { PaymentType } from '@/interfaces/payments.interface'
+import { slugify } from 'inngest' // For v3 migration
 
 import type { Prediction } from 'replicate'
 
@@ -190,7 +191,8 @@ const TRAINING_MESSAGES = {
 // Определяем функцию с правильной идемпотентностью
 export const generateModelTraining = inngest.createFunction(
   {
-    name: 'model-training',
+    id: slugify('model-training'), // v3 requires id
+    name: 'Model Training', // Optional display name
     concurrency: 2,
   },
   { event: 'model/training.start' },
@@ -198,7 +200,7 @@ export const generateModelTraining = inngest.createFunction(
     // Добавляем информативный лог о входящем событии
     console.log('🎯 СОБЫТИЕ ТРЕНИРОВКИ ПОЛУЧЕНО:', {
       eventName: event.name,
-      runId: runId,
+      runId: runId, // Use runId from args
       telegram_id: event.data.telegram_id,
       modelName: event.data.modelName,
       timestamp: new Date(event.ts).toISOString(),
@@ -206,7 +208,7 @@ export const generateModelTraining = inngest.createFunction(
 
     logger.info({
       message: 'Получено событие тренировки модели',
-      runId: runId,
+      runId: runId, // Use runId from args
       timestamp: new Date(event.ts).toISOString(),
     })
 

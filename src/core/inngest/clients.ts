@@ -1,19 +1,18 @@
 import { Inngest } from 'inngest'
 import { INNGEST_WEBHOOK_URL } from '@/config'
-import { isDev } from '@/config'
-// Добавляем лог для проверки инициализации
-console.log('🔄 Initializing Inngest client (v2)...')
+
+console.log('🔄 Initializing Inngest client (v3 style)...')
 console.log(
-  '🌐 Inngest webhook URL (v3 context, may not be used by v2 client):',
-  INNGEST_WEBHOOK_URL
+  '🌐 Inngest webhook URL (v3 context):',
+  INNGEST_WEBHOOK_URL // Webhook URL might be handled differently or via env vars for v3
 )
 
 export const inngest = new Inngest({
-  name: 'ai-training-server',
-  eventKey: isDev ? undefined : process.env.INNGEST_EVENT_KEY,
+  id: 'ai-training-server', // v3 requires id
+  // eventKey is typically not set in client constructor for v3
+  // signingKey is also usually handled by middleware/serve or env vars
 })
 
-// Проверка экспорта
-console.log('✅ Inngest v2 client created:', !!inngest)
+console.log('✅ Inngest v3 client created:', !!inngest)
 
 // Массив functions здесь больше не нужен, он будет формироваться в месте использования serve

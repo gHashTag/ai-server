@@ -21,11 +21,12 @@ import fs from 'fs'
 import { logger } from '@/utils/logger'
 import { getBotByName } from '@/core/bot'
 import { PaymentType } from '@/interfaces/payments.interface'
+import { slugify } from 'inngest'
 
 export const neuroImageGeneration = inngest.createFunction(
   {
-    name: 'neuro-image-generation',
-    // idempotency: 'event.data.telegram_id',
+    id: slugify('neuro-image-generation'),
+    name: 'Neuro Image Generation',
     retries: 3,
   },
   { event: 'neuro/photo.generate' },

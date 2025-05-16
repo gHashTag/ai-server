@@ -10,6 +10,7 @@ import { logger } from '@/utils/logger'
 import { Telegraf } from 'telegraf'
 import { MyContext } from '@/interfaces'
 import { PaymentType } from '@/interfaces/payments.interface'
+import { slugify } from 'inngest' // For v3 migration
 
 // Константы для вариантов оплаты
 const PAYMENT_OPTIONS = [
@@ -61,7 +62,8 @@ const SUBSCRIPTION_AMOUNTS = SUBSCRIPTION_PLANS.reduce((acc, plan) => {
 // Функция Inngest для обработки платежей
 export const processPayment = inngest.createFunction(
   {
-    name: 'payment-processing-ai-server',
+    id: slugify('payment-processing-ai-server'), // v3 requires id
+    name: 'Payment Processing AI Server', // Optional display name
     retries: 3, // Автоматические повторы при сбоях
     onFailure: async ({ error }) => {
       console.log('❌ Ошибка обработки платежа:', error)

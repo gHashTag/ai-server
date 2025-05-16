@@ -15,6 +15,7 @@ import { errorMessageAdmin } from '@/helpers/errorMessageAdmin'
 import axios from 'axios'
 import { logger } from '@/utils/logger'
 import { PaymentType } from '@/interfaces/payments.interface'
+import { slugify } from 'inngest' // For v3 migration
 
 interface TrainingResponse {
   id: string
@@ -34,13 +35,14 @@ async function encodeFileToBase64(url: string): Promise<string> {
 // Создаем Inngest функцию
 export const modelTrainingV2 = inngest.createFunction(
   {
-    name: 'model-training-v2',
+    id: slugify('model-training-v2'), // v3 requires id
+    name: 'Model Training V2', // Optional display name
   },
   { event: 'model/training.v2.requested' },
   async ({ event, step, runId }) => {
     logger.info({
       message: '🚀 Model training initiated',
-      runId: runId,
+      runId: runId, // Use runId from args
       data: event.data,
     })
 

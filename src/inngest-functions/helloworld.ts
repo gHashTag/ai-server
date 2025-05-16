@@ -1,15 +1,16 @@
 import { inngest } from '@/core/inngest/clients'
+import { slugify } from 'inngest' // For v3 migration
 
 // 2. Тестовая функция
 export const helloWorld = inngest.createFunction(
   {
-    name: 'hello-world-test', // Changed from id to name for v2
-    retries: 3, // Количество попыток
+    id: slugify('hello-world-test'), // v3 requires id
+    name: 'Hello World Test', // Optional display name
+    retries: 3,
   },
-  { event: 'test/hello' }, // Триггерное событие
+  { event: 'test/hello' },
   async ({ event, step }) => {
-    // Логика функции
-    await step.sleep('2s') // Removed step ID 'pause' for v2 compatibility
+    await step.sleep('wait_2_seconds_hello', '2s') // v3 step.sleep requires an ID
     return {
       success: true,
       message: `Привет, ${event.data.name || 'Мир'}! 👋`,

@@ -1,6 +1,7 @@
 import { inngest } from '@/core/inngest/clients'
 import { broadcastService } from '@/services/broadcast.service'
 import { logger } from '@utils/logger'
+import { slugify } from 'inngest' // For v3 migration
 // Интерфейс для данных события
 export interface BroadcastEventData {
   imageUrl?: string
@@ -19,7 +20,8 @@ export interface BroadcastEventData {
 // Функция для рассылки сообщений
 export const broadcastMessage = inngest.createFunction(
   {
-    name: 'broadcast-message',
+    id: slugify('broadcast-message'), // v3 requires id, using slugify for existing name
+    name: 'Broadcast Message', // Optional display name for v3
     retries: 3,
   },
   { event: 'broadcast/send-message' },
@@ -79,23 +81,7 @@ export const broadcastMessage = inngest.createFunction(
         return result.users
       })
 
-      // Шаг 4: Подготовка ботов
-      const bots = await step.run('prepare-bots', async () => {
-        const uniqueBotNames = [...new Set(users.map(u => u.bot_name))]
-        const botResults = {}
-
-        for (const botName of uniqueBotNames) {
-          const bot = await broadcastService.getBotInstance(botName)
-          if (!bot) {
-            throw new Error(`Бот ${botName} не найден`)
-          }
-          botResults[botName] = bot
-        }
-
-        return botResults
-      })
-
-      // Шаг 5: Отправка сообщений
+      // Шаг 4: Отправка сообщений
       const result = await step.run('send-messages', async () => {
         const broadcastResult = await broadcastService.sendToAllUsers(
           params.imageUrl,
@@ -109,7 +95,7 @@ export const broadcastMessage = inngest.createFunction(
         return broadcastResult || { successCount: 0, errorCount: 0 }
       })
 
-      // Шаг 6: Анализ результатов
+      // Шаг 5: Анализ результатов
       const summary = await step.run('analyze-results', async () => {
         const totalUsers = users.length
         const successRate = (result.successCount / totalUsers) * 100
