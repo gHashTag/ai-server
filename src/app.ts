@@ -94,8 +94,8 @@ export class App {
     this.app.use(helmet())
     this.app.use(compression())
     // Временно комментируем для диагностики проблемы с multipart
-    // this.app.use(express.json({ limit: '10mb' }));
-    // this.app.use(express.urlencoded({ limit: '10mb', extended: true }));
+    this.app.use(express.json({ limit: '10mb' }))
+    this.app.use(express.urlencoded({ limit: '10mb', extended: true }))
     this.app.use(cookieParser())
     this.app.use(morgan('combined'))
     this.app.use('/uploads', express.static(path.join(__dirname, 'uploads')))
