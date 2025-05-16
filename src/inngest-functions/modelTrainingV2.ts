@@ -34,13 +34,13 @@ async function encodeFileToBase64(url: string): Promise<string> {
 // Создаем Inngest функцию
 export const modelTrainingV2 = inngest.createFunction(
   {
-    id: 'model-training-v2',
+    name: 'model-training-v2',
   },
   { event: 'model/training.v2.requested' },
-  async ({ event, step }) => {
+  async ({ event, step, runId }) => {
     logger.info({
       message: '🚀 Model training initiated',
-      eventId: event.id,
+      runId: runId,
       data: event.data,
     })
 

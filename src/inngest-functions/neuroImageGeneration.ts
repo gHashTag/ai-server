@@ -24,7 +24,7 @@ import { PaymentType } from '@/interfaces/payments.interface'
 
 export const neuroImageGeneration = inngest.createFunction(
   {
-    id: 'neuro-image-generation',
+    name: 'neuro-image-generation',
     // idempotency: 'event.data.telegram_id',
     retries: 3,
   },

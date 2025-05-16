@@ -61,8 +61,7 @@ const SUBSCRIPTION_AMOUNTS = SUBSCRIPTION_PLANS.reduce((acc, plan) => {
 // Функция Inngest для обработки платежей
 export const processPayment = inngest.createFunction(
   {
-    id: 'payment-processing-ai-server',
-    name: 'Обработка платежей',
+    name: 'payment-processing-ai-server',
     retries: 3, // Автоматические повторы при сбоях
     onFailure: async ({ error }) => {
       console.log('❌ Ошибка обработки платежа:', error)

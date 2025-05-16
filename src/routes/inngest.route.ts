@@ -1,29 +1,34 @@
-import { serve } from 'inngest/express'
+import { serve } from 'inngest/express' // Предполагаемый v2 импорт для Express
+// Импортируем только клиент inngest
 import { inngest } from '@/core/inngest/clients'
-import {
-  generateModelTraining,
-  modelTrainingV2,
-  broadcastMessage,
-  processPayment,
-} from '../inngest-functions'
+// Импортируем все функции отдельно для сборки массива
+import * as allDefinedFunctions from '@/inngest-functions'
 
-console.log('🔍 Регистрация Inngest функций:', {
-  generateModelTrainingExists: !!generateModelTraining,
-  modelTrainingV2Exists: !!modelTrainingV2,
-  broadcastMessageExists: !!broadcastMessage,
-  processPaymentExists: !!processPayment,
+// Собираем все экспортированные функции в один массив
+const appFunctions = Object.values(allDefinedFunctions)
+
+console.log(
+  '🚦 Настройка Inngest маршрутов (v2). Количество обнаруженных функций для регистрации:',
+  appFunctions.length
+)
+
+// Логируем для проверки, какие конкретно функции были найдены
+// Это поможет убедиться, что все нужные функции попадают в serve
+console.log('🔍 Обнаруженные Inngest функции для регистрации (v2):', {
+  generateModelTrainingExists: !!allDefinedFunctions.generateModelTraining,
+  modelTrainingV2Exists: !!allDefinedFunctions.modelTrainingV2,
+  neuroImageGenerationExists: !!allDefinedFunctions.neuroImageGeneration,
+  helloWorldExists: !!allDefinedFunctions.helloWorld, // если есть такая функция
+  broadcastMessageExists: !!allDefinedFunctions.broadcastMessage,
+  processPaymentExists: !!allDefinedFunctions.processPayment,
+  // Добавьте сюда другие функции из вашего @/inngest-functions/index.ts для проверки
 })
 
-// Регистрация ВСЕХ функций в одном месте
-export const inngestRouter = serve({
-  client: inngest,
-  functions: [
-    generateModelTraining,
-    modelTrainingV2,
-    broadcastMessage,
-    processPayment,
-  ],
+// v2 Express middleware setup
+// Используем serve(client, functions, options) как основной паттерн для v2
+export const inngestRouter = serve(inngest, appFunctions, {
   signingKey: process.env.INNGEST_SIGNING_KEY,
+  // dev: isDev, // Опция dev может быть здесь или обрабатываться автоматически
 })
 
-console.log('✅ Inngest маршруты настроены!')
+console.log('✅ Inngest v2 маршруты настроены и готовы к работе!')

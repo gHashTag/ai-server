@@ -19,7 +19,7 @@ export interface BroadcastEventData {
 // Функция для рассылки сообщений
 export const broadcastMessage = inngest.createFunction(
   {
-    id: 'broadcast-message',
+    name: 'broadcast-message',
     retries: 3,
   },
   { event: 'broadcast/send-message' },

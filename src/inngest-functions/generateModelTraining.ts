@@ -190,16 +190,15 @@ const TRAINING_MESSAGES = {
 // Определяем функцию с правильной идемпотентностью
 export const generateModelTraining = inngest.createFunction(
   {
-    id: 'model-training',
+    name: 'model-training',
     concurrency: 2,
-    idempotency: 'event.data.telegram_id + "-" + event.data.modelName',
   },
   { event: 'model/training.start' },
-  async ({ event, step }) => {
+  async ({ event, step, runId }) => {
     // Добавляем информативный лог о входящем событии
     console.log('🎯 СОБЫТИЕ ТРЕНИРОВКИ ПОЛУЧЕНО:', {
       eventName: event.name,
-      eventId: event.id,
+      runId: runId,
       telegram_id: event.data.telegram_id,
       modelName: event.data.modelName,
       timestamp: new Date(event.ts).toISOString(),
@@ -207,9 +206,8 @@ export const generateModelTraining = inngest.createFunction(
 
     logger.info({
       message: 'Получено событие тренировки модели',
-      eventId: event.id,
+      runId: runId,
       timestamp: new Date(event.ts).toISOString(),
-      idempotencyKey: `train:${event.data.telegram_id}:${event.data.modelName}`,
     })
 
     // Приведение типов для event.data
