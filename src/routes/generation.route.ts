@@ -1,6 +1,7 @@
 import { Router } from 'express'
 import { GenerationController } from '@controllers/generation.controller'
 import { Routes } from '@interfaces/routes.interface'
+import { fileUpload } from '@/utils/fileUpload'
 
 export class GenerationRoute implements Routes {
   public path = '/generate'
@@ -47,6 +48,7 @@ export class GenerationRoute implements Routes {
     )
     this.router.post(
       `${this.path}/create-model-training`,
+      fileUpload.single('zipUrl'),
       this.generationController.createModelTraining
     )
     this.router.post(

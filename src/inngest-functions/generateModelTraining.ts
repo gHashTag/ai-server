@@ -580,11 +580,12 @@ export const generateModelTraining = inngest.createFunction(
       }
 
       // 4. Расчет стоимости
-      paymentAmount = (
-        calculateModeCost[ModeEnum.DigitalAvatarBody] as (
-          steps: number
-        ) => number
-      )(steps)
+      const costResult = calculateModeCost({
+        mode: ModeEnum.DigitalAvatarBody,
+        steps: steps, // Assuming steps is already a number here
+        numImages: 1, // Assuming 1 image/model for training cost calculation
+      })
+      paymentAmount = costResult.stars
 
       logger.info({
         message: 'Рассчитана стоимость тренировки',
