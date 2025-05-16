@@ -221,7 +221,7 @@ export const generateModelTraining = inngest.createFunction(
       try {
         // 1. Проверяем записи в базе данных
         const { data: existingTrainings } = await supabase
-          .from('trainings')
+          .from('model_trainings')
           .select('id, replicate_training_id, status')
           .eq('telegram_id', eventData.telegram_id)
           .eq('model_name', eventData.modelName)
