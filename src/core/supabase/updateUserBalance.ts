@@ -329,10 +329,13 @@ export const updateUserBalance = async (
       })
 
       // Обновляем существующую запись
+      // ВАЖНО: Работаем с payments_v2
       const { error: updateError } = await supabase
-        .from('payments')
+        .from('payments_v2') // <--- ИЗМЕНЕНО НА payments_v2
         .update({
           status: 'COMPLETED',
+          // Возможно, нужно обновлять и другие поля, например, payment_date
+          payment_date: new Date(),
         })
         .eq('inv_id', metadata.inv_id)
 
@@ -355,12 +358,11 @@ export const updateUserBalance = async (
       })
     } else {
       // Если inv_id не передан, создаем новую запись
-      // Более надежный способ генерации ID
-      const invId = `${Date.now()}-${Math.floor(
+      // Генерируем invId как строку из чисел, чтобы было ближе к bigint, если понадобится конвертация, или если тип поля text
+      const invId = `${Date.now()}${Math.floor(
         Math.random() * 1000000
-      )}-${telegram_id.substring(0, 5)}`
+      )}${telegram_id.substring(0, 5)}`.slice(0, 18) // Пример числовой строки, ограниченной по длине для bigint
 
-      // Получаем реальную сумму транзакции и звезд
       const transactionAmount = Math.abs(safeAmount)
 
       logger.info('💼 Создание новой записи о транзакции:', {
@@ -379,20 +381,45 @@ export const updateUserBalance = async (
         const safeRoundedAmount =
           transactionAmount != null ? Math.round(transactionAmount) : 0
 
-        const { error: paymentError } = await supabase.from('payments').insert({
-          telegram_id,
-          inv_id: invId,
-          currency: metadata?.currency || 'STARS',
-          amount: safeRoundedAmount, // Защита от null/undefined
-          status: 'COMPLETED',
-          stars: safeRoundedAmount, // Защита от null/undefined
-          type,
-          description: description || `Balance ${type}`,
-          payment_method:
-            metadata?.payment_method || (metadata?.service_type as ModeEnum),
-          bot_name: metadata?.bot_name || 'neuro_blogger_bot',
-          language: metadata?.language || 'ru',
-        })
+        // Определяем service_type для MONEY_OUTCOME
+        let serviceType = metadata?.service_type || null
+        if (type === PaymentType.MONEY_OUTCOME && !serviceType) {
+          // Пытаемся определить service_type из description, если он не передан явно
+          // Это очень упрощенная логика, ее нужно будет улучшить или передавать service_type всегда явно
+          if (
+            description?.toLowerCase().includes('neurophoto') ||
+            description?.toLowerCase().includes('neuro_photo')
+          ) {
+            serviceType = ModeEnum.NeuroPhoto // Предполагаем, что ModeEnum.NeuroPhoto это строка 'NEURO_PHOTO'
+          } else if (description?.toLowerCase().includes('texttoimage')) {
+            serviceType = ModeEnum.TextToImage
+          }
+          // ... другие режимы по аналогии
+        }
+
+        // ВАЖНО: Работаем с payments_v2
+        const { error: paymentError } = await supabase
+          .from('payments_v2')
+          .insert({
+            telegram_id,
+            inv_id: invId, // inv_id как строка, колонка в DB должна быть text или этот ID должен быть числом для bigint
+            currency: metadata?.currency || 'STARS',
+            amount: metadata?.currency === 'STARS' ? 0 : safeRoundedAmount, // Если валюта STARS, денежная сумма 0
+            status: 'COMPLETED',
+            stars: safeRoundedAmount,
+            type,
+            description: description || `Balance ${type}`,
+            payment_method:
+              metadata?.payment_method ||
+              (type === PaymentType.MONEY_OUTCOME ? 'Internal' : 'System'), // Более осмысленный default
+            bot_name: metadata?.bot_name || 'unknown_bot', // Более безопасный default
+            language: metadata?.language || 'ru',
+            metadata: metadata || {},
+            service_type:
+              type === PaymentType.MONEY_OUTCOME ? serviceType : null, // Только для расходов
+            subscription_type: null, // Для обычных расходов это null
+            payment_date: new Date(), // Дата фактического совершения платежа
+          })
 
         if (paymentError) {
           logger.error('❌ Ошибка при создании записи о транзакции:', {
