@@ -465,7 +465,7 @@ export class GenerationController {
       bot_name,
       gender,
     } = req.body
-    // console.log(req.body, 'req.body') // Original console.log, can be removed or kept
+    console.log(req.body, 'req.body') // Original console.log, can be removed or kept
 
     try {
       logger.info('Attempting to process model training request data:')
@@ -485,35 +485,23 @@ export class GenerationController {
       if (!steps) throw new Error('steps is required')
       if (!telegram_id) throw new Error('telegram_id is required')
       if (!bot_name) throw new Error('bot_name is required')
-      // if (!gender) throw new Error('gender is required') // Gender is optional
+      if (!gender) throw new Error('gender is required') // Gender is now required again
 
-      // Multer puts single file in req.file, multiple in req.files
-      const anies = req.files as any[] // Type assertion to handle mixed array
-      const zipFile =
-        req.file ||
-        (anies?.length > 0
-          ? anies.find(f => f.fieldname === 'zipUrl')
-          : undefined)
+      const zipFile = req.file // CORRECTED: multer.single populates req.file
 
-      logger.info({
-        message: 'Attempting to find zipFile. req.file:',
-        singleFile: req.file,
-        allFiles: req.files,
-      })
-
-      if (!zipFile) {
+      // Более точная проверка, если мы хотим быть уверены и в fieldname:
+      if (!zipFile || zipFile.fieldname !== 'zipUrl') {
         logger.error(
-          'zipFile is required but not found. req.file:',
-          req.file,
-          'req.files:',
-          req.files
+          "zipFile with fieldname 'zipUrl' is required, but not found or fieldname mismatch.",
+          {
+            receivedFile: req.file,
+          }
         )
-        throw new Error('zipFile is required')
+        throw new Error("zipFile with fieldname 'zipUrl' is required")
       }
-      logger.info({ message: 'zipFile found:', zipFile })
 
       const zipUrl = `https://${req.headers.host}/uploads/${telegram_id}/${type}/${zipFile.filename}`
-      logger.info(`Constructed zipUrl: ${zipUrl}`)
+      console.log(zipUrl, 'zipUrl')
 
       try {
         logger.info(

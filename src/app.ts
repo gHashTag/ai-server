@@ -24,7 +24,6 @@ import { Server } from 'http'
 import path from 'path'
 import morgan from 'morgan'
 // import { checkSecretKey } from './utils/checkSecretKey'
-import { fileUpload } from './utils/fileUpload'
 import { inngestRouter } from './routes/inngest.route'
 import { UploadRoute } from './routes/upload.route'
 import { inngest } from './core/inngest/clients'
@@ -94,10 +93,10 @@ export class App {
     this.app.use(hpp())
     this.app.use(helmet())
     this.app.use(compression())
-    this.app.use(express.json({ limit: '10mb' }))
-    this.app.use(express.urlencoded({ limit: '10mb', extended: true }))
+    // Временно комментируем для диагностики проблемы с multipart
+    // this.app.use(express.json({ limit: '10mb' }));
+    // this.app.use(express.urlencoded({ limit: '10mb', extended: true }));
     this.app.use(cookieParser())
-    this.app.use(fileUpload.any())
     this.app.use(morgan('combined'))
     this.app.use('/uploads', express.static(path.join(__dirname, 'uploads')))
   }
@@ -149,8 +148,6 @@ export class App {
         message: 'API is working',
       })
     })
-
-    this.app.use('/api/upload', new UploadRoute().router)
   }
 
   private initializeSwagger() {

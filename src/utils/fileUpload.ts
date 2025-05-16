@@ -5,6 +5,9 @@ import fs from 'fs'
 declare module 'express' {
   interface Request {
     files?: Express.Multer.File[]
+    // Если у вас есть AuthMiddleware, который добавляет req.user,
+    // то здесь можно было бы также расширить Request интерфейс:
+    // user?: { telegram_id: string | number; /* другие поля пользователя */ }
   }
 }
 
@@ -24,30 +27,53 @@ async function ensureDirectoryExistence(filePath: string) {
 const storage = multer.diskStorage({
   destination: async function (req, file, cb) {
     try {
-      console.log('CASE: storage')
-      console.log(req.body, 'req.body')
+      console.log('CASE: storage destination function entered')
+      console.log('req.body:', req.body) // Выводим все тело запроса
+
       const telegramId = req.body.telegram_id
-      const type = req.body.type
+      // Устанавливаем 'model' как тип по умолчанию, если он не предоставлен
+      // Это соответствует вашему предыдущему неявному ожиданию для generateModelTraining
+      const type = req.body.type || 'model'
+
+      if (!telegramId) {
+        console.error('Error: telegram_id is missing in req.body')
+        return cb(new Error('telegram_id is missing in request body'), '')
+      }
+
+      // type теперь всегда будет иметь значение
+      // if (!type) {
+      //   console.error('Error: type is missing in req.body');
+      //   return cb(new Error('type is missing in request body'), '');
+      // }
 
       const userDir = path.join(
-        __dirname,
-        '../uploads',
-        telegramId.toString(),
-        type
+        __dirname, // Это будет dist/utils
+        '..', // Подняться до dist/
+        '..', // Подняться до корня проекта (где src/, uploads/)
+        'uploads', // Перейти в uploads/
+        String(telegramId), // Используем String() для большей безопасности
+        String(type) // Используем String() для большей безопасности
       )
-      console.log(`Saving file to directory: ${userDir}`)
+      console.log(`Target directory for upload: ${userDir}`)
 
       await ensureDirectoryExistence(userDir)
 
       cb(null, userDir)
     } catch (error) {
+      console.error('Error in multer destination function:', error)
       cb(error, '')
     }
   },
   filename: function (req, file, cb) {
-    console.log('CASE: filename')
-    const filename = Date.now() + '-' + file.originalname
-    console.log(`Saving file with name: ${filename}`)
+    console.log('CASE: filename function entered')
+    console.log('req.body for filename:', req.body) // Проверим, доступен ли req.body и здесь
+    const originalFilename = file.originalname || 'unknown_file'
+    const safeOriginalFilename = originalFilename.replace(
+      /[^a-zA-Z0-9._-]/g,
+      '_'
+    )
+    const filename = Date.now() + '-' + safeOriginalFilename
+    console.log(`Generated filename: ${filename}`)
     cb(null, filename)
   },
 })
