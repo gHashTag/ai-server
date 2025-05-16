@@ -98,7 +98,10 @@ export class App {
     this.app.use(express.urlencoded({ limit: '10mb', extended: true }))
     this.app.use(cookieParser())
     this.app.use(morgan('combined'))
-    this.app.use('/uploads', express.static(path.join(__dirname, 'uploads')))
+    this.app.use(
+      '/uploads',
+      express.static(path.join(__dirname, '..', 'uploads'))
+    )
   }
 
   private initializeRoutes(routes: Routes[]) {
