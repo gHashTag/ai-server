@@ -7,7 +7,7 @@ import { generateImageToPrompt } from '@/services/generateImageToPrompt'
 import { createVoiceAvatar } from '@/services/createVoiceAvatar'
 import { generateModelTraining } from '@/services/'
 import { errorMessageAdmin } from '@/helpers/errorMessageAdmin'
-
+import { generateNeuroImage } from '@/services/generateNeuroImage'
 import { validateUserParams } from '@/middlewares/validateUserParams'
 import { generateNeuroImageV2 } from '@/services/generateNeuroImageV2'
 import { generateLipSync } from '@/services/generateLipSync'
@@ -97,22 +97,62 @@ export class GenerationController {
         return
       }
       validateUserParams(req)
+      // Отправляем предварительный ответ клиенту, что обработка началась
       res.status(200).json({ message: 'Processing started' })
 
-      await inngest.send({
-        name: 'neuro/photo.generate',
-        data: {
+      try {
+        // ПЛАН А: Попытка отправить задачу в Inngest
+        console.log(
+          `Attempting Plan A: Sending task to Inngest for telegram_id: ${telegram_id}`
+        )
+        await inngest.send({
+          name: 'neuro/photo.generate', // Это имя Inngest-функции
+          data: {
+            prompt,
+            model_url,
+            num_images,
+            telegram_id,
+            username,
+            is_ru,
+            bot_name,
+          },
+        })
+        console.log(
+          `Plan A successful: Task sent to Inngest for telegram_id: ${telegram_id}`
+        )
+        // Если Inngest принял задачу, то работа этого контроллера завершена.
+      } catch (inngestError) {
+        // ПЛАН Б: Ошибка при отправке в Inngest, переходим к прямому вызову
+        console.error(
+          `Plan A (Inngest send) failed for telegram_id: ${telegram_id}. Error: ${inngestError.message}. Proceeding to Plan B.`
+        )
+        // Опционально: уведомить администратора об ошибке с Inngest
+
+        console.log(
+          `Executing Plan B: Calling generateNeuroImage directly for telegram_id: ${telegram_id}`
+        )
+        // Выполняем generateNeuroImage напрямую.
+        // Эта функция сама обрабатывает ошибки и отправляет сообщения пользователю.
+        await generateNeuroImage(
           prompt,
           model_url,
           num_images,
           telegram_id,
           username,
           is_ru,
-          bot_name,
-        },
-      })
+          bot_name
+        )
+        console.log(
+          `Plan B (generateNeuroImage) completed for telegram_id: ${telegram_id}`
+        )
+      }
     } catch (error) {
-      next(error)
+      // Если ошибка произошла на этапе валидации, или если Plan B (generateNeuroImage)
+      // выбросил необработанную ошибку, то она попадет сюда.
+      console.error(
+        `Error in neuroPhoto controller for telegram_id: ${req.body?.telegram_id}. Error: ${error.message}`
+      )
+      next(error) // Передаем ошибку стандартному обработчику ошибок Express
     }
   }
 

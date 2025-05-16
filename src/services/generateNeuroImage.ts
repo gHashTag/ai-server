@@ -12,10 +12,9 @@ import { saveFileLocally } from '@/helpers'
 import { pulse } from '@/helpers/pulse'
 import { processBalanceOperation } from '@/price/helpers'
 import { errorMessageAdmin } from '@/helpers/errorMessageAdmin'
-import { Telegraf } from 'telegraf'
-import { MyContext } from '@/interfaces'
+import { getBotByName } from '@/core/bot'
 import { ModeEnum } from '@/interfaces/modes'
-import { calculateModeCost } from '@/price/helpers/modelsCost'
+import { calculateModeCost, BASE_COSTS } from '@/price/helpers/modelsCost'
 import path from 'path'
 import { API_URL } from '@/config'
 import fs from 'fs'
@@ -28,7 +27,6 @@ export async function generateNeuroImage(
   telegram_id: string,
   username: string,
   is_ru: boolean,
-  bot: Telegraf<MyContext>,
   bot_name: string
 ): Promise<GenerationResult[] | null> {
   console.log('>>> generateNeuroImage called with args:', {
@@ -51,27 +49,54 @@ export async function generateNeuroImage(
     }
 
     // Расчет стоимости
-    let costPerImage: number
-    if (typeof calculateModeCost[ModeEnum.NeuroPhoto] === 'function') {
-      costPerImage = calculateModeCost[ModeEnum.NeuroPhoto](num_images)
-    } else {
-      costPerImage = calculateModeCost[ModeEnum.NeuroPhoto]
+    // 1. Получаем базовую стоимость за одно изображение NeuroPhoto
+    const baseCostEntry = BASE_COSTS[ModeEnum.NeuroPhoto]
+    if (typeof baseCostEntry !== 'number') {
+      // Это не должно произойти для NeuroPhoto, но на всякий случай
+      console.error(
+        `Error: Cost for ModeEnum.NeuroPhoto is not a number. Found: ${baseCostEntry}`
+      )
+      throw new Error('Failed to determine cost for NeuroPhoto.')
     }
-    const totalCost = costPerImage * num_images
+    const costPerSingleImage = baseCostEntry
+
+    // 2. Рассчитываем общую стоимость для проверки баланса
+    const totalCostForBalanceCheck = costPerSingleImage * num_images
 
     // Вызываем обновленную функцию проверки баланса
     const balanceCheck = await processBalanceOperation({
       telegram_id,
-      paymentAmount: totalCost,
+      paymentAmount: totalCostForBalanceCheck, // Используем новую общую стоимость
       is_ru,
       bot_name,
     })
+
+    const botCandidate = getBotByName(bot_name)
+
+    // Извлекаем сам экземпляр бота и проверяем его
+    const botInstance = botCandidate.bot
+
+    if (
+      !botInstance ||
+      !('telegram' in botInstance) ||
+      typeof botInstance.telegram.sendMessage !== 'function'
+    ) {
+      console.error(
+        `Error: Bot instance not found, invalid, or missing critical methods for bot_name: ${bot_name}. Error from getBotByName: ${botCandidate.error}`
+      )
+      // errorMessageAdmin(new Error(`Bot instance not found or invalid for ${bot_name} in generateNeuroImage. Details: ${botCandidate.error}`)); // опционально
+      throw new Error(
+        `Bot instance not found, invalid, or missing critical methods for bot_name: ${bot_name}. Details: ${
+          botCandidate.error || 'Unknown error'
+        }`
+      )
+    }
 
     // Обрабатываем результат проверки баланса
     if (!balanceCheck.success) {
       if (balanceCheck.error) {
         try {
-          await bot.telegram.sendMessage(
+          await botInstance.telegram.sendMessage(
             telegram_id.toString(),
             balanceCheck.error
           )
@@ -122,14 +147,14 @@ export async function generateNeuroImage(
       try {
         // ... (уведомление о начале генерации i-го изображения) ...
         if (num_images > 1) {
-          bot.telegram.sendMessage(
+          botInstance.telegram.sendMessage(
             telegram_id,
             is_ru
               ? `⏳ Генерация изображения ${i + 1} из ${num_images}`
               : `⏳ Generating image ${i + 1} of ${num_images}`
           )
         } else {
-          bot.telegram.sendMessage(
+          botInstance.telegram.sendMessage(
             telegram_id,
             is_ru ? '⏳ Генерация...' : '⏳ Generating...',
             {
@@ -143,7 +168,7 @@ export async function generateNeuroImage(
 
         if (!imageUrl || imageUrl.endsWith('empty.zip')) {
           console.error(`Failed to generate image ${i + 1}`)
-          await bot.telegram.sendMessage(
+          await botInstance.telegram.sendMessage(
             telegram_id,
             is_ru
               ? `❌ Не удалось сгенерировать изображение ${i + 1}.`
@@ -182,7 +207,7 @@ export async function generateNeuroImage(
 
         if (prompt_id === null) {
           console.error(`Failed to save prompt for image ${i + 1}`)
-          await bot.telegram.sendMessage(
+          await botInstance.telegram.sendMessage(
             telegram_id,
             is_ru
               ? `❌ Ошибка сохранения данных для изображения ${i + 1}.`
@@ -192,7 +217,7 @@ export async function generateNeuroImage(
         }
 
         // Отправляем изображение пользователю СРАЗУ
-        await bot.telegram.sendPhoto(telegram_id, {
+        await botInstance.telegram.sendPhoto(telegram_id, {
           source: fs.createReadStream(imageLocalPath),
         })
 
@@ -219,7 +244,7 @@ export async function generateNeuroImage(
             ? `❌ Ошибка при генерации изображения ${i + 1}.`
             : `❌ An error occurred generating image ${i + 1}.`
         }
-        await bot.telegram.sendMessage(telegram_id, errorMessageToUser)
+        await botInstance.telegram.sendMessage(telegram_id, errorMessageToUser)
         errorMessageAdmin(error as Error) // Логируем админу
         // Не прерываем цикл
       }
@@ -227,7 +252,8 @@ export async function generateNeuroImage(
 
     // --- СПИСАНИЕ СРЕДСТВ И ФИНАЛЬНОЕ УВЕДОМЛЕНИЕ (ПОСЛЕ ЦИКЛА) ---
     if (successful_generations > 0) {
-      const finalCost = costPerImage * successful_generations
+      // Используем costPerSingleImage, полученный ранее
+      const finalCost = costPerSingleImage * successful_generations
       const newBalance = initialBalance - finalCost
 
       console.log('Deducting balance (NeuroImage):', {
@@ -254,7 +280,7 @@ export async function generateNeuroImage(
         console.log('Balance updated successfully (NeuroImage)')
 
         // Отправляем финальное сообщение
-        await bot.telegram.sendMessage(
+        await botInstance.telegram.sendMessage(
           telegram_id,
           is_ru
             ? `✅ Готово! Успешно сгенерировано ${successful_generations} из ${num_images} изображений.\nСписано: ${finalCost.toFixed(
@@ -289,7 +315,7 @@ export async function generateNeuroImage(
           updateError
         )
         errorMessageAdmin(updateError as Error)
-        await bot.telegram.sendMessage(
+        await botInstance.telegram.sendMessage(
           telegram_id,
           is_ru
             ? '❌ Произошла ошибка при обновлении вашего баланса после генерации.'
@@ -297,7 +323,7 @@ export async function generateNeuroImage(
         )
       }
     } else {
-      await bot.telegram.sendMessage(
+      await botInstance.telegram.sendMessage(
         telegram_id,
         is_ru
           ? '❌ Не удалось сгенерировать изображения по вашему запросу.'
