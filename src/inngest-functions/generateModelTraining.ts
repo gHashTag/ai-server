@@ -541,6 +541,15 @@ export const generateModelTraining = inngest.createFunction(
         )
 
         logger.info('🚀 Training ID:', training.id)
+        // Логируем фактический URL вебхука, который будет использован Replicate
+        logger.info({
+          message: '⚙️ Replicate Webhook URL for this training',
+          url: `${API_URL}/webhooks/replicate`,
+          api_url_from_config: API_URL, // Логируем значение API_URL из конфига
+          raw_webhook_url_env: process.env.WEBHOOK_URL, // Логируем значение из process.env напрямую
+          raw_origin_env: process.env.ORIGIN, // Логируем ORIGIN для сравнения
+          node_env: process.env.NODE_ENV, // Логируем NODE_ENV
+        })
         trainingSteps.registerCancelHandler(eventData.telegram_id, training.id)
         return training
       },

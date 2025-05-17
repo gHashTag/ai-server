@@ -1,5 +1,7 @@
 # ai-server-express
 
+ssh -i ~/.ssh/id_rsa root@cicd-a6yes-u14194.vm.elestio.app
+
 ## Common Testing Issues & Solutions
 
 ### 1. Error: `column users.id does not exist` during balance check
