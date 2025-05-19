@@ -46,10 +46,14 @@ export async function generateNeuroImageV2(
     }
     // Расчет стоимости
     let costPerImage: number
-    if (typeof calculateModeCost[ModeEnum.NeuroPhotoV2] === 'function') {
-      costPerImage = calculateModeCost[ModeEnum.NeuroPhotoV2](num_images)
-    } else {
-      costPerImage = calculateModeCost[ModeEnum.NeuroPhotoV2]
+    // ГАРАНТИЯ: BASE_COSTS[ModeEnum.NeuroPhotoV2] всегда число, не функция
+    costPerImage = Number(calculateModeCost[ModeEnum.NeuroPhotoV2]) || 0
+    if (isNaN(costPerImage) || costPerImage <= 0) {
+      console.error(
+        '[generateNeuroImageV2] costPerImage is NaN or <= 0:',
+        costPerImage
+      )
+      costPerImage = 0
     }
     const totalCost = costPerImage * num_images
 
@@ -179,8 +183,30 @@ export async function generateNeuroImageV2(
 
     // --- СПИСАНИЕ СРЕДСТВ И ФИНАЛЬНОЕ УВЕДОМЛЕНИЕ (ПОСЛЕ ЦИКЛА ЗАПУСКА) ---
     if (successful_starts > 0) {
-      const finalCost = costPerImage * successful_starts // Списываем только за успешные запуски
-      const newBalance = initialBalance - finalCost
+      let finalCost = costPerImage * successful_starts
+      let newBalance = Number(initialBalance) - finalCost
+      if (isNaN(finalCost)) {
+        console.error(
+          '[generateNeuroImageV2] finalCost is NaN:',
+          finalCost,
+          'costPerImage:',
+          costPerImage,
+          'successful_starts:',
+          successful_starts
+        )
+        finalCost = 0
+      }
+      if (isNaN(newBalance)) {
+        console.error(
+          '[generateNeuroImageV2] newBalance is NaN:',
+          newBalance,
+          'initialBalance:',
+          initialBalance,
+          'finalCost:',
+          finalCost
+        )
+        newBalance = 0
+      }
 
       console.log('Deducting balance (NeuroImageV2):', {
         initialBalance,
@@ -209,12 +235,16 @@ export async function generateNeuroImageV2(
         await bot.telegram.sendMessage(
           telegram_id,
           is_ru
-            ? `✅ Успешно запущено ${successful_starts} из ${num_images} генераций V2! Ожидайте результат.\nСписано: ${finalCost.toFixed(
-                2
-              )} ⭐️\nВаш новый баланс: ${newBalance.toFixed(2)} ⭐️`
-            : `✅ Successfully started ${successful_starts} out of ${num_images} V2 generations! Please wait for the result.\nDeducted: ${finalCost.toFixed(
-                2
-              )} ⭐️\nYour new balance: ${newBalance.toFixed(2)} ⭐️`
+            ? `✅ Успешно запущено ${successful_starts} из ${num_images} генераций V2! Ожидайте результат.\nСписано: ${(
+                Number(finalCost) || 0
+              ).toFixed(2)} ⭐️\nВаш новый баланс: ${(
+                Number(newBalance) || 0
+              ).toFixed(2)} ⭐️`
+            : `✅ Successfully started ${successful_starts} out of ${num_images} V2 generations! Please wait for the result.\nDeducted: ${(
+                Number(finalCost) || 0
+              ).toFixed(2)} ⭐️\nYour new balance: ${(
+                Number(newBalance) || 0
+              ).toFixed(2)} ⭐️`
         )
       } catch (updateError) {
         console.error(
