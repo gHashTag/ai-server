@@ -146,6 +146,7 @@ export async function generateNeuroImageV2(
             body: JSON.stringify(input),
           }
         )
+        console.log('response', response)
 
         if (!response.ok) {
           const errorData = await response.text()
@@ -157,6 +158,15 @@ export async function generateNeuroImageV2(
 
         const data = await response.json()
         console.log(`BFL response V2 (${i + 1}):`, data)
+        // Логируем, есть ли sample/url в data
+        if (data?.sample || data?.url) {
+          console.log(
+            'BFL API returned image sample/url:',
+            data.sample || data.url
+          )
+        } else {
+          console.warn('BFL API did NOT return image sample/url')
+        }
         task_ids.push(data.id) // Сохраняем ID задачи
 
         // Сохраняем промпт с ID задачи BFL
@@ -167,6 +177,11 @@ export async function generateNeuroImageV2(
           telegram_id,
           data.status // 'PENDING' или другой начальный статус
         )
+        // --- ДОБАВИТЬ: логика скачивания/сохранения фото, если реализована ---
+        // Например:
+        // const localPath = await saveFileLocally(...)
+        // console.log('Saved image locally at:', localPath)
+        // ---
         successful_starts++
       } catch (startError) {
         console.error(`Error starting generation V2 ${i + 1}:`, startError)
@@ -218,7 +233,7 @@ export async function generateNeuroImageV2(
       try {
         await updateUserBalance(
           telegram_id,
-          newBalance,
+          finalCost,
           PaymentType.MONEY_OUTCOME,
           `NeuroPhotoV2 generation start (${successful_starts}/${num_images} started)`,
           {
