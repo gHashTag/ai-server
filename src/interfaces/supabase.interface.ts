@@ -68,13 +68,13 @@ export interface ModelTraining {
   model_url: string
 }
 export type Subscription =
-  | 'neurobase'
   | 'neuromeeting'
   | 'neuroblogger'
   | 'neurotester'
   | 'neurophoto'
   | 'neuromentor'
   | 'stars'
+  | 'neurovideo'
 
 export interface UserType {
   id: bigint

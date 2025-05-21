@@ -1,9 +1,9 @@
 export enum SubscriptionType {
   NEUROPHOTO = 'NEUROPHOTO',
-  NEUROBASE = 'NEUROBASE',
   NEUROTESTER = 'NEUROTESTER',
   NEUROBLOGGER = 'NEUROBLOGGER',
   STARS = 'stars',
+  NEUROVIDEO = 'NEUROVIDEO',
 }
 
 export interface SubscriptionCreateParams {

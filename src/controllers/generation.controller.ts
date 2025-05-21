@@ -570,14 +570,10 @@ export class GenerationController {
     res: Response,
     next: NextFunction
   ): Promise<void> => {
-    try {
-      // Временно перенаправляем на основную версию
-      console.log('⚠️ V2 версия временно отключена, используем основную версию')
-      return this.createModelTraining(req, res, next)
-    } catch (error) {
-      console.error('Ошибка при обработке запроса:', error)
-      next(error)
-    }
+    // Этот метод просто вызывает createModelTraining, передавая ему все аргументы.
+    // Это сделано для совместимости или для постепенного перехода.
+    // Важно: Передаем `next` для корректной обработки ошибок в Express.
+    this.createModelTraining(req, res, next) // Добавлен next
   }
 
   public createLipSync = async (

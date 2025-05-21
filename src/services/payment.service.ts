@@ -32,12 +32,12 @@ const SUBSCRIPTION_PLANS = [
   },
   {
     row: 1,
-    text: '📚 NeuroBase',
+    text: '📚 NeuroVideo',
     en_price: 33,
     ru_price: 2999,
     description: 'Self-study using neural networks with an AI avatar.',
     stars_price: 1303,
-    callback_data: 'neurobase',
+    callback_data: 'neurovideo',
   },
   {
     row: 2,
@@ -116,7 +116,7 @@ export class PaymentService {
         const plan = SUBSCRIPTION_PLANS.find(p => p.ru_price === outSum)
         if (plan) {
           stars = plan.stars_price
-          subscription = plan.callback_data // 'neurobase', 'neurophoto' etc.
+          subscription = plan.callback_data // 'neurovideo', 'neurophoto' etc.
         }
       }
       // 2. Если не соответствует тарифу, проверяем стандартные варианты оплаты

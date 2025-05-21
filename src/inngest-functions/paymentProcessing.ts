@@ -35,12 +35,12 @@ const SUBSCRIPTION_PLANS = [
   },
   {
     row: 1,
-    text: '📚 NeuroBase',
+    text: '📚 NeuroVideo',
     en_price: 33,
     ru_price: 2999,
     description: 'Self-study using neural networks with an AI avatar.',
     stars_price: 1303,
-    callback_data: 'neurobase',
+    callback_data: 'neurovideo',
   },
   {
     row: 2,
