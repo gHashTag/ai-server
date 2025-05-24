@@ -23,7 +23,7 @@ interface ConversionRates {
 
 // Определяем конверсии
 export const conversionRates: ConversionRates = {
-  costPerStepInStars: 0.25,
+  costPerStepInStars: 0.22,
   costPerStarInDollars: 0.016,
   rublesToDollarsRate: 100,
 }
