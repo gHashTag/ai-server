@@ -74,6 +74,9 @@ export class App {
   }
 
   private initializeMiddlewares() {
+    // Полностью удаляем отладочный middleware, который переопределял res.send
+    // и вызывал ошибки в обработчике ошибок
+
     // this.app.use(checkSecretKey);
     this.app.use((req, res, next) => {
       getDynamicLogger(LOG_FORMAT)(req, res, next)
@@ -91,7 +94,7 @@ export class App {
       })
     )
     this.app.use(hpp())
-    this.app.use(helmet())
+    // this.app.use(helmet()); // Temporarily commented out for Inngest dev troubleshooting
     this.app.use(compression())
     // Временно комментируем для диагностики проблемы с multipart
     this.app.use(express.json({ limit: '10mb' }))
@@ -105,6 +108,11 @@ export class App {
   }
 
   private initializeRoutes(routes: Routes[]) {
+    // Удаляем этот специфический обработчик, так как serve из inngest/express должен сам его обрабатывать
+    // this.app.head('/api/inngest', (req, res) => {
+    //   res.status(200).end()
+    // })
+
     this.app.use('/api/inngest', inngestRouter)
     this.app.use('/api/upload', new UploadRoute().router)
     this.app.get('/trigger', async (req, res) => {
@@ -170,19 +178,35 @@ export class App {
   }
 
   private initializeErrorHandling() {
-    this.app.use((_req, res) => {
+    /* // Temporarily commented out for Inngest dev troubleshooting
+    this.app.use((_req, res) => { 
       res.status(404).json({
         status: 'error',
         message: 'Route not found',
-      })
-    })
+      });
+    });
+    */
 
     this.app.use((err: Error, _req: express.Request, res: express.Response) => {
       logger.error('Error:', err)
-      res.status(500).json({
-        status: 'error',
-        message: 'Internal server error',
-      })
+
+      // Проверяем, что res.status доступен (может быть переопределен middleware)
+      if (typeof res.status === 'function') {
+        res.status(500).json({
+          status: 'error',
+          message: 'Internal server error',
+        })
+      } else {
+        // Fallback если res.status недоступен
+        res.statusCode = 500
+        res.setHeader('Content-Type', 'application/json')
+        res.end(
+          JSON.stringify({
+            status: 'error',
+            message: 'Internal server error',
+          })
+        )
+      }
     })
   }
 }
