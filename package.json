@@ -18,9 +18,12 @@
     "format": "prettier --write .",
     "ngrok": "ngrok http 4000",
     "tunnel": "ssh -R 80:localhost:4000 localhost.run",
-    "dev:inngest": "npx inngest-cli@latest dev -u http://localhost:4000/api/inngest"
+    "dev:inngest": "npx inngest-cli@latest dev -u http://localhost:4000/api/inngest",
+    "mcp:server": "npm run build && node dist/mcp/index.js",
+    "mcp:dev": "nodemon --exec \"npm run build && node dist/mcp/index.js\" --watch src/mcp --ext ts"
   },
   "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.12.0",
     "@nexrender/server": "^1.60.10",
     "@nexrender/worker": "^1.61.1",
     "@supabase/supabase-js": "^2.47.10",
@@ -58,7 +61,8 @@
     "typedi": "^0.10.0",
     "uuid": "^11.0.3",
     "winston": "^3.8.1",
-    "winston-daily-rotate-file": "^4.7.1"
+    "winston-daily-rotate-file": "^4.7.1",
+    "zod": "^3.25.28"
   },
   "devDependencies": {
     "@inngest/test": "^0.1.6",
