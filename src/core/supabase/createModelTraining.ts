@@ -14,6 +14,7 @@ export interface TrainingData {
   api?: string
   error?: string
   gender?: string
+  bot_name?: string
 }
 
 /**
@@ -24,6 +25,9 @@ export async function createModelTraining(trainingData: TrainingData) {
     message: 'Сохраняем информацию о тренировке в базу данных',
     telegram_id: trainingData.telegram_id,
     model_name: trainingData.model_name,
+    gender: trainingData.gender,
+    bot_name: trainingData.bot_name,
+    fullTrainingData: trainingData,
   })
 
   try {
@@ -40,7 +44,15 @@ export async function createModelTraining(trainingData: TrainingData) {
       cancel_url: trainingData.cancel_url,
       error: trainingData.error,
       gender: trainingData.gender,
+      bot_name: trainingData.bot_name,
     }
+
+    logger.info({
+      message: '🔍 Данные для вставки в БД',
+      insertData,
+      gender_value: insertData.gender,
+      bot_name_value: insertData.bot_name,
+    })
 
     // Создаем запись в таблице model_trainings
     const { data: dbTraining, error } = await supabase

@@ -10,6 +10,7 @@ import {
 import { errorMessage } from '@/helpers'
 import { errorMessageAdmin } from '@/helpers/errorMessageAdmin'
 import { processBalanceOperation } from '@/price/helpers'
+import { API_URL } from '@/config'
 
 import { Telegraf } from 'telegraf'
 import { MyContext } from '@/interfaces'
@@ -193,6 +194,7 @@ export async function generateModelTraining(
       steps,
       status: 'starting',
       gender,
+      bot_name,
     })
     console.log(`Created DB training record ID: ${dbTrainingRecord.id}`)
 
@@ -215,6 +217,8 @@ export async function generateModelTraining(
           learning_rate: 0.0001,
           wandb_project: 'flux_train_replicate',
         },
+        webhook: `${API_URL}/webhooks/replicate`,
+        webhook_events_filter: ['completed'],
       }
     )
     console.log(`Replicate training started. ID: ${currentTraining.id}`)

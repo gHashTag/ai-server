@@ -54,6 +54,7 @@ export const modelTrainingV2 = inngest.createFunction(
       telegram_id,
       is_ru,
       bot_name,
+      gender,
     } = event.data
 
     // Проверяем существование пользователя в базе
@@ -334,6 +335,8 @@ export const modelTrainingV2 = inngest.createFunction(
           zip_url: zipUrl,
           steps,
           api: 'bfl',
+          gender,
+          bot_name,
         })
 
         logger.info({

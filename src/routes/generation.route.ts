@@ -39,6 +39,10 @@ export class GenerationRoute implements Routes {
       this.generationController.neuroPhoto
     )
     this.router.post(
+      `${this.path}/neuro-photo-sync`,
+      this.generationController.neuroPhotoSync
+    )
+    this.router.post(
       `${this.path}/neuro-photo-v2`,
       this.generationController.neuroPhotoV2
     )
