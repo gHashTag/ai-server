@@ -266,7 +266,7 @@ export async function generateNeuroImage(
       try {
         await updateUserBalance(
           telegram_id,
-          newBalance,
+          finalCost, // ← ИСПРАВЛЕНО: передаем сумму операции, а не новый баланс
           PaymentType.MONEY_OUTCOME,
           `NeuroPhoto generation (${successful_generations}/${num_images} successful)`,
           {
@@ -274,7 +274,9 @@ export async function generateNeuroImage(
             payment_method: 'Internal',
             bot_name: bot_name,
             language: is_ru ? 'ru' : 'en',
-            // operation_id: ???
+            service_type: ModeEnum.NeuroPhoto, // ← ДОБАВЛЕНО: указываем тип сервиса
+            category: 'REAL',
+            cost: finalCost / 1.5, // ← ДОБАВЛЕНО: себестоимость (цена ÷ наценка 50%)
           }
         )
         console.log('Balance updated successfully (NeuroImage)')

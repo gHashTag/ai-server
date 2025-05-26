@@ -282,7 +282,7 @@ export const neuroImageGeneration = inngest.createFunction(
 
         await updateUserBalance(
           telegram_id,
-          newBalance,
+          totalCost, // ← ИСПРАВЛЕНО: передаем сумму операции, а не новый баланс
           PaymentType.MONEY_OUTCOME,
           `NeuroPhoto generation (${num_images} images)`,
           {
@@ -290,6 +290,9 @@ export const neuroImageGeneration = inngest.createFunction(
             payment_method: 'Internal',
             bot_name: bot_name,
             language: is_ru ? 'ru' : 'en',
+            service_type: ModeEnum.NeuroPhoto, // ← ДОБАВЛЕНО: указываем тип сервиса
+            category: 'REAL',
+            cost: totalCost / 1.5, // ← ДОБАВЛЕНО: себестоимость (цена ÷ наценка 50%)
           }
         )
 

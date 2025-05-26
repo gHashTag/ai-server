@@ -13,6 +13,9 @@ type BalanceUpdateMetadata = {
   modePrice?: number
   currentBalance?: number
   paymentAmount?: number
+  category?: string
+  cost?: number
+  operation_id?: string
   [key: string]: any
 }
 
@@ -404,14 +407,17 @@ export const updateUserBalance = async (
             telegram_id,
             inv_id: invId, // inv_id как строка, колонка в DB должна быть text или этот ID должен быть числом для bigint
             currency: metadata?.currency || 'STARS',
-            amount: metadata?.currency === 'STARS' ? 0 : safeRoundedAmount, // Если валюта STARS, денежная сумма 0
+            amount:
+              metadata?.currency === 'STARS'
+                ? safeRoundedAmount
+                : safeRoundedAmount, // Для STARS валюты amount = stars
             status: 'COMPLETED',
             stars: safeRoundedAmount,
             type,
             description: description || `Balance ${type}`,
             payment_method:
               metadata?.payment_method ||
-              (type === PaymentType.MONEY_OUTCOME ? 'Internal' : 'System'), // Более осмысленный default
+              (type === PaymentType.MONEY_OUTCOME ? 'Internal' : 'System'), // Internal для расходов, System для доходов/бонусов
             bot_name: metadata?.bot_name || 'unknown_bot', // Более безопасный default
             language: metadata?.language || 'ru',
             metadata: metadata || {},
@@ -419,6 +425,10 @@ export const updateUserBalance = async (
               type === PaymentType.MONEY_OUTCOME ? serviceType : null, // Только для расходов
             subscription_type: null, // Для обычных расходов это null
             payment_date: new Date(), // Дата фактического совершения платежа
+            category: metadata?.category || 'REAL', // ← ДОБАВЛЕНО: категория
+            cost: metadata?.cost || null, // ← ДОБАВЛЕНО: себестоимость операции
+            operation_id: metadata?.operation_id || null, // ← ДОБАВЛЕНО: ID операции
+            is_system_payment: 'false', // ← ДОБАВЛЕНО: флаг системного платежа
           })
 
         if (paymentError) {

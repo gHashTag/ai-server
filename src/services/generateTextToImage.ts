@@ -218,7 +218,7 @@ export const generateTextToImage = async (
       try {
         await updateUserBalance(
           telegram_id,
-          newBalance,
+          finalCost, // ← ИСПРАВЛЕНО: передаем сумму операции, а не новый баланс
           PaymentType.MONEY_OUTCOME,
           `Text-to-Image generation (${successful_generations}/${num_images} successful)`,
           {
@@ -226,6 +226,9 @@ export const generateTextToImage = async (
             payment_method: 'Internal',
             bot_name: bot_name,
             language: is_ru ? 'ru' : 'en',
+            service_type: ModeEnum.TextToImage, // ← ДОБАВЛЕНО: указываем тип сервиса
+            category: 'REAL',
+            cost: finalCost / 1.5, // ← ДОБАВЛЕНО: себестоимость (цена ÷ наценка 50%)
           }
         )
         console.log('Balance updated successfully')
