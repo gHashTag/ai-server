@@ -14,7 +14,7 @@ services:
       - LOG_DIR=/app/logs
       - SECRET_KEY=${SECRET_KEY}
       - CREDENTIALS=true
-      - ORIGIN=https://ai-server-new-u14194.vm.elestio.app
+      - ORIGIN=https://ai-server-u14194.vm.elestio.app
       - LOG_FORMAT=combined
     volumes:
       - ./persistent_uploads:/app/dist/uploads
@@ -31,7 +31,7 @@ services:
       - ./certbot/conf:/etc/letsencrypt
       - ./certbot/www:/var/www/certbot
     environment:
-      - DOMAIN=ai-server-new-u14194.vm.elestio.app
+      - DOMAIN=ai-server-u14194.vm.elestio.app
     depends_on:
       - app
     restart: always
