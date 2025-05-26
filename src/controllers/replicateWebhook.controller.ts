@@ -87,7 +87,7 @@ export class ReplicateWebhookController {
           try {
             await this.notificationService.sendTrainingError(
               training.users.telegram_id.toString(),
-              training.users.bot_name,
+              training.bot_name || training.users.bot_name,
               event.error || 'Unknown error'
             )
             logger.info({
@@ -108,7 +108,7 @@ export class ReplicateWebhookController {
           try {
             await this.notificationService.sendSuccessNotification(
               training.users.telegram_id.toString(),
-              training.users.bot_name,
+              training.bot_name || training.users.bot_name,
               training.users.language_code === 'ru'
             )
             logger.info({
@@ -136,10 +136,14 @@ export class ReplicateWebhookController {
             is_terminal: terminalStatuses.includes(event.status),
             metadata: {
               ...(event.metadata || {}),
-              bot_name: training.users.bot_name,
+              bot_name: training.bot_name || training.users.bot_name, // Приоритет bot_name из model_trainings
+              gender: training.gender, // Добавляем gender из model_trainings
             },
             error: event.error,
             output: event.output,
+            // Добавляем прямые поля для удобства
+            bot_name: training.bot_name || training.users.bot_name,
+            gender: training.gender,
           },
         })
 

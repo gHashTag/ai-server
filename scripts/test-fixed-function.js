@@ -1,6 +1,21 @@
-import { supabase } from '@/core/supabase'
+#!/usr/bin/env node
 
-export async function getTrainingWithUser(trainingId: string) {
+/**
+ * Тест исправленной функции getTrainingWithUser
+ */
+
+import { createClient } from '@supabase/supabase-js'
+import dotenv from 'dotenv'
+
+dotenv.config()
+
+const supabase = createClient(
+  process.env.SUPABASE_URL,
+  process.env.SUPABASE_SERVICE_KEY
+)
+
+// Копируем исправленную функцию для тестирования
+async function getTrainingWithUser(trainingId) {
   try {
     // 1. Сначала получаем запись из model_trainings
     const { data: training, error: trainingError } = await supabase
@@ -68,3 +83,43 @@ export async function getTrainingWithUser(trainingId: string) {
     return null
   }
 }
+
+async function testFixedFunction() {
+  console.log('🧪 Тестируем исправленную функцию getTrainingWithUser...\n')
+
+  const trainingId = 'czx5g9e7bxrme0cq1d48v6zcmg' // ID из логов
+
+  try {
+    const result = await getTrainingWithUser(trainingId)
+
+    if (result) {
+      console.log('✅ Функция работает! Результат:')
+      console.log(JSON.stringify(result, null, 2))
+
+      console.log('\n🔍 Анализ результата:')
+      console.log('- ID найден:', result.id ? '✅' : '❌')
+      console.log(
+        '- bot_name определен:',
+        result.bot_name ? '✅' : '❌',
+        `(${result.bot_name})`
+      )
+      console.log(
+        '- gender определен:',
+        result.gender !== null ? '✅' : '❌',
+        `(${result.gender})`
+      )
+      console.log('- users данные:', result.users ? '✅' : '❌')
+
+      if (result.users) {
+        console.log('  - user bot_name:', result.users.bot_name)
+        console.log('  - user language_code:', result.users.language_code)
+      }
+    } else {
+      console.log('❌ Функция вернула null')
+    }
+  } catch (error) {
+    console.error('💥 Ошибка тестирования:', error)
+  }
+}
+
+testFixedFunction().catch(console.error)

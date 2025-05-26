@@ -158,6 +158,7 @@ interface TrainingEventData {
   telegram_id: string
   triggerWord: string
   zipUrl: string
+  gender?: string
 }
 
 export interface ApiError extends Error {
@@ -215,6 +216,21 @@ export const generateModelTraining = inngest.createFunction(
     // Приведение типов для event.data
     const eventData = event.data as TrainingEventData
     const cacheKey = `${eventData.telegram_id}:${eventData.modelName}`
+
+    // 🔍 Логируем все данные события для диагностики
+    logger.info({
+      message: '🔍 Полные данные события для диагностики',
+      eventData: {
+        telegram_id: eventData.telegram_id,
+        modelName: eventData.modelName,
+        bot_name: eventData.bot_name,
+        gender: eventData.gender,
+        is_ru: eventData.is_ru,
+        triggerWord: eventData.triggerWord,
+        zipUrl: eventData.zipUrl,
+        steps: eventData.steps,
+      },
+    })
 
     // ВАЖНО: Проверка наличия реальной активной тренировки в Replicate
     const activeCheck = (await step.run('check-active-training', async () => {
@@ -740,6 +756,8 @@ export const generateModelTraining = inngest.createFunction(
               replicate_training_id: training.id,
               cancel_url: training.urls?.cancel,
               status: 'pending', // Начальный статус
+              gender: eventData.gender,
+              bot_name: eventData.bot_name,
             })
 
             logger.info({
