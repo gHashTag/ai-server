@@ -158,6 +158,7 @@ interface TrainingEventData {
   telegram_id: string
   triggerWord: string
   zipUrl: string
+  gender?: string
 }
 
 export interface ApiError extends Error {
@@ -740,6 +741,8 @@ export const generateModelTraining = inngest.createFunction(
               replicate_training_id: training.id,
               cancel_url: training.urls?.cancel,
               status: 'pending', // Начальный статус
+              gender: eventData.gender,
+              bot_name: eventData.bot_name,
             })
 
             logger.info({
