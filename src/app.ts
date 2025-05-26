@@ -186,27 +186,23 @@ export class App {
       });
     });
     */
-
+    // Временно отключаем обработчик ошибок для диагностики
+    /*
     this.app.use((err: Error, _req: express.Request, res: express.Response) => {
       logger.error('Error:', err)
 
-      // Проверяем, что res.status доступен (может быть переопределен middleware)
-      if (typeof res.status === 'function') {
+      // Простой обработчик ошибок без fallback
+      try {
         res.status(500).json({
           status: 'error',
           message: 'Internal server error',
         })
-      } else {
-        // Fallback если res.status недоступен
-        res.statusCode = 500
-        res.setHeader('Content-Type', 'application/json')
-        res.end(
-          JSON.stringify({
-            status: 'error',
-            message: 'Internal server error',
-          })
-        )
+      } catch (responseError) {
+        logger.error('Error sending error response:', responseError)
+        // Если даже это не работает, просто завершаем соединение
+        res.end()
       }
     })
+    */
   }
 }

@@ -529,7 +529,6 @@ export class GenerationController {
             is_ru,
             bot_name,
             gender,
-            // idempotencyKey: `train:${telegram_id}:${modelName}-${Date.now()}`,
           },
         })
         logger.info(
@@ -543,12 +542,52 @@ export class GenerationController {
           '❌ Ошибка при отправке события в Inngest (План А):',
           inngestError
         )
-        // Decide if we should call next(inngestError) or handle differently
-        // For now, let's send a 500 response directly
-        res.status(500).json({
-          message: 'Failed to send training task to Inngest',
-          error: inngestError.message,
-        })
+        logger.info(
+          '🔄 План Б: Переход к синхронной функции generateModelTraining'
+        )
+
+        try {
+          // Импортируем синхронную функцию
+          const { generateModelTraining } = await import(
+            '@/services/generateModelTraining'
+          )
+          const { getBotByName } = await import('@/core/bot')
+
+          // Получаем бот
+          const { bot } = getBotByName(bot_name)
+          if (!bot) {
+            throw new Error(`Bot ${bot_name} not found`)
+          }
+
+          // Запускаем синхронную тренировку
+          const result = await generateModelTraining(
+            zipUrl,
+            triggerWord,
+            modelName,
+            Number(steps),
+            telegram_id,
+            is_ru === 'true' || is_ru === true,
+            bot,
+            bot_name,
+            gender
+          )
+
+          logger.info(
+            '✅ План Б: Синхронная тренировка успешно завершена',
+            result
+          )
+          res.status(200).json({
+            message: 'Model training completed via sync function (Plan B)',
+            result,
+          })
+        } catch (syncError) {
+          logger.error('❌ План Б: Ошибка в синхронной функции:', syncError)
+          res.status(500).json({
+            message: 'Both Plan A (Inngest) and Plan B (sync) failed',
+            planAError: inngestError.message,
+            planBError: syncError.message,
+          })
+        }
       }
     } catch (error) {
       logger.error('❌ Ошибка в createModelTraining контроллере:', {
@@ -637,6 +676,76 @@ export class GenerationController {
       res.status(200).json(lipSyncResponse)
     } catch (error) {
       console.error('Ошибка при обработке запроса:', error)
+      next(error)
+    }
+  }
+
+  public neuroPhotoSync = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> => {
+    try {
+      const {
+        prompt,
+        model_url,
+        num_images,
+        telegram_id,
+        username,
+        is_ru,
+        bot_name,
+      } = req.body
+
+      if (!prompt) {
+        res.status(400).json({ message: 'prompt is required' })
+        return
+      }
+      if (!model_url) {
+        res.status(400).json({ message: 'model_url is required' })
+        return
+      }
+      if (!num_images) {
+        res.status(400).json({ message: 'num_images is required' })
+        return
+      }
+
+      validateUserParams(req)
+
+      console.log('🔄 MCP: Синхронная генерация нейрофото через Replicate')
+
+      // Синхронная генерация - ждем результат
+      const result = await generateNeuroImage(
+        prompt,
+        model_url,
+        num_images,
+        telegram_id,
+        username || `mcp_user_${telegram_id}`,
+        is_ru,
+        bot_name
+      )
+
+      console.log('🔍 MCP: Результат generateNeuroImage:', result)
+
+      if (result && result.length > 0) {
+        console.log('🔍 MCP: Первый элемент результата:', result[0])
+
+        res.status(200).json({
+          success: true,
+          message: 'Нейрофото успешно сгенерировано',
+          images: result.map(img => ({
+            url: img.image,
+            prompt_id: img.prompt_id,
+          })),
+          count: result.length,
+        })
+      } else {
+        res.status(500).json({
+          success: false,
+          message: 'Не удалось сгенерировать изображения',
+        })
+      }
+    } catch (error) {
+      console.error('❌ Ошибка в neuroPhotoSync:', error)
       next(error)
     }
   }

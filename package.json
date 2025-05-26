@@ -6,7 +6,13 @@
   "license": "ISC",
   "scripts": {
     "start": "npm run build && cross-env NODE_ENV=production node dist/server.js",
-    "dev": "nodemon --config nodemon.json",
+    "start:all": "npm run build && pm2 start ecosystem.mcp.config.js",
+    "stop:all": "pm2 stop ecosystem.mcp.config.js",
+    "restart:all": "pm2 restart ecosystem.mcp.config.js",
+    "logs:all": "pm2 logs",
+    "status": "pm2 status",
+    "dev": "npm run build && pm2 start ecosystem.mcp.config.js",
+    "dev:simple": "nodemon --config nodemon.json",
     "build": "swc src -d dist --source-maps --copy-files",
     "build:tsc": "tsc && tsc-alias",
     "test": "jest --forceExit --detectOpenHandles",
@@ -20,6 +26,7 @@
     "tunnel": "ssh -R 80:localhost:4000 localhost.run",
     "dev:inngest": "npx inngest-cli@latest dev -u http://localhost:4000/api/inngest",
     "mcp:server": "npm run build && node dist/mcp/index.js",
+    "mcp:server:direct": "node dist/mcp/index.js",
     "mcp:dev": "nodemon --exec \"npm run build && node dist/mcp/index.js\" --watch src/mcp --ext ts"
   },
   "dependencies": {

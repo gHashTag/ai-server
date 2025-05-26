@@ -217,6 +217,21 @@ export const generateModelTraining = inngest.createFunction(
     const eventData = event.data as TrainingEventData
     const cacheKey = `${eventData.telegram_id}:${eventData.modelName}`
 
+    // 🔍 Логируем все данные события для диагностики
+    logger.info({
+      message: '🔍 Полные данные события для диагностики',
+      eventData: {
+        telegram_id: eventData.telegram_id,
+        modelName: eventData.modelName,
+        bot_name: eventData.bot_name,
+        gender: eventData.gender,
+        is_ru: eventData.is_ru,
+        triggerWord: eventData.triggerWord,
+        zipUrl: eventData.zipUrl,
+        steps: eventData.steps,
+      },
+    })
+
     // ВАЖНО: Проверка наличия реальной активной тренировки в Replicate
     const activeCheck = (await step.run('check-active-training', async () => {
       try {

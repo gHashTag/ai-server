@@ -136,3 +136,5 @@ src/uploads/
 *.mp4
 
 *.zip
+
+.env.production

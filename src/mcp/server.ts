@@ -7,26 +7,23 @@ import { mcpConfig, validateMcpConfig } from './config.js'
 import { createNeuroPhoto } from './tools/neurophoto.js'
 
 /**
- * Простое логирование для MCP сервера
+ * Минимальное логирование для MCP сервера (только в stderr)
  */
 const mcpLogger = {
   info: (message: string, data?: any) => {
-    console.log(
-      `[MCP INFO] ${message}`,
-      data ? JSON.stringify(data, null, 2) : ''
-    )
+    console.error(`[MCP] ${message}`)
   },
   error: (message: string, data?: any) => {
-    console.error(
-      `[MCP ERROR] ${message}`,
-      data ? JSON.stringify(data, null, 2) : ''
-    )
+    console.error(`[MCP ERROR] ${message}`)
   },
   warn: (message: string, data?: any) => {
-    console.warn(
-      `[MCP WARN] ${message}`,
-      data ? JSON.stringify(data, null, 2) : ''
-    )
+    console.error(`[MCP WARN] ${message}`)
+  },
+  debug: (message: string, data?: any) => {
+    // Отключаем debug в продакшене
+    if (process.env.NODE_ENV === 'development') {
+      console.error(`[MCP DEBUG] ${message}`)
+    }
   },
 }
 
@@ -61,44 +58,47 @@ class AIServerMCP {
       createNeuroPhoto
     )
 
-    mcpLogger.info('🔧 MCP Tools настроены:', {
-      description: 'MCP server tools configured',
-      tools: ['create_neurophoto'],
-    })
+    mcpLogger.info('Tools configured: create_neurophoto')
   }
 
   async start() {
     try {
       const transport = new StdioServerTransport()
-      await this.server.connect(transport)
 
-      mcpLogger.info('🚀 MCP Server запущен:', {
-        description: 'MCP server started successfully',
-        transport: 'stdio',
-        server_name: mcpConfig.mcpServerName,
-        version: mcpConfig.mcpServerVersion,
-      })
+      // Обработчики событий для диагностики
+      transport.onclose = () => {
+        mcpLogger.info('Transport closed')
+      }
+
+      transport.onerror = error => {
+        mcpLogger.error(`Transport error: ${error}`)
+      }
+
+      await this.server.connect(transport)
+      mcpLogger.info('MCP Server started successfully')
     } catch (error) {
-      mcpLogger.error('❌ Ошибка запуска MCP Server:', {
-        description: 'Failed to start MCP server',
-        error: error instanceof Error ? error.message : String(error),
-        error_details: error,
-      })
+      mcpLogger.error(
+        `Failed to start: ${
+          error instanceof Error ? error.message : String(error)
+        }`
+      )
       process.exit(1)
     }
   }
 }
 
-// Запуск сервера
+// Экспорт для использования в других модулях
+export { AIServerMCP }
+
+// Запуск сервера только если это главный модуль
 if (require.main === module) {
   const mcpServer = new AIServerMCP()
   mcpServer.start().catch(error => {
-    mcpLogger.error('❌ Критическая ошибка MCP Server:', {
-      description: 'Critical MCP server error',
-      error: error instanceof Error ? error.message : String(error),
-    })
+    console.error(
+      `Critical error: ${
+        error instanceof Error ? error.message : String(error)
+      }`
+    )
     process.exit(1)
   })
 }
-
-export { AIServerMCP }
