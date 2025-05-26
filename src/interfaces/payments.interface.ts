@@ -23,11 +23,12 @@ export interface BalanceOperationResult {
  * Платежные системы
  */
 export type PaymentMethod =
-  | 'Telegram'
-  | 'Robokassa'
-  | 'System'
-  | 'Unknown'
-  | 'Manual'
+  | 'Telegram' // Оплата через Telegram Stars
+  | 'Robokassa' // Оплата через Robokassa (рубли)
+  | 'Internal' // Внутренние операции (списание за сервисы)
+  | 'System' // Системные операции (бонусы, возвраты)
+  | 'Manual' // Ручные операции администратора
+  | 'Unknown' // Неизвестный метод (для старых записей)
 
 /**
  * Статусы платежей

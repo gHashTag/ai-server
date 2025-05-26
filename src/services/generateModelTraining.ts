@@ -234,15 +234,18 @@ export async function generateModelTraining(
     const newBalance = initialBalance - paymentAmount
     await updateUserBalance(
       telegram_id,
-      newBalance,
+      paymentAmount, // ← ИСПРАВЛЕНО: передаем сумму операции, а не новый баланс
       PaymentType.MONEY_OUTCOME,
-      `Model training start ${modelName} (steps: ${steps})`,
+      `Оплата тренировки модели ${modelName} (шагов: ${steps})`,
       {
         stars: paymentAmount,
         payment_method: 'Internal',
         bot_name: bot_name,
         language: is_ru ? 'ru' : 'en',
+        service_type: ModeEnum.DigitalAvatarBody, // ← ДОБАВЛЕНО: указываем тип сервиса
         operation_id: currentTraining.id,
+        category: 'REAL',
+        cost: paymentAmount / 1.5, // ← ДОБАВЛЕНО: себестоимость (цена ÷ наценка 50%)
       }
     )
     console.log(

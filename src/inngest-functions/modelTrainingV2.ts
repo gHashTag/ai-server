@@ -385,15 +385,18 @@ export const modelTrainingV2 = inngest.createFunction(
 
         await updateUserBalance(
           telegram_id,
-          newBalance,
+          paymentAmount, // ← ИСПРАВЛЕНО: передаем сумму операции, а не новый баланс
           PaymentType.MONEY_OUTCOME,
-          `Model training ${modelName} (steps: ${steps})`,
+          `Оплата тренировки модели ${modelName} (шагов: ${steps})`,
           {
             stars: paymentAmount,
             payment_method: 'Internal',
             bot_name,
             language: is_ru ? 'ru' : 'en',
+            service_type: ModeEnum.DigitalAvatarBodyV2, // ← ДОБАВЛЕНО: указываем тип сервиса
             operation_id: training.id,
+            category: 'REAL',
+            cost: paymentAmount / 1.5, // ← ДОБАВЛЕНО: себестоимость (цена ÷ наценка 50%)
           }
         )
 
@@ -444,7 +447,7 @@ export const modelTrainingV2 = inngest.createFunction(
           PaymentType.MONEY_INCOME,
           `Refund for model training ${modelName} (steps: ${steps})`,
           {
-            payment_method: 'Training',
+            payment_method: 'System',
             bot_name,
             language: is_ru ? 'ru' : 'en',
           }

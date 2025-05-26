@@ -677,16 +677,20 @@ export const generateModelTraining = inngest.createFunction(
 
         await updateUserBalance(
           eventData.telegram_id,
-          newBalance,
+          paymentAmount, // ← ИСПРАВЛЕНО: передаем сумму операции, а не новый баланс
           PaymentType.MONEY_OUTCOME,
           `Оплата тренировки модели ${modelName} (шагов: ${steps})`,
           {
-            payment_method: 'Training',
+            stars: paymentAmount, // ← ДОБАВЛЕНО: явно указываем сумму в звездах
+            payment_method: 'Internal',
             bot_name: eventData.bot_name,
             language:
               eventData.is_ru === true || eventData.is_ru === 'true'
                 ? 'ru'
                 : 'en',
+            service_type: ModeEnum.DigitalAvatarBody, // ← ДОБАВЛЕНО: указываем тип сервиса
+            category: 'REAL',
+            cost: paymentAmount / 1.5, // ← ДОБАВЛЕНО: себестоимость (цена ÷ наценка 50%)
           }
         )
 

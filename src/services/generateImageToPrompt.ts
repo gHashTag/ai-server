@@ -141,7 +141,7 @@ export async function generateImageToPrompt(
       try {
         await updateUserBalance(
           telegram_id,
-          newBalance,
+          costPerImage, // ← ИСПРАВЛЕНО: передаем сумму операции, а не новый баланс
           PaymentType.MONEY_OUTCOME,
           'Image-to-Prompt generation',
           {
@@ -149,6 +149,9 @@ export async function generateImageToPrompt(
             payment_method: 'Internal',
             bot_name: bot_name,
             language: is_ru ? 'ru' : 'en',
+            service_type: ModeEnum.ImageToPrompt, // ← ДОБАВЛЕНО: указываем тип сервиса
+            category: 'REAL',
+            cost: costPerImage / 1.5, // ← ДОБАВЛЕНО: себестоимость (цена ÷ наценка 50%)
           }
         )
         console.log('Balance updated successfully for Image-to-Prompt')
