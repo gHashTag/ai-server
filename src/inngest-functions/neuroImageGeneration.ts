@@ -92,7 +92,7 @@ export const neuroImageGeneration = inngest.createFunction(
         if (!resolvedGender) {
           // Если gender не передан, пытаемся получить из пользователя
           resolvedGender = userExists.gender
-          
+
           // Если и в пользователе нет, пытаемся получить из последней тренировки
           if (!resolvedGender) {
             const { supabase } = await import('@/core/supabase')
@@ -103,17 +103,17 @@ export const neuroImageGeneration = inngest.createFunction(
               .order('created_at', { ascending: false })
               .limit(1)
               .single()
-            
+
             resolvedGender = lastTraining?.gender
           }
         }
-        
+
         logger.info({
           message: '🎭 Gender для генерации (Inngest)',
           gender: resolvedGender || 'НЕ ОПРЕДЕЛЕН',
           telegram_id,
         })
-        
+
         return resolvedGender
       })
 
@@ -222,8 +222,16 @@ export const neuroImageGeneration = inngest.createFunction(
                 : `⏳ Generating image ${i + 1} of ${num_images}`
             )
 
+            // ← ИСПРАВЛЕНО: Формируем промпт с учетом gender
+            const genderPrompt =
+              userGender === 'male'
+                ? 'handsome man, masculine features'
+                : userGender === 'female'
+                ? 'beautiful woman, feminine features'
+                : 'person' // fallback если gender не определен
+
             const input = {
-              prompt: `Fashionable: ${prompt}. Cinematic Lighting, realistic, intricate details, extremely detailed, incredible details, full colored, complex details, insanely detailed and intricate, hypermaximalist, extremely detailed with rich colors. Masterpiece, best quality, aerial view, HDR, UHD, unreal engine, Representative, fair skin, beautiful face, Rich in details, high quality, gorgeous, glamorous, 8K, super detail, gorgeous light and shadow, detailed decoration, detailed lines.`,
+              prompt: `Fashionable ${genderPrompt}: ${prompt}. Cinematic Lighting, realistic, intricate details, extremely detailed, incredible details, full colored, complex details, insanely detailed and intricate, hypermaximalist, extremely detailed with rich colors. Masterpiece, best quality, aerial view, HDR, UHD, unreal engine, Representative, fair skin, beautiful face, Rich in details, high quality, gorgeous, glamorous, 8K, super detail, gorgeous light and shadow, detailed decoration, detailed lines.`,
               negative_prompt: 'nsfw, erotic, violence, bad anatomy...',
               num_inference_steps: 40,
               guidance_scale: 3,
