@@ -27,7 +27,8 @@ export async function generateNeuroImage(
   telegram_id: string,
   username: string,
   is_ru: boolean,
-  bot_name: string
+  bot_name: string,
+  gender?: string // ← ДОБАВЛЕНО: параметр gender (опциональный)
 ): Promise<GenerationResult[] | null> {
   console.log('>>> generateNeuroImage called with args:', {
     prompt,
@@ -47,6 +48,29 @@ export async function generateNeuroImage(
     if (level === 1) {
       await updateUserLevelPlusOne(telegram_id, level)
     }
+
+    // ← ДОБАВЛЕНО: Получаем gender из параметра или из базы данных
+    let userGender = gender
+    if (!userGender) {
+      // Если gender не передан, пытаемся получить из пользователя
+      userGender = userExists.gender
+
+      // Если и в пользователе нет, пытаемся получить из последней тренировки
+      if (!userGender) {
+        const { supabase } = await import('@/core/supabase')
+        const { data: lastTraining } = await supabase
+          .from('model_trainings')
+          .select('gender')
+          .eq('telegram_id', telegram_id)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .single()
+
+        userGender = lastTraining?.gender
+      }
+    }
+
+    console.log('🎭 Gender для генерации (v1):', userGender || 'НЕ ОПРЕДЕЛЕН')
 
     // Расчет стоимости
     // 1. Получаем базовую стоимость за одно изображение NeuroPhoto
@@ -118,8 +142,17 @@ export async function generateNeuroImage(
 
     const aspect_ratio = await getAspectRatio(telegram_id)
     const results: GenerationResult[] = []
+
+    // ← ИСПРАВЛЕНО: Формируем промпт с учетом gender
+    const genderPrompt =
+      userGender === 'male'
+        ? 'handsome man, masculine features'
+        : userGender === 'female'
+        ? 'beautiful woman, feminine features'
+        : 'person' // fallback если gender не определен
+
     const input = {
-      prompt: `Fashionable: ${prompt}. Cinematic Lighting, realistic, intricate details, extremely detailed, incredible details, full colored, complex details, insanely detailed and intricate, hypermaximalist, extremely detailed with rich colors. Masterpiece, best quality, aerial view, HDR, UHD, unreal engine, Representative, fair skin, beautiful face, Rich in details, high quality, gorgeous, glamorous, 8K, super detail, gorgeous light and shadow, detailed decoration, detailed lines.`,
+      prompt: `Fashionable ${genderPrompt}: ${prompt}. Cinematic Lighting, realistic, intricate details, extremely detailed, incredible details, full colored, complex details, insanely detailed and intricate, hypermaximalist, extremely detailed with rich colors. Masterpiece, best quality, aerial view, HDR, UHD, unreal engine, Representative, fair skin, beautiful face, Rich in details, high quality, gorgeous, glamorous, 8K, super detail, gorgeous light and shadow, detailed decoration, detailed lines.`,
       negative_prompt: 'nsfw, erotic, violence, bad anatomy...',
       num_inference_steps: 40,
       guidance_scale: 3,

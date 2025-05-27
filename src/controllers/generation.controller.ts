@@ -82,6 +82,7 @@ export class GenerationController {
         username,
         is_ru,
         bot_name,
+        gender, // ← ДОБАВЛЕНО: извлекаем gender
       } = req.body
       if (!prompt) {
         res.status(400).json({ message: 'prompt is required' })
@@ -114,6 +115,7 @@ export class GenerationController {
             username,
             is_ru,
             bot_name,
+            gender, // ← ДОБАВЛЕНО: передаем gender в Inngest
           },
         })
         console.log(
@@ -139,7 +141,8 @@ export class GenerationController {
           telegram_id,
           username,
           is_ru,
-          bot_name
+          bot_name,
+          gender // ← ДОБАВЛЕНО: передаем gender в функцию
         )
         console.log(
           `Plan B (generateNeuroImage) completed for telegram_id: ${telegram_id}`
@@ -161,7 +164,8 @@ export class GenerationController {
     next: NextFunction
   ): Promise<void> => {
     try {
-      const { prompt, num_images, telegram_id, is_ru, bot_name } = req.body
+      const { prompt, num_images, telegram_id, is_ru, bot_name, gender } =
+        req.body
       if (!prompt) {
         res.status(400).json({ message: 'prompt is required' })
         return
@@ -179,7 +183,8 @@ export class GenerationController {
         num_images,
         telegram_id,
         is_ru,
-        bot_name
+        bot_name,
+        gender // ← ИСПРАВЛЕНО: передаем gender в функцию
       ).catch(error => {
         console.error('Ошибка при генерации изображения:', error)
       })
