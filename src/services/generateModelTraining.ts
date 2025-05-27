@@ -4,9 +4,9 @@ import {
   updateUserBalance,
   updateLatestModelTraining,
   updateUserLevelPlusOne,
-  supabase,
   createModelTraining,
-} from '@/core/supabase'
+} from '@/db/migration-layer'
+import { supabase } from '@/core/supabase'
 import { errorMessage } from '@/helpers'
 import { errorMessageAdmin } from '@/helpers/errorMessageAdmin'
 import { processBalanceOperation } from '@/price/helpers'
@@ -193,7 +193,7 @@ export async function generateModelTraining(
       zip_url: zipUrl,
       steps,
       status: 'starting',
-      gender,
+      gender: gender as 'male' | 'female',
       bot_name,
     })
     console.log(`Created DB training record ID: ${dbTrainingRecord.id}`)

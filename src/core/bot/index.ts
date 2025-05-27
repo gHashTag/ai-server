@@ -3,6 +3,9 @@ import { config } from 'dotenv'
 import { pulseBot } from '@/config'
 import { logger } from '@utils/logger'
 
+// Экспортируем pulseBot для использования в других модулях
+export { pulseBot }
+
 import { Telegraf } from 'telegraf'
 import { MyContext } from '@/interfaces'
 config({ path: `.env.${process.env.NODE_ENV || 'development'}.local` })
