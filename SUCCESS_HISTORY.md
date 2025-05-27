@@ -41,7 +41,7 @@ _Обновлено: 2025-01-15_
 - `src/core/supabase/updateUserBalance.ts` - исправление округления в транзакциях
 - `scripts/test-neurophoto-rounding-fix.js` - тест верификации исправления
 
-**Коммит:** `[будет добавлен после коммита]` (Ветка: `main`)
+**Коммит:** `77f5cd5c7009b2a7d80ce5870ba2f85da8cf7b56` (Ветка: `main`)
 
 ---
 
