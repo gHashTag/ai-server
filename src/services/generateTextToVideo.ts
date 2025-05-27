@@ -7,8 +7,14 @@ import { InputFile } from 'telegraf/typings/core/types/typegram'
 import { saveVideoUrlToSupabase } from '@/core/supabase/saveVideoUrlToSupabase'
 import path from 'path'
 import { getBotByName } from '@/core/bot'
-import { getUserByTelegramId, updateUserLevelPlusOne } from '@/core/supabase'
+import {
+  getUserByTelegramId,
+  updateUserLevelPlusOne,
+  updateUserBalance,
+} from '@/core/supabase'
 import { VIDEO_MODELS_CONFIG } from '@/config/models.config'
+import { PaymentType } from '@/interfaces/payments.interface'
+import { ModeEnum } from '@/interfaces/modes'
 
 export const processVideoGeneration = async (
   videoModel: string,
@@ -142,13 +148,35 @@ export const generateTextToVideo = async (
     const video = { source: videoLocalPath }
     await bot.telegram.sendVideo(telegram_id.toString(), video as InputFile)
 
+    // Списываем средства после успешной генерации
+    try {
+      await updateUserBalance(
+        telegram_id,
+        paymentAmount,
+        PaymentType.MONEY_OUTCOME,
+        `Text-to-Video generation (${videoModel})`,
+        {
+          stars: paymentAmount,
+          payment_method: 'Internal',
+          service_type: ModeEnum.TextToVideo,
+          bot_name: bot_name,
+          language: is_ru ? 'ru' : 'en',
+          cost: paymentAmount / 1.5, // себестоимость
+        }
+      )
+      console.log('Balance updated successfully for Text-to-Video')
+    } catch (balanceError) {
+      console.error('Error updating balance for text-to-video:', balanceError)
+      errorMessageAdmin(balanceError as Error)
+    }
+
     await bot.telegram.sendMessage(
       telegram_id,
       is_ru
-        ? `Ваше видео сгенерировано!\n\nСгенерировать еще?\n\nСтоимость: ${paymentAmount.toFixed(
+        ? `✅ Ваше видео сгенерировано!\n\nСписано: ${paymentAmount.toFixed(
             2
           )} ⭐️\nВаш новый баланс: ${newBalance.toFixed(2)} ⭐️`
-        : `Your video has been generated!\n\nGenerate more?\n\nCost: ${paymentAmount.toFixed(
+        : `✅ Your video has been generated!\n\nDeducted: ${paymentAmount.toFixed(
             2
           )} ⭐️\nYour new balance: ${newBalance.toFixed(2)} ⭐️`,
       {
