@@ -4,13 +4,18 @@ import os from 'os'
 import elevenLabsClient from '@/core/elevenlabs'
 
 import { InputFile } from 'telegraf/typings/core/types/typegram'
-import { getUserByTelegramId, updateUserLevelPlusOne } from '@/core/supabase'
+import {
+  getUserByTelegramId,
+  updateUserLevelPlusOne,
+  updateUserBalance,
+} from '@/core/supabase'
 import { errorMessageAdmin, errorMessage } from '@/helpers'
 import { Telegraf } from 'telegraf'
 import { MyContext } from '@/interfaces'
 import { calculateModeCost } from '@/price/helpers/modelsCost'
-import { processBalanceOperation, sendBalanceMessage } from '@/price/helpers'
+import { processBalanceOperation } from '@/price/helpers'
 import { ModeEnum } from '@/interfaces/modes'
+import { PaymentType } from '@/interfaces/payments.interface'
 
 export const generateSpeech = async ({
   text,
@@ -71,28 +76,64 @@ export const generateSpeech = async ({
 
       audioStream.pipe(writeStream)
 
-      writeStream.on('finish', () => {
+      writeStream.on('finish', async () => {
         const audio = { source: audioUrl }
-        bot.telegram.sendAudio(telegram_id, audio as InputFile, {
-          reply_markup: {
-            keyboard: [
-              [
-                {
-                  text: is_ru ? '🎙️ Текст в голос' : '🎙️ Текст в голос',
-                },
-                { text: is_ru ? '🏠 Главное меню' : '🏠 Main menu' },
+        const paymentAmount = calculateModeCost({
+          mode: ModeEnum.TextToSpeech,
+        }).stars
+
+        // Списываем средства
+        try {
+          await updateUserBalance(
+            telegram_id,
+            paymentAmount,
+            PaymentType.MONEY_OUTCOME,
+            `Синтез речи (ElevenLabs)`,
+            {
+              stars: paymentAmount,
+              payment_method: 'Internal',
+              service_type: ModeEnum.TextToSpeech,
+              bot_name: bot_name,
+              language: is_ru ? 'ru' : 'en',
+              cost: paymentAmount / 1.5, // себестоимость
+            }
+          )
+
+          const newBalance = balanceCheck.currentBalance - paymentAmount
+
+          await bot.telegram.sendAudio(telegram_id, audio as InputFile, {
+            reply_markup: {
+              keyboard: [
+                [
+                  {
+                    text: is_ru ? '🎙️ Текст в голос' : '🎙️ Текст в голос',
+                  },
+                  { text: is_ru ? '🏠 Главное меню' : '🏠 Main menu' },
+                ],
               ],
-            ],
-          },
-        })
-        sendBalanceMessage(
-          telegram_id,
-          balanceCheck.currentBalance,
-          calculateModeCost({ mode: ModeEnum.TextToSpeech }).stars,
-          is_ru,
-          bot
-        )
-        resolve({ audioUrl })
+            },
+          })
+
+          await bot.telegram.sendMessage(
+            telegram_id,
+            is_ru
+              ? `✅ Аудио создано! Списано: ${paymentAmount} ⭐️. Баланс: ${newBalance.toFixed(
+                  2
+                )} ⭐️`
+              : `✅ Audio created! Deducted: ${paymentAmount} ⭐️. Balance: ${newBalance.toFixed(
+                  2
+                )} ⭐️`
+          )
+
+          resolve({ audioUrl })
+        } catch (balanceError) {
+          console.error(
+            'Error updating balance for text-to-speech:',
+            balanceError
+          )
+          errorMessageAdmin(balanceError as Error)
+          reject(balanceError)
+        }
       })
 
       writeStream.on('error', error => {

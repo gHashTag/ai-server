@@ -5,13 +5,19 @@ import { replicate } from '@/core/replicate'
 import { VIDEO_MODELS_CONFIG } from '@/config/models.config'
 import { logger } from '@/utils/logger' // Добавляем логгер
 import { downloadFile } from '@/helpers/downloadFile'
-import { getUserByTelegramId, updateUserLevelPlusOne } from '@/core/supabase'
+import {
+  getUserByTelegramId,
+  updateUserLevelPlusOne,
+  updateUserBalance,
+} from '@/core/supabase'
 import { getBotByName } from '@/core/bot'
 import { processBalanceVideoOperation } from '@/price/helpers'
 import { saveVideoUrlToSupabase } from '@/core/supabase/saveVideoUrlToSupabase'
 import { mkdir, writeFile } from 'fs/promises'
 import path from 'path'
 import { errorMessageAdmin } from '@/helpers/errorMessageAdmin'
+import { PaymentType } from '@/interfaces/payments.interface'
+import { ModeEnum } from '@/interfaces/modes'
 
 interface ReplicateResponse {
   id: string // ID может не возвращаться для replicate.run, но output точно есть
@@ -235,14 +241,42 @@ export const generateImageToVideo = async (
       await bot.telegram.sendVideo(telegram_id, { source: videoLocalPath })
       logger.info('API Server (Task): Video sent to user', { telegram_id })
 
+      // Списываем средства после успешной генерации
+      try {
+        await updateUserBalance(
+          telegram_id,
+          paymentAmount,
+          PaymentType.MONEY_OUTCOME,
+          `Image-to-Video generation (${videoModel})`,
+          {
+            stars: paymentAmount,
+            payment_method: 'Internal',
+            service_type: ModeEnum.ImageToVideo,
+            bot_name: bot_name,
+            language: is_ru ? 'ru' : 'en',
+            cost: paymentAmount / 1.5, // себестоимость
+          }
+        )
+        logger.info(
+          'API Server (Task): Balance updated successfully for Image-to-Video',
+          { telegram_id }
+        )
+      } catch (balanceError) {
+        logger.error(
+          'API Server (Task): Error updating balance for image-to-video',
+          { telegram_id, error: balanceError }
+        )
+        errorMessageAdmin(balanceError as Error)
+      }
+
       // Отправляем сообщение об успехе и балансе
       await bot.telegram.sendMessage(
         telegram_id,
         is_ru
-          ? `✅ Ваше видео готово!\n\nСтоимость: ${paymentAmount.toFixed(
+          ? `✅ Ваше видео готово!\n\nСписано: ${paymentAmount.toFixed(
               2 // Используем paymentAmount из balanceResult
             )} ⭐️\nВаш новый баланс: ${newBalance.toFixed(2)} ⭐️` // Используем newBalance из balanceResult
-          : `✅ Your video is ready!\n\nCost: ${paymentAmount.toFixed(
+          : `✅ Your video is ready!\n\nDeducted: ${paymentAmount.toFixed(
               2
             )} ⭐️\nYour new balance: ${newBalance.toFixed(2)} ⭐️`
         // Убрал клавиатуру "Сгенерировать новое?", т.к. сцена завершена

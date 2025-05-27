@@ -47,7 +47,8 @@ export async function generateNeuroImageV2(
     // Расчет стоимости
     let costPerImage: number
     // ГАРАНТИЯ: BASE_COSTS[ModeEnum.NeuroPhotoV2] всегда число, не функция
-    costPerImage = Number(calculateModeCost[ModeEnum.NeuroPhotoV2]) || 0
+    costPerImage =
+      Number(calculateModeCost({ mode: ModeEnum.NeuroPhotoV2 }).stars) || 0
     if (isNaN(costPerImage) || costPerImage <= 0) {
       console.error(
         '[generateNeuroImageV2] costPerImage is NaN or <= 0:',
@@ -239,8 +240,10 @@ export async function generateNeuroImageV2(
           {
             stars: finalCost,
             payment_method: 'Internal',
+            service_type: ModeEnum.NeuroPhotoV2,
             bot_name: bot_name,
             language: is_ru ? 'ru' : 'en',
+            cost: finalCost / 1.5, // себестоимость
             // operation_id: task_ids.join(','), // Можно сохранить ID задач
           }
         )
