@@ -381,8 +381,9 @@ export const updateUserBalance = async (
         // Создаем запись о транзакции с корректным типом данных
         // Все числовые поля преобразуем в целые числа для безопасности
         // БЕЗОПАСНОЕ преобразование, защита от null/undefined
+        // ИСПРАВЛЕНО: Убираем округление, сохраняем точное значение (7.5⭐ должно остаться 7.5⭐)
         const safeRoundedAmount =
-          transactionAmount != null ? Math.round(transactionAmount) : 0
+          transactionAmount != null ? transactionAmount : 0
 
         // Определяем service_type для MONEY_OUTCOME
         let serviceType = metadata?.service_type || null
