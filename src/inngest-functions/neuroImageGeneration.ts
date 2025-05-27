@@ -40,6 +40,7 @@ export const neuroImageGeneration = inngest.createFunction(
         username,
         is_ru,
         bot_name,
+        gender, // ← ДОБАВЛЕНО: извлекаем gender из event.data
       } = event.data
 
       logger.info({
@@ -83,6 +84,37 @@ export const neuroImageGeneration = inngest.createFunction(
         const user = await getUserByTelegramId(telegram_id)
         if (!user) throw new Error(`User ${telegram_id} not found`)
         return user
+      })
+
+      // ← ДОБАВЛЕНО: Получаем gender из параметра или из базы данных
+      const userGender = await step.run('get-user-gender', async () => {
+        let resolvedGender = gender
+        if (!resolvedGender) {
+          // Если gender не передан, пытаемся получить из пользователя
+          resolvedGender = userExists.gender
+          
+          // Если и в пользователе нет, пытаемся получить из последней тренировки
+          if (!resolvedGender) {
+            const { supabase } = await import('@/core/supabase')
+            const { data: lastTraining } = await supabase
+              .from('model_trainings')
+              .select('gender')
+              .eq('telegram_id', telegram_id)
+              .order('created_at', { ascending: false })
+              .limit(1)
+              .single()
+            
+            resolvedGender = lastTraining?.gender
+          }
+        }
+        
+        logger.info({
+          message: '🎭 Gender для генерации (Inngest)',
+          gender: resolvedGender || 'НЕ ОПРЕДЕЛЕН',
+          telegram_id,
+        })
+        
+        return resolvedGender
       })
 
       // Уровень пользователя

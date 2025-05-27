@@ -4,6 +4,7 @@ import {
   updateUserLevelPlusOne,
   getFineTuneIdByTelegramId,
   updateUserBalance,
+  supabase, // ← ДОБАВЛЕНО: импорт supabase для запроса тренировок
 } from '@/core/supabase'
 import { API_URL } from '@/config'
 import { GenerationResult } from '@/interfaces'
@@ -23,7 +24,8 @@ export async function generateNeuroImageV2(
   num_images: number,
   telegram_id: string,
   is_ru: boolean,
-  bot_name: string
+  bot_name: string,
+  gender?: string // ← ДОБАВЛЕНО: параметр gender (опциональный)
 ): Promise<GenerationResult | null> {
   let bot: Telegraf<MyContext>
   try {
@@ -44,6 +46,28 @@ export async function generateNeuroImageV2(
     if (level === 1) {
       await updateUserLevelPlusOne(telegram_id, level)
     }
+
+    // ← ДОБАВЛЕНО: Получаем gender из параметра или из базы данных
+    let userGender = gender
+    if (!userGender) {
+      // Если gender не передан, пытаемся получить из пользователя
+      userGender = userExists.gender
+      
+      // Если и в пользователе нет, пытаемся получить из последней тренировки
+      if (!userGender) {
+        const { data: lastTraining } = await supabase
+          .from('model_trainings')
+          .select('gender')
+          .eq('telegram_id', telegram_id)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .single()
+        
+        userGender = lastTraining?.gender
+      }
+    }
+    
+    console.log('🎭 Gender для генерации:', userGender || 'НЕ ОПРЕДЕЛЕН')
     // Расчет стоимости
     let costPerImage: number
     // ГАРАНТИЯ: BASE_COSTS[ModeEnum.NeuroPhotoV2] всегда число, не функция
@@ -95,10 +119,17 @@ export async function generateNeuroImageV2(
     console.log('finetuneId', finetune_id)
 
     // --- ЛОГИКА ЗАПУСКА ГЕНЕРАЦИИ BFL ---
+    // ← ИСПРАВЛЕНО: Формируем промпт с учетом gender
+    const genderPrompt = userGender === 'male' 
+      ? 'handsome man, masculine features' 
+      : userGender === 'female' 
+        ? 'beautiful woman, feminine features'
+        : 'person' // fallback если gender не определен
+    
     const input = {
       finetune_id,
       finetune_strength: 2,
-      prompt: `Fashionable: ${prompt}. Cinematic Lighting, realistic, intricate details, extremely detailed, incredible details, full colored, complex details, insanely detailed and intricate, hypermaximalist, extremely detailed with rich colors. Masterpiece, best quality, aerial view, HDR, UHD, unreal engine, Representative, fair skin, beautiful face, Rich in details, high quality, gorgeous, glamorous, 8K, super detail, gorgeous light and shadow, detailed decoration, detailed lines.`,
+      prompt: `Fashionable ${genderPrompt}: ${prompt}. Cinematic Lighting, realistic, intricate details, extremely detailed, incredible details, full colored, complex details, insanely detailed and intricate, hypermaximalist, extremely detailed with rich colors. Masterpiece, best quality, aerial view, HDR, UHD, unreal engine, Representative, fair skin, beautiful face, Rich in details, high quality, gorgeous, glamorous, 8K, super detail, gorgeous light and shadow, detailed decoration, detailed lines.`,
       aspect_ratio,
       ...(aspect_ratio === '1:1'
         ? { width: 1024, height: 1024 }
