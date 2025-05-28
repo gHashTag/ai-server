@@ -304,7 +304,7 @@ export async function generateNeuroImage(
           `NeuroPhoto generation (${successful_generations}/${num_images} successful)`,
           {
             stars: finalCost,
-            payment_method: 'Internal',
+            payment_method: 'System',
             bot_name: bot_name,
             language: is_ru ? 'ru' : 'en',
             service_type: ModeEnum.NeuroPhoto, // ← ДОБАВЛЕНО: указываем тип сервиса

@@ -239,7 +239,7 @@ export async function generateModelTraining(
       `Оплата тренировки модели ${modelName} (шагов: ${steps})`,
       {
         stars: paymentAmount,
-        payment_method: 'Internal',
+        payment_method: 'System', // ← ИСПРАВЛЕНО: 'Internal' → 'System'
         bot_name: bot_name,
         language: is_ru ? 'ru' : 'en',
         service_type: ModeEnum.DigitalAvatarBody, // ← ДОБАВЛЕНО: указываем тип сервиса

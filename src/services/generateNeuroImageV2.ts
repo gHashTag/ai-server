@@ -270,7 +270,7 @@ export async function generateNeuroImageV2(
           `NeuroPhotoV2 generation start (${successful_starts}/${num_images} started)`,
           {
             stars: finalCost,
-            payment_method: 'Internal',
+            payment_method: 'System',
             service_type: ModeEnum.NeuroPhotoV2,
             bot_name: bot_name,
             language: is_ru ? 'ru' : 'en',

@@ -51,6 +51,7 @@ export interface MySession extends Scenes.WizardSession<MyWizardSession> {
   steps: number
   inviter: string
   inviteCode: string
+  language?: string
 }
 
 export interface MyContext extends Context {

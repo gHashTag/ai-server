@@ -91,7 +91,7 @@ export const generateSpeech = async ({
             `Синтез речи (ElevenLabs)`,
             {
               stars: paymentAmount,
-              payment_method: 'Internal',
+              payment_method: 'System',
               service_type: ModeEnum.TextToSpeech,
               bot_name: bot_name,
               language: is_ru ? 'ru' : 'en',

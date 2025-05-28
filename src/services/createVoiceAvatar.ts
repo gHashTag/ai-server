@@ -107,7 +107,7 @@ export async function createVoiceAvatar(
         `Создание голосового аватара (ElevenLabs)`,
         {
           stars: cost,
-          payment_method: 'Internal',
+          payment_method: 'System',
           service_type: ModeEnum.Voice,
           bot_name: bot.botInfo?.username || 'unknown_bot',
           language: isRu ? 'ru' : 'en',

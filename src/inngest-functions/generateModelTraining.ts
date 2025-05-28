@@ -682,7 +682,7 @@ export const generateModelTraining = inngest.createFunction(
           `Оплата тренировки модели ${modelName} (шагов: ${steps})`,
           {
             stars: paymentAmount, // ← ДОБАВЛЕНО: явно указываем сумму в звездах
-            payment_method: 'Internal',
+            payment_method: 'System',
             bot_name: eventData.bot_name,
             language:
               eventData.is_ru === true || eventData.is_ru === 'true'

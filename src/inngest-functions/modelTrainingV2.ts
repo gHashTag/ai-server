@@ -390,7 +390,7 @@ export const modelTrainingV2 = inngest.createFunction(
           `Оплата тренировки модели ${modelName} (шагов: ${steps})`,
           {
             stars: paymentAmount,
-            payment_method: 'Internal',
+            payment_method: 'System',
             bot_name,
             language: is_ru ? 'ru' : 'en',
             service_type: ModeEnum.DigitalAvatarBodyV2, // ← ДОБАВЛЕНО: указываем тип сервиса

@@ -114,7 +114,7 @@ export const updateUserBalance = async (
     currency: 'STARS',
     status: 'COMPLETED' as const,
     type: type as 'MONEY_INCOME' | 'MONEY_OUTCOME' | 'REFUND',
-    payment_method: metadata?.payment_method || 'Internal',
+    payment_method: metadata?.payment_method || 'System',
     description,
     service_type: metadata?.service_type,
     metadata: metadata

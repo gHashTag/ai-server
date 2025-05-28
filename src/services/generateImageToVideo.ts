@@ -250,7 +250,7 @@ export const generateImageToVideo = async (
           `Image-to-Video generation (${videoModel})`,
           {
             stars: paymentAmount,
-            payment_method: 'Internal',
+            payment_method: 'System',
             service_type: ModeEnum.ImageToVideo,
             bot_name: bot_name,
             language: is_ru ? 'ru' : 'en',

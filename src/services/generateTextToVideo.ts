@@ -157,7 +157,7 @@ export const generateTextToVideo = async (
         `Text-to-Video generation (${videoModel})`,
         {
           stars: paymentAmount,
-          payment_method: 'Internal',
+          payment_method: 'System',
           service_type: ModeEnum.TextToVideo,
           bot_name: bot_name,
           language: is_ru ? 'ru' : 'en',

@@ -96,7 +96,7 @@ export const createPaymentOperationSchema = z.object({
   type: operationTypeEnum,
   description: z.string().min(1, 'Описание обязательно'),
   bot_name: z.string().optional(),
-  payment_method: z.string().default('Internal'),
+  payment_method: z.string().default('System'),
   currency: z.string().default('STARS'),
   subscription_type: subscriptionTypeEnum.optional(),
   service_type: z.string().optional(),

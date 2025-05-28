@@ -327,7 +327,7 @@ export const neuroImageGeneration = inngest.createFunction(
           `NeuroPhoto generation (${num_images} images)`,
           {
             stars: totalCost,
-            payment_method: 'Internal',
+            payment_method: 'System',
             bot_name: bot_name,
             language: is_ru ? 'ru' : 'en',
             service_type: ModeEnum.NeuroPhoto, // ← ДОБАВЛЕНО: указываем тип сервиса

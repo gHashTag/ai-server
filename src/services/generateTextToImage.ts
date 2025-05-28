@@ -223,7 +223,7 @@ export const generateTextToImage = async (
           `Text-to-Image generation (${successful_generations}/${num_images} successful)`,
           {
             stars: finalCost,
-            payment_method: 'Internal',
+            payment_method: 'System',
             bot_name: bot_name,
             language: is_ru ? 'ru' : 'en',
             service_type: ModeEnum.TextToImage, // ← ДОБАВЛЕНО: указываем тип сервиса
