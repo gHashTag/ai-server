@@ -1,6 +1,6 @@
 import { WEBHOOK_URL } from '@/config'
 import { setSyncLabsVideo } from '@/core/supabase'
-import axios, { AxiosResponse } from 'axios'
+import { syncLabsReliable } from '@/core/synclabs/withCircuitBreaker'
 
 export type LipSyncStatus =
   | 'CANCELED'
@@ -28,11 +28,9 @@ export interface LipSyncResponse {
   error: string | null
 }
 
-interface LipSyncError {
-  message: string
+export interface LipSyncResult extends Partial<LipSyncResponse> {
+  message?: string
 }
-
-type LipSyncResult = LipSyncResponse | LipSyncError
 
 export async function generateLipSync(
   telegram_id: string,
@@ -40,59 +38,24 @@ export async function generateLipSync(
   audio: string,
   is_ru: boolean
 ): Promise<LipSyncResult> {
-  const url = 'https://api.sync.so/v2/generate'
-  const body = {
-    model: 'lipsync-1.9.0-beta',
-    input: [
-      {
-        type: 'video',
-        url: video,
-      },
-      {
-        type: 'audio',
-        url: audio,
-      },
-    ],
-    options: {
-      output_format: 'mp4',
-    },
-    webhookUrl: WEBHOOK_URL,
-  }
-
-  console.log(body, 'body')
-
   try {
-    const response: AxiosResponse<LipSyncResponse> = await axios.post(
-      url,
-      body,
+    const result = await syncLabsReliable.generateLipSync(
       {
-        headers: {
-          'x-api-key': process.env.SYNC_LABS_API_KEY as string,
-          'Content-Type': 'application/json',
-        },
-      }
+        video,
+        audio,
+        webhookUrl: WEBHOOK_URL,
+      },
+      'generate-lipsync'
     )
 
-    if (response.data?.id) {
-      const videoId = response.data.id
-      await setSyncLabsVideo(telegram_id, videoId, is_ru)
-
-      if (response.status === 200) {
-        return response.data
-      } else {
-        console.error(`Error: ${response.status} ${response.statusText}`)
-        return { message: 'Error generating lip sync' }
-      }
+    if (result?.id) {
+      await setSyncLabsVideo(telegram_id, result.id, is_ru)
+      return result
     } else {
-      console.error('No video ID found in response')
       return { message: 'No video ID found in response' }
     }
   } catch (error) {
-    if (axios.isAxiosError(error)) {
-      console.error('API Error:', error.response?.data || error.message)
-    } else {
-      console.error('Unexpected error:', error)
-    }
+    console.error('LipSync generation error:', error)
     return { message: 'Error occurred while generating lip sync' }
   }
 }

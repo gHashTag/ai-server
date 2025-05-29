@@ -1,7 +1,7 @@
 import { createWriteStream } from 'fs'
 import path from 'path'
 import os from 'os'
-import elevenLabsClient from '@/core/elevenlabs'
+import { elevenLabsReliable } from '@/core/elevenlabs/withCircuitBreaker'
 
 import { InputFile } from 'telegraf/typings/core/types/typegram'
 import {
@@ -65,11 +65,14 @@ export const generateSpeech = async ({
       )
       // Логируем попытку генерации
 
-      const audioStream = await elevenLabsClient.generate({
-        voice: voice_id,
-        model_id: 'eleven_turbo_v2_5',
-        text,
-      })
+      const audioStream = await elevenLabsReliable.generate(
+        {
+          voice: voice_id,
+          model_id: 'eleven_turbo_v2_5',
+          text,
+        },
+        'generate-speech'
+      )
 
       const audioUrl = path.join(os.tmpdir(), `audio_${Date.now()}.mp3`)
       const writeStream = createWriteStream(audioUrl)
@@ -138,16 +141,14 @@ export const generateSpeech = async ({
 
       writeStream.on('error', error => {
         console.error('Error writing audio file:', error)
+        errorMessage(error, telegram_id, is_ru)
+        errorMessageAdmin(error)
         reject(error)
       })
-    } catch (error: any) {
-      errorMessage(error as Error, telegram_id.toString(), is_ru)
+    } catch (error) {
+      console.error('Error in generateSpeech:', error)
+      errorMessage(error as Error, telegram_id, is_ru)
       errorMessageAdmin(error as Error)
-      console.error('Error in createAudioFileFromText:', {
-        message: error.message,
-        statusCode: error.statusCode,
-        stack: error.stack,
-      })
       reject(error)
     }
   })

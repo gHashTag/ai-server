@@ -16,6 +16,7 @@ import axios from 'axios'
 import { logger } from '@/utils/logger'
 import { PaymentType } from '@/interfaces/payments.interface'
 import { slugify } from 'inngest' // For v3 migration
+import { bflReliable } from '@/core/bfl/withCircuitBreaker'
 
 interface TrainingResponse {
   id: string
@@ -223,40 +224,7 @@ export const modelTrainingV2 = inngest.createFunction(
       // Отправляем запрос на API для создания модели
       const training = await step.run('create-training', async () => {
         logger.info({
-          message: '🔍 Checking environment variables',
-          step: 'create-training',
-        })
-
-        if (!process.env.BFL_API_KEY) {
-          logger.error({
-            message: '🚫 Missing required environment variable',
-            variable: 'BFL_API_KEY',
-            step: 'create-training',
-          })
-
-          throw new Error('BFL_API_KEY is not set')
-        }
-        if (!process.env.BFL_WEBHOOK_URL) {
-          logger.error({
-            message: '🚫 Missing required environment variable',
-            variable: 'BFL_WEBHOOK_URL',
-            step: 'create-training',
-          })
-
-          throw new Error('BFL_WEBHOOK_URL is not set')
-        }
-        if (!process.env.REPLICATE_USERNAME) {
-          logger.error({
-            message: '🚫 Missing required environment variable',
-            variable: 'REPLICATE_USERNAME',
-            step: 'create-training',
-          })
-
-          throw new Error('REPLICATE_USERNAME is not set')
-        }
-
-        logger.info({
-          message: '🌐 Sending request to BFL API for model creation',
+          message: '🚀 Creating model training with BFL API',
           telegramId: telegram_id,
           triggerWord: triggerWord,
           modelName: modelName,
@@ -264,13 +232,8 @@ export const modelTrainingV2 = inngest.createFunction(
           step: 'create-training',
         })
 
-        const response = await fetch('https://api.us1.bfl.ai/v1/finetune', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'X-Key': process.env.BFL_API_KEY,
-          },
-          body: JSON.stringify({
+        const trainingResult = await bflReliable.createFinetune(
+          {
             file_data: encodedZip,
             finetune_comment: telegram_id,
             trigger_word: triggerWord,
@@ -283,38 +246,19 @@ export const modelTrainingV2 = inngest.createFunction(
             lora_rank: 32,
             webhook_url: process.env.BFL_WEBHOOK_URL,
             webhook_secret: process.env.BFL_WEBHOOK_SECRET,
-          }),
-        })
-
-        logger.info({
-          message: '📡 Received response from BFL API',
-          statusCode: response.status,
-          step: 'create-training',
-        })
-
-        if (!response.ok) {
-          logger.error({
-            message: '❌ Failed to create model training',
-            statusCode: response.status,
-            step: 'create-training',
-          })
-
-          throw new Error(
-            `Failed to initiate training with new API. Status: ${response.status}`
-          )
-        }
-
-        const jsonResponse = (await response.json()) as TrainingResponse
+          },
+          'model-training-v2-create'
+        )
 
         logger.info({
           message: '🎉 Model training initiated successfully',
-          finetune_id: jsonResponse.finetune_id,
+          finetune_id: trainingResult.finetune_id,
           telegramId: telegram_id,
           modelName: modelName,
           step: 'create-training',
         })
 
-        return jsonResponse
+        return trainingResult
       })
 
       // Сохраняем информацию о тренировке в базу данных

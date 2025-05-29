@@ -1,4 +1,4 @@
-import { replicate } from '@/core/replicate'
+import { replicateReliable } from '@/core/replicate/withCircuitBreaker'
 import {
   getUserByTelegramId,
   updateUserBalance,
@@ -37,53 +37,6 @@ interface ModelTrainingResult {
 }
 
 const activeTrainings = new Map<string, { cancel: () => void }>()
-
-async function getLatestModelUrl(modelName: string): Promise<string> {
-  try {
-    const username = process.env.REPLICATE_USERNAME
-    if (!username) {
-      throw new Error('REPLICATE_USERNAME is not set in environment variables')
-    }
-    const response = await fetch(
-      `https://api.replicate.com/v1/models/${username}/${modelName}`,
-      {
-        method: 'GET',
-        headers: {
-          Authorization: `Bearer ${process.env.REPLICATE_API_TOKEN}`,
-          'Content-Type': 'application/json',
-        },
-      }
-    )
-
-    if (!response.ok) {
-      if (response.status === 404) {
-        console.warn(
-          `Model ${username}/${modelName} not found or has no version yet.`
-        )
-        throw new Error(
-          `Model ${username}/${modelName} not found or has no version yet.`
-        )
-      }
-      throw new Error(
-        `Failed to fetch latest version id, status: ${response.status}`
-      )
-    }
-
-    const data = await response.json()
-    console.log('data:', data)
-    if (!data.latest_version?.id) {
-      throw new Error(
-        `Latest version ID not found for model ${username}/${modelName}`
-      )
-    }
-    const model_url = `${username}/${modelName}:${data.latest_version.id}`
-    console.log('model_url:', model_url)
-    return model_url
-  } catch (error) {
-    console.error('Error fetching latest model url:', error)
-    throw error
-  }
-}
 
 export async function generateModelTraining(
   zipUrl: string,
@@ -153,7 +106,11 @@ export async function generateModelTraining(
     let modelExists = false
     try {
       console.log(`Checking if model exists: ${username}/${modelName}`)
-      await replicate.models.get(username, modelName)
+      await replicateReliable.getModel(
+        username,
+        modelName,
+        'check-model-existence'
+      )
       console.log(`Model ${username}/${modelName} exists.`)
       modelExists = true
     } catch (error) {
@@ -171,11 +128,16 @@ export async function generateModelTraining(
     if (!modelExists) {
       try {
         console.log(`Creating model ${username}/${modelName}...`)
-        await replicate.models.create(username, modelName, {
-          description: `LoRA model trained with trigger word: ${triggerWord}`,
-          visibility: 'public',
-          hardware: 'gpu-t4',
-        })
+        await replicateReliable.createModel(
+          username,
+          modelName,
+          {
+            description: `LoRA model trained with trigger word: ${triggerWord}`,
+            visibility: 'public',
+            hardware: 'gpu-t4',
+          },
+          'create-model'
+        )
         console.log(`Model ${username}/${modelName} created.`)
         await new Promise(resolve => setTimeout(resolve, 3000))
       } catch (error) {
@@ -199,7 +161,7 @@ export async function generateModelTraining(
     console.log(`Created DB training record ID: ${dbTrainingRecord.id}`)
 
     console.log(`Starting Replicate training for model ${destination}...`)
-    currentTraining = await replicate.trainings.create(
+    currentTraining = await replicateReliable.createTraining(
       'ostris',
       'flux-dev-lora-trainer',
       'e440909d3512c31646ee2e0c7d6f6f4923224863a6a10c494606e79fb5844497',
@@ -219,7 +181,8 @@ export async function generateModelTraining(
         },
         webhook: `${API_URL}/webhooks/replicate`,
         webhook_events_filter: ['completed'],
-      }
+      },
+      'create-training'
     )
     console.log(`Replicate training started. ID: ${currentTraining.id}`)
 
@@ -282,7 +245,10 @@ export async function generateModelTraining(
         `Waiting for training ${currentTraining.id} to complete... Current status: ${status}`
       )
       await new Promise(resolve => setTimeout(resolve, 15000))
-      const updatedTraining = await replicate.trainings.get(currentTraining.id)
+      const updatedTraining = await replicateReliable.getTraining(
+        currentTraining.id,
+        'poll-training-status'
+      )
       status = updatedTraining.status
 
       if (updatedTraining.error) {
@@ -301,7 +267,11 @@ export async function generateModelTraining(
 
     if (status === 'succeeded') {
       console.log('Training succeeded!')
-      const model_url = await getLatestModelUrl(modelName)
+      const model_url = await replicateReliable.getLatestModelUrl(
+        modelName,
+        username,
+        'get-trained-model-url'
+      )
       console.log('Latest model URL:', model_url)
       await updateLatestModelTraining(
         telegram_id,
@@ -345,7 +315,10 @@ export async function generateModelTraining(
         console.log(
           `Attempting to cancel training ${currentTraining.id} due to error...`
         )
-        await replicate.trainings.cancel(currentTraining.id)
+        await replicateReliable.cancelTraining(
+          currentTraining.id,
+          'cancel-training-on-error'
+        )
         console.log(`Training ${currentTraining.id} cancellation requested.`)
         await supabase
           .from('model_trainings')

@@ -26,6 +26,8 @@ import morgan from 'morgan'
 // import { checkSecretKey } from './utils/checkSecretKey'
 import { inngestRouter } from './routes/inngest.route'
 import { UploadRoute } from './routes/upload.route'
+import { HealthRoute } from './routes/health.route'
+import { MetricsRoute, metricsMiddleware } from './routes/metrics.route'
 import { inngest } from './core/inngest/clients'
 
 // const nexrenderPort = NEXRENDER_PORT
@@ -81,6 +83,10 @@ export class App {
     this.app.use((req, res, next) => {
       getDynamicLogger(LOG_FORMAT)(req, res, next)
     })
+
+    // Добавляем metrics middleware для подсчета запросов
+    this.app.use(metricsMiddleware)
+
     this.app.use(
       cors({
         origin: '*',
@@ -113,6 +119,10 @@ export class App {
     //   res.status(200).end()
     // })
 
+    // Системные routes (высокий приоритет)
+    this.app.use('/health', new HealthRoute().router)
+    this.app.use('/metrics', new MetricsRoute().router)
+
     this.app.use('/api/inngest', inngestRouter)
     this.app.use('/api/upload', new UploadRoute().router)
     this.app.get('/trigger', async (req, res) => {
@@ -135,6 +145,9 @@ export class App {
           version: '1.0.0',
           endpoints: {
             health: '/health',
+            healthDetailed: '/health/detailed',
+            metrics: '/metrics',
+            metricsJson: '/metrics/json',
             api: '/api/test',
           },
         })
@@ -145,13 +158,6 @@ export class App {
           message: 'Internal server error',
         })
       }
-    })
-
-    this.app.get('/health', (_req, res) => {
-      res.json({
-        status: 'OK',
-        timestamp: new Date().toISOString(),
-      })
     })
 
     this.app.get('/api/test', (_req, res) => {
