@@ -99,6 +99,7 @@ export class CacheManager {
   private dependencyMap = new Map<string, Set<string>>() // parent -> children
   private metrics: CacheMetrics
   private cleanupTimer?: NodeJS.Timeout
+  private stopped = false
 
   constructor(config: Partial<CacheConfig> = {}) {
     this.config = cacheConfigSchema.parse(config)
@@ -546,6 +547,7 @@ export class CacheManager {
     }
     await this.cleanup()
     logger.info('🛑 CacheManager stopped')
+    this.stopped = true
   }
 
   // === PRIVATE METHODS ===
@@ -792,5 +794,41 @@ export class CacheManager {
         logger.error('❌ Cleanup timer error', { error })
       })
     }, this.config.cleanupInterval)
+  }
+
+  // Add health check method for SystemHealthMonitor compatibility
+  public isHealthy(): boolean {
+    return !this.stopped && this.metrics.totalAccessTime >= 0
+  }
+
+  public getHealthStatus(): {
+    status: 'HEALTHY' | 'WARNING' | 'CRITICAL'
+    message?: string
+    metrics?: Record<string, any>
+  } {
+    if (this.stopped) {
+      return {
+        status: 'CRITICAL',
+        message: 'CacheManager is stopped',
+        metrics: this.getStats(),
+      }
+    }
+
+    const stats = this.getStats()
+    const hitRate = stats.hits / (stats.hits + stats.misses) || 0
+
+    if (hitRate < 0.5 && stats.hits + stats.misses > 100) {
+      return {
+        status: 'WARNING',
+        message: `Low cache hit rate: ${(hitRate * 100).toFixed(1)}%`,
+        metrics: stats,
+      }
+    }
+
+    return {
+      status: 'HEALTHY',
+      message: `Cache hit rate: ${(hitRate * 100).toFixed(1)}%`,
+      metrics: stats,
+    }
   }
 }

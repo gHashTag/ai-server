@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach, jest } from 'bun:test'
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import {
   PerformanceMonitor,
   MonitorConfig,
@@ -9,8 +9,8 @@ import {
 import { CacheManager } from '@/utils/CacheManager'
 
 // Mock process.memoryUsage and process.cpuUsage for system metrics
-const mockMemoryUsage = jest.fn()
-const mockCpuUsage = jest.fn()
+const mockMemoryUsage = vi.fn()
+const mockCpuUsage = vi.fn()
 
 // Store original functions
 const originalMemoryUsage = process.memoryUsage

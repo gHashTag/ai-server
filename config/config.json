@@ -1,0 +1,7 @@
+{
+  "database": {
+    "host": "localhost",
+    "port": "5432",
+    "url": "postgres://admin:secret@localhost:5432/myapp"
+  }
+}

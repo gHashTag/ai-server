@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach } from 'bun:test'
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { CacheManager, CacheStrategy, CacheLevel } from '@/utils/CacheManager'
 
 describe('CacheManager', () => {

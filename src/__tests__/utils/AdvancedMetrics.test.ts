@@ -1,8 +1,10 @@
-import { describe, it, expect, beforeEach, afterEach } from 'bun:test'
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import {
   AdvancedMetrics,
   MetricType,
   AlertLevel,
+  TrendDirection,
+  Alert,
 } from '@/utils/AdvancedMetrics'
 import { CacheManager } from '@/utils/CacheManager'
 
@@ -235,9 +237,9 @@ describe('AdvancedMetrics', () => {
       await new Promise(resolve => setTimeout(resolve, 100))
 
       // Check resolved alerts (they should still exist but marked as resolved)
-      const allAlerts = Array.from((metrics as any).alerts.values())
+      const allAlerts = await metrics.getActiveAlerts()
       const errorAlert = allAlerts.find(
-        alert => alert.type === 'high_error_rate'
+        (alert: Alert) => alert.type === 'high_error_rate'
       )
       expect(errorAlert?.resolved).toBe(true)
     })
