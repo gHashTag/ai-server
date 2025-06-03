@@ -102,9 +102,9 @@ export const BOT_NAMES = {
   ['NeuroLenaAssistant_bot']: process.env.BOT_TOKEN_5,
   ['NeurostylistShtogrina_bot']: process.env.BOT_TOKEN_6,
   ['Gaia_Kamskaia_bot']: process.env.BOT_TOKEN_7,
+  ['Kaya_easy_art_bot']: process.env.BOT_TOKEN_8,
   ['ai_koshey_bot']: process.env.BOT_TOKEN_TEST_1,
   ['clip_maker_neuro_bot']: process.env.BOT_TOKEN_TEST_2,
-  ['Kaya_easy_art_bot']: process.env.BOT_TOKEN_TEST_3,
 }
 
 export const AVATARS_GROUP_ID = {
