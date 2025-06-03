@@ -214,7 +214,10 @@ export const neuroImageGeneration = inngest.createFunction(
         const generationResult = await step.run(
           `generate-image-${i}`,
           async () => {
-            const { bot } = getBotByName(bot_name)
+            const { bot, error } = getBotByName(bot_name)
+            if (error || !bot) {
+              throw new Error(`Bot instance not found or invalid: ${error}`)
+            }
             await bot.telegram.sendMessage(
               telegram_id,
               is_ru
@@ -300,7 +303,10 @@ export const neuroImageGeneration = inngest.createFunction(
         )
 
         await step.run(`notify-image-${i}`, async () => {
-          const { bot } = getBotByName(bot_name)
+          const { bot, error } = getBotByName(bot_name)
+          if (error || !bot) {
+            throw new Error(`Bot instance not found or invalid: ${error}`)
+          }
           await bot.telegram.sendPhoto(telegram_id, {
             source: fs.createReadStream(generationResult.path),
           })
@@ -346,7 +352,10 @@ export const neuroImageGeneration = inngest.createFunction(
       })
 
       await step.run('final-notification', async () => {
-        const { bot } = getBotByName(bot_name)
+        const { bot, error } = getBotByName(bot_name)
+        if (error || !bot) {
+          throw new Error(`Bot instance not found or invalid: ${error}`)
+        }
         await bot.telegram.sendMessage(
           telegram_id,
           is_ru
