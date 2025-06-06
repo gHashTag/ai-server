@@ -14,7 +14,7 @@ function removeAnnotations(text: string): string {
   return text.replace(annotationPattern, '')
 }
 
-export async function getAiFeedbackFromSupabase({
+export async function getAiFeedbackFromOpenAI({
   assistant_id,
   report,
   language_code,
