@@ -211,12 +211,18 @@ export class PaymentService {
         } else {
           // Если подписки нет, значит это пополнение баланса - обновляем баланс
           await updateUserBalanceRobokassa(
-            // Предполагаем, что эта функция существует
+            invId.toString(), // ИСПРАВЛЕНО: передаем inv_id первым параметром
             telegram_id,
             stars,
-            'money_income',
+            'MONEY_INCOME',
             `Пополнение баланса через Robokassa (InvId: ${invId})`,
-            { payment_id: paymentData.id } // Передаем ID платежа из БД
+            {
+              payment_id: paymentData.id,
+              payment_method: 'Robokassa',
+              bot_name: bot_name,
+              language: language_code,
+              service_type: null, // Для MONEY_INCOME всегда null
+            }
           )
           logger.info(
             `[PaymentSuccess] Balance updated via updateUserBalance for ${telegram_id} by ${stars}`

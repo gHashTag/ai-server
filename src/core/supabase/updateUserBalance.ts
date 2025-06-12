@@ -386,19 +386,25 @@ export const updateUserBalance = async (
           transactionAmount != null ? transactionAmount : 0
 
         // Определяем service_type для MONEY_OUTCOME
-        let serviceType = metadata?.service_type || null
+        const serviceType = metadata?.service_type || null
+
+        // КРИТИЧНО: service_type ДОЛЖЕН передаваться явно из сервиса!
         if (type === PaymentType.MONEY_OUTCOME && !serviceType) {
-          // Пытаемся определить service_type из description, если он не передан явно
-          // Это очень упрощенная логика, ее нужно будет улучшить или передавать service_type всегда явно
-          if (
-            description?.toLowerCase().includes('neurophoto') ||
-            description?.toLowerCase().includes('neuro_photo')
-          ) {
-            serviceType = ModeEnum.NeuroPhoto // Предполагаем, что ModeEnum.NeuroPhoto это строка 'NEURO_PHOTO'
-          } else if (description?.toLowerCase().includes('texttoimage')) {
-            serviceType = ModeEnum.TextToImage
-          }
-          // ... другие режимы по аналогии
+          logger.error(
+            '❌ КРИТИЧЕСКАЯ ОШИБКА: service_type не передан для MONEY_OUTCOME операции!',
+            {
+              description:
+                'CRITICAL ERROR: service_type not provided for MONEY_OUTCOME operation',
+              telegram_id,
+              operation_description: description,
+              caller_metadata: metadata,
+            }
+          )
+
+          // Возвращаем ошибку вместо угадывания
+          throw new Error(
+            'service_type обязателен для операций списания средств (MONEY_OUTCOME)'
+          )
         }
 
         // ВАЖНО: Работаем с payments_v2
