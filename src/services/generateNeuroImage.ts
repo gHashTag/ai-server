@@ -337,7 +337,14 @@ export async function generateNeuroImage(
                   { text: is_ru ? '⬆️ Улучшить промпт' : '⬆️ Improve prompt' },
                   { text: is_ru ? '📐 Изменить размер' : '📐 Change size' },
                 ],
-                [{ text: is_ru ? '🏠 Главное меню' : '🏠 Main menu' }],
+                [
+                  {
+                    text: is_ru
+                      ? '⬆️ Увеличить качество'
+                      : '⬆️ Upscale Quality',
+                  },
+                  { text: is_ru ? '🏠 Главное меню' : '🏠 Main menu' },
+                ],
               ],
               resize_keyboard: true,
               one_time_keyboard: false,
