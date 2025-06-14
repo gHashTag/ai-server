@@ -378,7 +378,14 @@ export const neuroImageGeneration = inngest.createFunction(
                   { text: is_ru ? '🆕 Новый промпт' : '🆕 New prompt' },
                   { text: is_ru ? '⬆️ Улучшить промпт' : '⬆️ Improve prompt' },
                 ],
-                [{ text: is_ru ? '📐 Изменить размер' : '📐 Change size' }],
+                [
+                  { text: is_ru ? '📐 Изменить размер' : '📐 Change size' },
+                  {
+                    text: is_ru
+                      ? '⬆️ Увеличить качество'
+                      : '⬆️ Upscale Quality',
+                  },
+                ],
                 [{ text: is_ru ? '🏠 Главное меню' : '🏠 Main menu' }],
               ],
               resize_keyboard: true,
