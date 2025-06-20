@@ -11,6 +11,9 @@ export const bots = Object.values(BOT_NAMES).map(
   token => new Telegraf<MyContext>(token)
 )
 
+// Импортируем DEFAULT_BOT_NAME для fallback
+import { DEFAULT_BOT_NAME } from '@/config'
+
 export function getBotByName(bot_name: string): {
   bot?: Telegraf<MyContext>
   error?: string | null
@@ -21,19 +24,38 @@ export function getBotByName(bot_name: string): {
   })
 
   // Проверяем наличие бота в конфигурации
-  const token = BOT_NAMES[bot_name]
+  let token = BOT_NAMES[bot_name]
+  let actualBotName = bot_name
+
   if (!token) {
-    logger.error('❌ Токен бота не найден в конфигурации', {
-      description: 'Bot token not found in configuration',
-      bot_name,
-      availableBots: Object.keys(BOT_NAMES),
-    })
-    return { error: 'Bot not found in configuration' }
+    logger.warn(
+      '⚠️ Токен бота не найден в конфигурации, используем fallback:',
+      {
+        description: 'Bot token not found in configuration, using fallback',
+        requested_bot_name: bot_name,
+        fallback_bot_name: DEFAULT_BOT_NAME,
+        availableBots: Object.keys(BOT_NAMES),
+      }
+    )
+
+    // Используем fallback на DEFAULT_BOT_NAME
+    token = BOT_NAMES[DEFAULT_BOT_NAME]
+    actualBotName = DEFAULT_BOT_NAME
+
+    if (!token) {
+      logger.error('❌ Даже fallback бот недоступен в конфигурации', {
+        description: 'Even fallback bot not available in configuration',
+        fallback_bot_name: DEFAULT_BOT_NAME,
+        availableBots: Object.keys(BOT_NAMES),
+      })
+      return { error: 'Bot not found in configuration' }
+    }
   }
 
   logger.info('🔑 Токен бота получен из конфигурации', {
     description: 'Bot token retrieved from configuration',
-    bot_name,
+    requested_bot_name: bot_name,
+    actual_bot_name: actualBotName,
     tokenLength: token.length,
   })
 
@@ -43,7 +65,8 @@ export function getBotByName(bot_name: string): {
   if (!bot) {
     logger.error('❌ Экземпляр бота не найден', {
       description: 'Bot instance not found',
-      bot_name,
+      requested_bot_name: bot_name,
+      actual_bot_name: actualBotName,
       availableBots: bots.map(bot => ({
         token: bot.telegram.token.substring(0, 5) + '...',
         hasBot: !!bot,
@@ -58,7 +81,8 @@ export function getBotByName(bot_name: string): {
       '❌ Экземпляр бота найден, но отсутствуют необходимые методы',
       {
         description: 'Bot instance found but missing required methods',
-        bot_name,
+        requested_bot_name: bot_name,
+        actual_bot_name: actualBotName,
         hasTelegram: !!bot.telegram,
         methods: bot.telegram ? Object.keys(bot.telegram) : [],
       }
@@ -68,7 +92,8 @@ export function getBotByName(bot_name: string): {
 
   logger.info('✅ Бот успешно получен', {
     description: 'Bot successfully retrieved',
-    bot_name,
+    requested_bot_name: bot_name,
+    actual_bot_name: actualBotName,
     hasTelegram: !!bot.telegram,
     methodsCount: bot.telegram ? Object.keys(bot.telegram).length : 0,
   })

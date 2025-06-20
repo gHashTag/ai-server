@@ -73,6 +73,7 @@ if (!process.env.BOT_TOKEN_5) throw new Error('BOT_TOKEN_5 is not set')
 if (!process.env.BOT_TOKEN_6) throw new Error('BOT_TOKEN_6 is not set')
 if (!process.env.BOT_TOKEN_7) throw new Error('BOT_TOKEN_7 is not set')
 if (!process.env.BOT_TOKEN_8) throw new Error('BOT_TOKEN_8 is not set')
+if (!process.env.BOT_TOKEN_9) throw new Error('BOT_TOKEN_9 is not set')
 
 if (!process.env.BOT_TOKEN_TEST_1)
   throw new Error('BOT_TOKEN_TEST_1 is not set')
@@ -88,6 +89,7 @@ const BOT_TOKENS_PROD = [
   process.env.BOT_TOKEN_6,
   process.env.BOT_TOKEN_7,
   process.env.BOT_TOKEN_8,
+  process.env.BOT_TOKEN_9,
 ]
 const BOT_TOKENS_TEST = [
   process.env.BOT_TOKEN_TEST_1,
@@ -103,6 +105,7 @@ export const BOT_NAMES = {
   ['NeurostylistShtogrina_bot']: process.env.BOT_TOKEN_6,
   ['Gaia_Kamskaia_bot']: process.env.BOT_TOKEN_7,
   ['Kaya_easy_art_bot']: process.env.BOT_TOKEN_8,
+  ['AI_STARS_bot']: process.env.BOT_TOKEN_9,
   ['ai_koshey_bot']: process.env.BOT_TOKEN_TEST_1,
   ['clip_maker_neuro_bot']: process.env.BOT_TOKEN_TEST_2,
 }
@@ -116,6 +119,7 @@ export const AVATARS_GROUP_ID = {
   ['NeurostylistShtogrina_bot']: '@neirostylist',
   ['Gaia_Kamskaia_bot']: '@neuromeets',
   ['ai_koshey_bot']: '@ai_koshey',
+  ['AI_STARS_bot']: '@ai_stars',
 }
 
 export const ADMIN_GROUP_ID = '@neuro_blogger_pulse'
