@@ -3,11 +3,13 @@
  * Real API integration with strict typing and validation
  */
 
-import { Inngest } from 'inngest'
 import { slugify } from 'inngest'
 import axios from 'axios'
 import pkg from 'pg'
 const { Pool } = pkg
+
+// Используем основной Inngest клиент
+import { inngest } from '@/core/inngest/clients'
 
 // Импортируем Zod-схемы
 import {
@@ -24,12 +26,6 @@ import {
   type ReelsSaveResult,
   ReelsSaveResultSchema,
 } from '../core/instagram/schemas'
-
-// Isolated Inngest client for Instagram
-const instagramInngest = new Inngest({
-  id: 'ai-server-instagram-v2',
-  name: 'AI Server Instagram Scraper V2',
-})
 
 // Simple logger
 const log = {
@@ -352,8 +348,8 @@ class InstagramDatabase {
           await client.query(
             `INSERT INTO instagram_similar_users 
              (search_username, user_pk, username, full_name, is_private, is_verified, 
-              profile_pic_url, profile_chaining_secondary_label, social_context, project_id)
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+              profile_pic_url, profile_url, profile_chaining_secondary_label, social_context, project_id)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
              ON CONFLICT (search_username, user_pk) DO NOTHING`,
             [
               searchUsername,
@@ -363,6 +359,7 @@ class InstagramDatabase {
               user.is_private,
               user.is_verified,
               user.profile_pic_url,
+              user.profile_url || `https://instagram.com/${user.username}`,
               user.profile_chaining_secondary_label,
               user.social_context,
               projectId || null,
@@ -410,6 +407,7 @@ class InstagramDatabase {
           is_private BOOLEAN DEFAULT false,
           is_verified BOOLEAN DEFAULT false,
           profile_pic_url TEXT,
+          profile_url TEXT, -- URL профиля Instagram для прямого перехода
           profile_chaining_secondary_label VARCHAR(255),
           social_context VARCHAR(255),
           project_id INTEGER,
@@ -579,7 +577,7 @@ class InstagramDatabase {
 }
 
 // Main Instagram Scraper Function with Zod validation
-export const instagramScraperV2 = instagramInngest.createFunction(
+export const instagramScraperV2 = inngest.createFunction(
   {
     id: slugify('instagram-scraper-v2'),
     name: 'Instagram Scraper V2 (Real API + Zod)',
@@ -889,7 +887,7 @@ export async function triggerInstagramScrapingV2(
   // Валидируем входные данные
   const validatedData = InstagramScrapingEventSchema.parse(data)
 
-  const result = await instagramInngest.send({
+  const result = await inngest.send({
     name: 'instagram/scrape-similar-users',
     data: validatedData,
   })
