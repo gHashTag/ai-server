@@ -5,6 +5,10 @@ import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 import { z } from 'zod'
 import { mcpConfig, validateMcpConfig } from './config.js'
 import { createNeuroPhoto } from './tools/neurophoto.js'
+import {
+  createInstagramScraping,
+  InstagramScrapingMCPSchema,
+} from './tools/instagram-scraper.js'
 
 /**
  * Минимальное логирование для MCP сервера (только в stderr)
@@ -55,10 +59,19 @@ class AIServerMCP {
         gender: z.enum(['male', 'female']).describe('Пол для генерации'),
         telegram_id: z.string().describe('Telegram ID пользователя'),
       },
-      createNeuroPhoto
+      createNeuroPhoto as any
     )
 
-    mcpLogger.info('Tools configured: create_neurophoto')
+    // Инструмент для скрапинга Instagram конкурентов
+    this.server.tool(
+      'create_instagram_scraping',
+      InstagramScrapingMCPSchema.shape,
+      createInstagramScraping as any
+    )
+
+    mcpLogger.info(
+      'Tools configured: create_neurophoto, create_instagram_scraping'
+    )
   }
 
   async start() {

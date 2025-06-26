@@ -53,6 +53,7 @@ export interface InstagramUserEntity {
   profile_pic_url: string | null // Avatar URL (nullable)
   profile_chaining_secondary_label: string | null // Secondary label (nullable)
   social_context: string | null // Social context (nullable)
+  project_id: number | null // ID проекта для связи (nullable, INTEGER)
   scraped_at: Date // When scraped
   created_at: Date // When first saved
   updated_at: Date // When last updated
@@ -71,6 +72,7 @@ export interface CreateInstagramUserPayload {
   profile_pic_url?: string | null
   profile_chaining_secondary_label?: string | null
   social_context?: string | null
+  project_id?: number | null // ID проекта для связи (optional, INTEGER)
 }
 
 // =====================================
@@ -80,19 +82,22 @@ export interface CreateInstagramUserPayload {
 /**
  * Instagram scraping event data
  */
-export interface InstagramScrapingEventData {
-  username_or_id: string // Target username or Instagram ID
-  max_users?: number // Max users to scrape (default: 50)
-  requester_telegram_id?: string // ID of user who requested (optional)
-  metadata?: Record<string, any> // Additional metadata
+export interface InstagramScrapingEvent {
+  username_or_id: string
+  project_id: number
+  max_users?: number // По умолчанию 50
+  max_reels_per_user?: number // НОВОЕ: По умолчанию 50 рилсов на пользователя
+  scrape_reels?: boolean // НОВОЕ: Включить ли парсинг рилсов (по умолчанию false)
+  requester_telegram_id?: string
+  metadata?: Record<string, any>
 }
 
 /**
  * Complete Instagram scraping event
  */
-export interface InstagramScrapingEvent {
+export interface InstagramScrapingEventPayload {
   name: 'instagram/scrape-similar-users'
-  data: InstagramScrapingEventData
+  data: InstagramScrapingEvent
 }
 
 // =====================================
@@ -169,6 +174,7 @@ export interface InstagramUserFilters {
   search_username?: string
   is_verified?: boolean
   is_private?: boolean
+  project_id?: number // Фильтр по проекту (INTEGER)
   scraped_after?: Date
   scraped_before?: Date
   limit?: number
@@ -226,4 +232,101 @@ export interface RateLimitInfo {
   remaining: number // Remaining requests
   resetAt: Date // When limit resets
   retryAfter?: number // Seconds to wait if rate limited
+}
+
+// =====================================
+// INSTAGRAM REELS INTERFACES
+// =====================================
+
+/**
+ * Raw Instagram reel data from RapidAPI response
+ */
+export interface RawInstagramReel {
+  pk: string | number
+  id: string
+  code: string // shortcode
+  media_type: number
+  image_versions2?: {
+    candidates: Array<{
+      url: string
+      width: number
+      height: number
+    }>
+  }
+  video_versions?: Array<{
+    url: string
+    width: number
+    height: number
+  }>
+  caption?: {
+    text?: string
+  } | null
+  like_count?: number
+  comment_count?: number
+  play_count?: number
+  taken_at: number
+  user: {
+    pk: string | number
+    username: string
+    full_name?: string
+    profile_pic_url?: string
+    is_verified?: boolean
+  }
+  original_width?: number
+  original_height?: number
+}
+
+/**
+ * Validated Instagram Reel for database
+ */
+export interface ValidatedInstagramReel {
+  reel_id: string
+  shortcode: string
+  display_url: string
+  video_url?: string
+  caption?: string
+  like_count: number
+  comment_count: number
+  play_count?: number
+  taken_at_timestamp: number
+  owner_id: string
+  owner_username: string
+  owner_full_name?: string
+  owner_profile_pic_url?: string
+  owner_is_verified?: boolean
+  is_video: boolean
+  video_duration?: number
+  accessibility_caption?: string
+  hashtags?: string[]
+  mentions?: string[]
+  project_id?: number
+  scraped_for_user_pk?: string // ID пользователя, для которого собрали рилсы
+}
+
+/**
+ * Instagram Reels API response structure (REAL API format)
+ */
+export interface InstagramReelsApiResponse {
+  status: string
+  message?: string | null
+  data: {
+    items: Array<{
+      media: RawInstagramReel
+    }>
+    paging_info: {
+      max_id?: string
+      more_available?: boolean
+    }
+  }
+}
+
+/**
+ * Database result for reels saving
+ */
+export interface ReelsSaveResult {
+  saved: number
+  duplicatesSkipped: number
+  totalProcessed: number
+  userId: string
+  username: string
 }

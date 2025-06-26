@@ -59,6 +59,10 @@ export class App {
       logger.info(`🚀 App listening on the port ${this.port}`)
       logger.info(`http://localhost:${this.port}`)
       logger.info(`=================================`)
+      logger.info(`📊 Inngest Dashboard: http://localhost:8288`)
+      logger.info(`🔗 Inngest Functions: http://localhost:8288/functions`)
+      logger.info(`⚡ Inngest Events: http://localhost:8288/events`)
+      logger.info(`=================================`)
     })
     return this.server
   }
