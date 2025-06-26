@@ -5,6 +5,7 @@ import { modelTrainingV2 } from './modelTrainingV2'
 import { broadcastMessage } from './broadcastMessage'
 import { processPayment } from './paymentProcessing'
 import { instagramScraperV2 } from './instagramScraper-v2'
+import { instagramReelsTest } from './instagramScraper-v2-simple'
 
 // Экспортируем массив функций для Inngest
 export const functions = [
@@ -15,6 +16,7 @@ export const functions = [
   broadcastMessage,
   processPayment,
   instagramScraperV2, // Real Instagram API integration
+  instagramReelsTest, // Test function for reels API
 ]
 
 // Экспортируем отдельные функции для прямого импорта
@@ -26,6 +28,7 @@ export {
   broadcastMessage,
   processPayment,
   instagramScraperV2,
+  instagramReelsTest,
 }
 
 // Также экспортируем все через старый способ для совместимости

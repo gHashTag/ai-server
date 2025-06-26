@@ -68,6 +68,7 @@ export async function createInstagramUsersTable(): Promise<void> {
       profile_pic_url TEXT,
       profile_chaining_secondary_label VARCHAR(255),
       social_context VARCHAR(255),
+      project_id INTEGER, -- ID проекта для связи (INTEGER)
       scraped_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
       created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
       updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
@@ -79,6 +80,9 @@ export async function createInstagramUsersTable(): Promise<void> {
     
     CREATE INDEX IF NOT EXISTS idx_instagram_users_scraped_at 
     ON instagram_similar_users(scraped_at);
+
+    CREATE INDEX IF NOT EXISTS idx_instagram_users_project_id 
+    ON instagram_similar_users(project_id);
   `
 
   try {
@@ -101,11 +105,12 @@ export async function insertInstagramUser(
     INSERT INTO instagram_similar_users (
       search_username, user_pk, username, full_name, 
       is_private, is_verified, profile_pic_url, 
-      profile_chaining_secondary_label, social_context
-    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+      profile_chaining_secondary_label, social_context, project_id
+    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
     ON CONFLICT (search_username, user_pk) 
     DO UPDATE SET 
-      updated_at = CURRENT_TIMESTAMP
+      updated_at = CURRENT_TIMESTAMP,
+      project_id = EXCLUDED.project_id
     RETURNING *
   `
 
@@ -119,6 +124,7 @@ export async function insertInstagramUser(
     userData.profile_pic_url || null,
     userData.profile_chaining_secondary_label || null,
     userData.social_context || null,
+    userData.project_id || null,
   ]
 
   try {
@@ -159,6 +165,11 @@ export async function getInstagramUsers(
   if (filters.is_verified !== undefined) {
     query += ` AND is_verified = $${++paramCount}`
     values.push(filters.is_verified)
+  }
+
+  if (filters.project_id) {
+    query += ` AND project_id = $${++paramCount}`
+    values.push(filters.project_id)
   }
 
   query += ' ORDER BY scraped_at DESC'
