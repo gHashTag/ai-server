@@ -66,6 +66,7 @@ export async function createInstagramUsersTable(): Promise<void> {
       is_private BOOLEAN DEFAULT false,
       is_verified BOOLEAN DEFAULT false,
       profile_pic_url TEXT,
+      profile_url TEXT, -- URL профиля Instagram для прямого перехода
       profile_chaining_secondary_label VARCHAR(255),
       social_context VARCHAR(255),
       project_id INTEGER, -- ID проекта для связи (INTEGER)
@@ -104,9 +105,9 @@ export async function insertInstagramUser(
   const insertSQL = `
     INSERT INTO instagram_similar_users (
       search_username, user_pk, username, full_name, 
-      is_private, is_verified, profile_pic_url, 
+      is_private, is_verified, profile_pic_url, profile_url,
       profile_chaining_secondary_label, social_context, project_id
-    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
     ON CONFLICT (search_username, user_pk) 
     DO UPDATE SET 
       updated_at = CURRENT_TIMESTAMP,
@@ -122,6 +123,7 @@ export async function insertInstagramUser(
     userData.is_private || false,
     userData.is_verified || false,
     userData.profile_pic_url || null,
+    userData.profile_url || `https://instagram.com/${userData.username}`, // Автоматически генерируем URL
     userData.profile_chaining_secondary_label || null,
     userData.social_context || null,
     userData.project_id || null,

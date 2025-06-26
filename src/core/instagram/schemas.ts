@@ -30,6 +30,7 @@ export const InstagramApiResponseSchema = z.object({
   status: z.string(),
   message: z.string().nullable().optional(), // Может быть null, undefined или строкой
   data: z.object({
+    id: z.union([z.string(), z.number()]).optional(), // ID пользователя, для которого искали похожих
     users: z.array(InstagramUserSchema),
   }),
 })
@@ -45,6 +46,7 @@ export const ValidatedInstagramUserSchema = z.object({
   is_private: z.boolean(),
   is_verified: z.boolean(),
   profile_pic_url: z.string().nullable(),
+  profile_url: z.string().nullable(), // URL профиля Instagram
   profile_chaining_secondary_label: z.string().nullable(),
   social_context: z.string().nullable(),
   project_id: z.number().int().positive().nullable().optional(), // ID проекта для связи (INTEGER)
@@ -116,6 +118,7 @@ export function validateInstagramUsers(
         is_private: parsedUser.is_private,
         is_verified: parsedUser.is_verified,
         profile_pic_url: parsedUser.profile_pic_url || '',
+        profile_url: `https://instagram.com/${parsedUser.username}`, // Генерируем URL профиля
         profile_chaining_secondary_label:
           parsedUser.profile_chaining_secondary_label || '',
         social_context: parsedUser.social_context || '',

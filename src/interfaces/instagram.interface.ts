@@ -51,6 +51,7 @@ export interface InstagramUserEntity {
   is_private: boolean // Private account flag
   is_verified: boolean // Verified account flag
   profile_pic_url: string | null // Avatar URL (nullable)
+  profile_url: string | null // Instagram profile URL (nullable)
   profile_chaining_secondary_label: string | null // Secondary label (nullable)
   social_context: string | null // Social context (nullable)
   project_id: number | null // ID проекта для связи (nullable, INTEGER)
@@ -70,6 +71,7 @@ export interface CreateInstagramUserPayload {
   is_private?: boolean
   is_verified?: boolean
   profile_pic_url?: string | null
+  profile_url?: string | null // Instagram profile URL
   profile_chaining_secondary_label?: string | null
   social_context?: string | null
   project_id?: number | null // ID проекта для связи (optional, INTEGER)
