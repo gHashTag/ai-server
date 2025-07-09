@@ -25,6 +25,10 @@ import {
   type ValidatedInstagramReel,
   type ReelsSaveResult,
   ReelsSaveResultSchema,
+  CreateInstagramUserEventSchema,
+  type CreateInstagramUserEvent,
+  type CreateUserResult,
+  CreateUserResultSchema,
 } from '../core/instagram/schemas'
 
 // Simple logger
@@ -390,6 +394,103 @@ class InstagramDatabase {
       )
 
       return validatedResult
+    } finally {
+      client.release()
+    }
+  }
+
+  /**
+   * Создаёт одного пользователя в таблице instagram_similar_users
+   */
+  async createSingleUser(
+    userData: CreateInstagramUserEvent
+  ): Promise<CreateUserResult> {
+    const client = await dbPool.connect()
+
+    try {
+      // Ensure table exists
+      await this.ensureTableExists(client)
+
+      // Создаём объект пользователя для сохранения
+      const user: ValidatedInstagramUser = {
+        pk: userData.pk,
+        username: userData.username,
+        full_name: userData.full_name || '',
+        is_private: userData.is_private || false,
+        is_verified: userData.is_verified || false,
+        profile_pic_url: userData.profile_pic_url || '',
+        profile_url: `https://instagram.com/${userData.username}`,
+        profile_chaining_secondary_label:
+          userData.profile_chaining_secondary_label || '',
+        social_context: userData.social_context || '',
+        project_id: userData.project_id,
+      }
+
+      // Проверяем, существует ли уже такой пользователь
+      const existingUser = await client.query(
+        'SELECT id FROM instagram_similar_users WHERE user_pk = $1 AND project_id = $2',
+        [user.pk, userData.project_id]
+      )
+
+      if (existingUser.rows.length > 0) {
+        log.info(
+          `👤 User already exists: ${user.username} (PK: ${user.pk}) in project ${userData.project_id}`
+        )
+
+        const result: CreateUserResult = {
+          success: true,
+          created: false,
+          alreadyExists: true,
+          user: user,
+        }
+
+        return CreateUserResultSchema.parse(result)
+      }
+
+      // Вставляем нового пользователя
+      await client.query(
+        `INSERT INTO instagram_similar_users 
+         (search_username, user_pk, username, full_name, is_private, is_verified, 
+          profile_pic_url, profile_url, profile_chaining_secondary_label, social_context, project_id)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
+        [
+          `manual_${userData.username}`, // Префикс для ручного создания
+          user.pk,
+          user.username,
+          user.full_name,
+          user.is_private,
+          user.is_verified,
+          user.profile_pic_url,
+          user.profile_url,
+          user.profile_chaining_secondary_label,
+          user.social_context,
+          userData.project_id,
+        ]
+      )
+
+      log.info(
+        `✅ User created successfully: ${user.username} (PK: ${user.pk}) in project ${userData.project_id}`
+      )
+
+      const result: CreateUserResult = {
+        success: true,
+        created: true,
+        alreadyExists: false,
+        user: user,
+      }
+
+      return CreateUserResultSchema.parse(result)
+    } catch (error: any) {
+      log.error(`❌ Error creating user ${userData.username}:`, error.message)
+
+      const result: CreateUserResult = {
+        success: false,
+        created: false,
+        alreadyExists: false,
+        error: error.message,
+      }
+
+      return CreateUserResultSchema.parse(result)
     } finally {
       client.release()
     }
@@ -889,6 +990,145 @@ export async function triggerInstagramScrapingV2(
 
   const result = await inngest.send({
     name: 'instagram/scrape-similar-users',
+    data: validatedData,
+  })
+
+  return {
+    eventId: result.ids[0],
+  }
+}
+
+// Новая функция для создания одного пользователя Instagram
+export const createInstagramUser = inngest.createFunction(
+  {
+    id: slugify('create-instagram-user'),
+    name: 'Create Single Instagram User',
+    concurrency: 5,
+  },
+  { event: 'instagram/create-user' },
+  async ({ event, step, runId, logger: log }) => {
+    // Валидируем входные данные с помощью Zod
+    const validationResult = CreateInstagramUserEventSchema.safeParse(
+      event.data
+    )
+
+    if (!validationResult.success) {
+      const errorMessage = `Invalid event data: ${validationResult.error.errors
+        .map(e => `${e.path.join('.')}: ${e.message}`)
+        .join(', ')}`
+      log.error(errorMessage)
+      throw new Error(errorMessage)
+    }
+
+    const userData = validationResult.data
+
+    log.info('🚀 Create Instagram User started (with Zod validation)', {
+      runId,
+      username: userData.username,
+      pk: userData.pk,
+      projectId: userData.project_id,
+      requester: userData.requester_telegram_id,
+    })
+
+    // Step 1: Validate database connection
+    const dbValidation = await step.run('validate-database', async () => {
+      if (!process.env.NEON_DATABASE_URL) {
+        throw new Error('Database URL is not configured')
+      }
+
+      log.info(`✅ Database connection validated`)
+      return { valid: true }
+    })
+
+    // Step 2: Validate project_id exists in database
+    const projectValidation = await step.run(
+      'validate-project-id',
+      async () => {
+        const db = new InstagramDatabase()
+        const validation = await db.validateProjectId(userData.project_id)
+
+        if (!validation.exists) {
+          throw new Error(
+            `Project ID ${userData.project_id} does not exist or is inactive`
+          )
+        }
+
+        log.info(
+          `✅ Project validation successful: ${validation.projectName} (ID: ${userData.project_id})`
+        )
+        return {
+          valid: true,
+          projectId: userData.project_id,
+          projectName: validation.projectName,
+        }
+      }
+    )
+
+    // Step 3: Create user in database
+    const createResult = (await step.run(
+      'create-user-in-database',
+      async () => {
+        const db = new InstagramDatabase()
+        const result = await db.createSingleUser(userData)
+
+        if (!result.success) {
+          throw new Error(`Failed to create user: ${result.error}`)
+        }
+
+        log.info(
+          `${result.created ? '✅ User created' : '👤 User already exists'}: ${
+            userData.username
+          } (PK: ${userData.pk})`
+        )
+
+        return result
+      }
+    )) as CreateUserResult
+
+    // Final result
+    const finalResult = {
+      success: true,
+      created: createResult.created,
+      alreadyExists: createResult.alreadyExists,
+      user: {
+        pk: userData.pk,
+        username: userData.username,
+        full_name: userData.full_name,
+        is_private: userData.is_private,
+        is_verified: userData.is_verified,
+        profile_pic_url: userData.profile_pic_url,
+        profile_url: `https://instagram.com/${userData.username}`,
+        profile_chaining_secondary_label:
+          userData.profile_chaining_secondary_label,
+        social_context: userData.social_context,
+      },
+      projectId: userData.project_id,
+      requesterTelegramId: userData.requester_telegram_id,
+      createdAt: new Date(),
+      runId,
+      mode: 'MANUAL_USER_CREATION_WITH_ZOD',
+    }
+
+    log.info('🎉 Create Instagram User completed successfully', {
+      username: userData.username,
+      pk: userData.pk,
+      created: createResult.created,
+      projectId: userData.project_id,
+    })
+
+    return finalResult
+  }
+)
+
+// Helper function to trigger single user creation with Zod validation
+export async function triggerCreateInstagramUser(
+  data: CreateInstagramUserEvent
+): Promise<{ eventId: string }> {
+  // Валидируем входные данные
+  const validatedData = CreateInstagramUserEventSchema.parse(data)
+
+  const result = await inngest.send({
+    name: 'instagram/create-user',
     data: validatedData,
   })
 

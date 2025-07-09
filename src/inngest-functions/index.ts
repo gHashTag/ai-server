@@ -4,7 +4,7 @@ import { generateModelTraining } from './generateModelTraining'
 import { modelTrainingV2 } from './modelTrainingV2'
 import { broadcastMessage } from './broadcastMessage'
 import { processPayment } from './paymentProcessing'
-import { instagramScraperV2 } from './instagramScraper-v2'
+import { instagramScraperV2, createInstagramUser } from './instagramScraper-v2'
 import { instagramReelsTest } from './instagramScraper-v2-simple'
 
 // Экспортируем массив функций для Inngest
@@ -16,6 +16,7 @@ export const functions = [
   broadcastMessage,
   processPayment,
   instagramScraperV2, // Real Instagram API integration
+  createInstagramUser, // Manual Instagram user creation
   instagramReelsTest, // Test function for reels API
 ]
 
@@ -28,6 +29,7 @@ export {
   broadcastMessage,
   processPayment,
   instagramScraperV2,
+  createInstagramUser,
   instagramReelsTest,
 }
 

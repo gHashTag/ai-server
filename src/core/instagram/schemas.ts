@@ -92,6 +92,41 @@ export const DatabaseSaveResultSchema = z.object({
 // Тип для результата сохранения
 export type DatabaseSaveResult = z.infer<typeof DatabaseSaveResultSchema>
 
+// Схема для создания одного пользователя вручную
+export const CreateInstagramUserEventSchema = z.object({
+  pk: z.string().min(1, 'User PK is required'),
+  username: z.string().min(1, 'Username is required'),
+  full_name: z.string().optional().default(''),
+  is_private: z.boolean().optional().default(false),
+  is_verified: z.boolean().optional().default(false),
+  profile_pic_url: z.string().url().optional().or(z.literal('')).default(''),
+  profile_chaining_secondary_label: z.string().optional().default(''),
+  social_context: z.string().optional().default(''),
+  project_id: z
+    .number()
+    .int()
+    .positive('Project ID must be a positive integer'),
+  requester_telegram_id: z.string().optional(),
+  metadata: z.record(z.any()).optional().default({}),
+})
+
+// Тип для события создания пользователя
+export type CreateInstagramUserEvent = z.infer<
+  typeof CreateInstagramUserEventSchema
+>
+
+// Схема для результата создания одного пользователя
+export const CreateUserResultSchema = z.object({
+  success: z.boolean(),
+  created: z.boolean(),
+  alreadyExists: z.boolean(),
+  user: ValidatedInstagramUserSchema.optional(),
+  error: z.string().optional(),
+})
+
+// Тип для результата создания пользователя
+export type CreateUserResult = z.infer<typeof CreateUserResultSchema>
+
 // Функция для валидации массива пользователей
 export function validateInstagramUsers(
   users: unknown[],
