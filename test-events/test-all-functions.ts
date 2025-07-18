@@ -22,7 +22,7 @@ async function testAllFunctions() {
 
   const baseData = {
     project_id: 1,
-    requester_telegram_id: 144022504,
+    requester_telegram_id: "144022504", // ИСПРАВЛЕНО: string вместо number
     metadata: {
       test: 'all-functions-sync-test',
       timestamp: new Date().toISOString(),
