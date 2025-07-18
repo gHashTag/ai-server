@@ -24,6 +24,8 @@ export const functions = [
   instagramReelsTest, // Test function for reels API
   findCompetitors, // Job 1: Find Instagram Competitors
   analyzeCompetitorReels, // Job 2: Analyze Competitor Reels
+  extractTopContent, // Job 3: Extract Top Content
+  generateContentScripts, // Job 4: Generate Content Scripts
 ]
 
 // Экспортируем отдельные функции для прямого импорта
@@ -39,6 +41,8 @@ export {
   instagramReelsTest,
   findCompetitors,
   analyzeCompetitorReels,
+  extractTopContent,
+  generateContentScripts,
 }
 
 // Также экспортируем все через старый способ для совместимости
