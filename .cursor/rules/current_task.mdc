@@ -218,6 +218,162 @@ export const telegramCommandHandler = inngest.createFunction(
 
 **Текущая задача:** ✅ СИСТЕМА ПОЛНОСТЬЮ ГОТОВА К PRODUCTION! Все функции протестированы с реальными данными. Созданы тестовые скрипты и документация. Система готова к деплою и интеграции с Telegram Bot.
 
+## 🧪 **Руководство по тестированию функций**
+
+### **Быстрый старт с правильными типами данных**
+
+```bash
+# Запуск тестов с правильными типами данных (string для telegram_id)
+bun run test-events/test-with-templates.ts
+
+# Старые тесты (исправлены)
+bun run test-events/test-all-functions.ts
+```
+
+### **📊 Структура тестовых данных**
+
+**Базовый шаблон** (используется во всех функциях):
+```typescript
+{
+  id: "uniqueId-timestamp",           // Идемпотентность (24 часа)
+  name: "instagram/event-name",       // Имя события
+  data: {
+    project_id: 1,                    // ID проекта
+    requester_telegram_id: "144022504", // ⚠️ ВАЖНО: string, НЕ number
+    metadata: {
+      timestamp: "2025-07-18T...",    // Время события
+      test: "test-name",              // Тип теста
+      test_env: "development",        // Среда тестирования
+      version: "1.0.0"                // Версия
+    }
+  }
+}
+```
+
+### **🔧 Доступные тестовые кейсы для каждой функции**
+
+#### **1. findCompetitors (Job 1)**
+```typescript
+// Дефолтный тест
+generateTestEvent('findCompetitors', 'default')
+// Данные: username="alexyanovsky", max_users=3, min_followers=1000
+
+// Большая партия
+generateTestEvent('findCompetitors', 'large_batch')
+// Данные: username="alexyanovsky", max_users=10, min_followers=5000
+
+// Минимальные требования
+generateTestEvent('findCompetitors', 'minimal')
+// Данные: username="alexyanovsky", max_users=1, min_followers=100
+```
+
+#### **2. analyzeCompetitorReels (Job 2)**
+```typescript
+// Дефолтный тест
+generateTestEvent('analyzeCompetitorReels', 'default')
+// Данные: username="alexyanovsky", days_back=7, max_reels=5
+
+// Расширенный период
+generateTestEvent('analyzeCompetitorReels', 'extended_period')
+// Данные: username="alexyanovsky", days_back=30, max_reels=15
+
+// Минимальные параметры
+generateTestEvent('analyzeCompetitorReels', 'minimal')
+// Данные: username="alexyanovsky", days_back=3, max_reels=2
+```
+
+#### **3. extractTopContent (Job 3)**
+```typescript
+// Дефолтный тест
+generateTestEvent('extractTopContent', 'default')
+// Данные: username="alexyanovsky", days_back=14, limit=5
+
+// Большой лимит
+generateTestEvent('extractTopContent', 'large_limit')
+// Данные: username="alexyanovsky", days_back=30, limit=20
+
+// Минимальные параметры
+generateTestEvent('extractTopContent', 'minimal')
+// Данные: username="alexyanovsky", days_back=7, limit=3
+```
+
+#### **4. generateContentScripts (Job 4)**
+```typescript
+// Дефолтный тест
+generateTestEvent('generateContentScripts', 'default')
+// Данные: reel_id="test_reel_default", ig_reel_url="https://instagram.com/p/DHp5jLHt8v6/"
+
+// Реальный рилс
+generateTestEvent('generateContentScripts', 'real_reel')
+// Данные: reel_id="3565423054066818531_11632928642", ig_reel_url="https://instagram.com/p/DHp5jLHt8v6/"
+
+// Альтернативный рилс
+generateTestEvent('generateContentScripts', 'alternative_reel')
+// Данные: reel_id="test_reel_alternative", ig_reel_url="https://instagram.com/p/CExample123/"
+```
+
+#### **5. instagramScraperV2 (Job 5)**
+```typescript
+// Дефолтный тест
+generateTestEvent('instagramScraperV2', 'default')
+// Данные: username="alexyanovsky", max_users=5, max_reels_per_user=3, scrape_reels=true
+
+// Только пользователи
+generateTestEvent('instagramScraperV2', 'users_only')
+// Данные: username="alexyanovsky", max_users=10, max_reels_per_user=0, scrape_reels=false
+
+// Много рилсов
+generateTestEvent('instagramScraperV2', 'many_reels')
+// Данные: username="alexyanovsky", max_users=3, max_reels_per_user=10, scrape_reels=true
+```
+
+### **📋 Команды для тестирования**
+
+```bash
+# 1. Запуск всех функций с дефолтными параметрами
+bun run test-events/test-with-templates.ts
+
+# 2. Проверка статуса серверов
+lsof -i :4000  # Основной сервер
+lsof -i :8288  # Inngest Dev Server
+
+# 3. Просмотр результатов
+open http://localhost:8288  # Inngest Dashboard
+
+# 4. Проверка базы данных
+bun run test-events/verify-results-fixed.ts
+```
+
+### **🔍 Диагностика проблем**
+
+**Проблема:** `requester_telegram_id: Expected string, received number`
+**Решение:** Используйте `"144022504"` (string) вместо `144022504` (number)
+
+**Проблема:** `Function not found in dashboard`
+**Решение:** Проверьте, что функция добавлена в `src/inngest-functions/index.ts`
+
+**Проблема:** `Invalid status code: 500`
+**Решение:** Проверьте логи сервера и убедитесь, что все env переменные установлены
+
+### **🎯 Полный цикл тестирования**
+
+```bash
+# Шаг 1: Запустить серверы
+bun run dev
+
+# Шаг 2: Запустить тесты
+bun run test-events/test-with-templates.ts
+
+# Шаг 3: Подождать выполнения (30-60 сек)
+sleep 30
+
+# Шаг 4: Проверить результаты
+bun run test-events/verify-results-fixed.ts
+
+# Шаг 5: Просмотреть dashboard
+open http://localhost:8288
+```
+
 **⚡ ФИНАЛЬНАЯ ПРОВЕРКА ЗАВЕРШЕНА - 18.07.2025 08:15 UTC:**
 
 ✅ **Все 5 функций работают с РЕАЛЬНЫМИ данными:**
