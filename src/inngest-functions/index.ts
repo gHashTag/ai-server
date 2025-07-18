@@ -6,6 +6,10 @@ import { broadcastMessage } from './broadcastMessage'
 import { processPayment } from './paymentProcessing'
 import { instagramScraperV2, createInstagramUser } from './instagramScraper-v2'
 import { instagramReelsTest } from './instagramScraper-v2-simple'
+import { findCompetitors } from './findCompetitors'
+import { analyzeCompetitorReels } from './analyzeCompetitorReels'
+import { extractTopContent } from './extractTopContent'
+import { generateContentScripts } from './generateContentScripts'
 
 // Экспортируем массив функций для Inngest
 export const functions = [
@@ -18,6 +22,8 @@ export const functions = [
   instagramScraperV2, // Real Instagram API integration
   createInstagramUser, // Manual Instagram user creation
   instagramReelsTest, // Test function for reels API
+  findCompetitors, // Job 1: Find Instagram Competitors
+  analyzeCompetitorReels, // Job 2: Analyze Competitor Reels
 ]
 
 // Экспортируем отдельные функции для прямого импорта
@@ -31,6 +37,8 @@ export {
   instagramScraperV2,
   createInstagramUser,
   instagramReelsTest,
+  findCompetitors,
+  analyzeCompetitorReels,
 }
 
 // Также экспортируем все через старый способ для совместимости
@@ -41,3 +49,7 @@ export * from './modelTrainingV2'
 export * from './broadcastMessage'
 export * from './paymentProcessing'
 export * from './instagramScraper-v2'
+export * from './findCompetitors'
+export * from './analyzeCompetitorReels'
+export * from './extractTopContent'
+export * from './generateContentScripts'

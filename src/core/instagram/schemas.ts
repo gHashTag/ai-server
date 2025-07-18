@@ -256,19 +256,24 @@ export const RawInstagramReelSchema = z.object({
   }),
 })
 
-// Схема ответа API рилсов (исправленная под реальную структуру)
+// Схема ответа API рилсов (улучшенная для обработки ошибок)
 export const InstagramReelsApiResponseSchema = z.object({
   status: z.string(),
   message: z.string().nullable().optional(),
-  data: z.object({
-    items: z.array(RawInstagramReelSchema),
-    paging_info: z
-      .object({
-        max_id: z.string().optional(),
-        more_available: z.boolean().optional(),
-      })
-      .optional(),
-  }),
+  data: z.union([
+    // Успешный ответ - объект с items
+    z.object({
+      items: z.array(RawInstagramReelSchema),
+      paging_info: z
+        .object({
+          max_id: z.string().optional(),
+          more_available: z.boolean().optional(),
+        })
+        .optional(),
+    }),
+    // Ошибка - строка с описанием ошибки
+    z.string(),
+  ]),
 })
 
 // Схема валидированного рилса для БД
@@ -313,9 +318,43 @@ export type ReelsSaveResult = z.infer<typeof ReelsSaveResultSchema>
 
 /**
  * Валидирует ответ API рилсов Instagram
+ * Теперь обрабатывает случаи когда API возвращает ошибку в виде строки
  */
-export function validateInstagramReelsApiResponse(data: any) {
-  return InstagramReelsApiResponseSchema.safeParse(data)
+export function validateInstagramReelsApiResponse(data: any): {
+  success: boolean
+  data?: z.infer<typeof InstagramReelsApiResponseSchema>
+  error?: any
+} {
+  const result = InstagramReelsApiResponseSchema.safeParse(data)
+
+  if (!result.success) {
+    return {
+      success: false,
+      error: result.error,
+    }
+  }
+
+  // Проверяем, что data не является строкой (ошибкой)
+  if (typeof result.data.data === 'string') {
+    return {
+      success: false,
+      error: {
+        issues: [
+          {
+            code: 'api_error',
+            message: `API returned error: ${result.data.data}`,
+            path: ['data'],
+          },
+        ],
+        name: 'ApiError',
+      },
+    }
+  }
+
+  return {
+    success: true,
+    data: result.data,
+  }
 }
 
 /**

@@ -222,6 +222,19 @@ class InstagramAPI {
 
         const data = validationResult.data!.data
 
+        // Проверяем, что data не является строкой (ошибкой API)
+        if (typeof data === 'string') {
+          log.error(`❌ API returned error: ${data}`)
+          return {
+            success: false,
+            error: `API error: ${data}`,
+            reels: [],
+            total: 0,
+            userId: '',
+            username: username,
+          }
+        }
+
         // Проверяем что есть хотя бы один рилс
         if (!data.items || data.items.length === 0) {
           log.warn(`⚠️ No reels found for user ${username}`)
