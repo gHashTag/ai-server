@@ -5,6 +5,7 @@ import { modelTrainingV2 } from './modelTrainingV2'
 import { broadcastMessage } from './broadcastMessage'
 import { processPayment } from './paymentProcessing'
 import { instagramScraperV2, createInstagramUser } from './instagramScraper-v2'
+import { instagramScraperV2Test } from './instagramScraper-v2-test'
 import { instagramReelsTest } from './instagramScraper-v2-simple'
 import { findCompetitors } from './findCompetitors'
 import { analyzeCompetitorReels } from './analyzeCompetitorReels'
@@ -20,6 +21,7 @@ export const functions = [
   broadcastMessage,
   processPayment,
   instagramScraperV2, // Real Instagram API integration
+  instagramScraperV2Test, // TEST version without external APIs
   createInstagramUser, // Manual Instagram user creation
   instagramReelsTest, // Test function for reels API
   findCompetitors, // Job 1: Find Instagram Competitors

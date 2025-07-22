@@ -29,10 +29,13 @@ export type InstagramUser = z.infer<typeof InstagramUserSchema>
 export const InstagramApiResponseSchema = z.object({
   status: z.string(),
   message: z.string().nullable().optional(), // Может быть null, undefined или строкой
-  data: z.object({
-    id: z.union([z.string(), z.number()]).optional(), // ID пользователя, для которого искали похожих
-    users: z.array(InstagramUserSchema),
-  }),
+  data: z.union([
+    z.object({
+      id: z.union([z.string(), z.number()]).optional(), // ID пользователя, для которого искали похожих
+      users: z.array(InstagramUserSchema),
+    }),
+    z.string().describe('API error response (can be empty)'), // API может вернуть строку ошибки (включая пустую)
+  ]),
 })
 
 // Тип для ответа API
