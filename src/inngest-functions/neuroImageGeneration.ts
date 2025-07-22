@@ -26,7 +26,7 @@ import { slugify } from 'inngest'
 export const neuroImageGeneration = inngest.createFunction(
   {
     id: slugify('neuro-image-generation'),
-    name: 'Neuro Image Generation',
+    name: '🎨 Neuro Image Generation',
     retries: 3,
   },
   { event: 'neuro/photo.generate' },

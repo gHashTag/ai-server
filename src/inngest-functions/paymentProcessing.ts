@@ -63,7 +63,7 @@ const SUBSCRIPTION_AMOUNTS = SUBSCRIPTION_PLANS.reduce((acc, plan) => {
 export const processPayment = inngest.createFunction(
   {
     id: slugify('payment-processing-ai-server'), // v3 requires id
-    name: 'Payment Processing AI Server', // Optional display name
+    name: '💳 Payment Processing AI Server', // Optional display name
     retries: 3, // Автоматические повторы при сбоях
     onFailure: async ({ error }) => {
       console.log('❌ Ошибка обработки платежа:', error)

@@ -210,8 +210,8 @@ class InstagramReelsAnalyzer {
 // Main analyzeCompetitorReels function
 export const analyzeCompetitorReels = inngest.createFunction(
   {
-    id: slugify('analyze-competitor-reels'),
-    name: 'Analyze Competitor Reels',
+    id: 'analyze-competitor-reels',
+    name: '📈 Analyze Competitor Reels',
     concurrency: 2,
   },
   { event: 'instagram/analyze-reels' },

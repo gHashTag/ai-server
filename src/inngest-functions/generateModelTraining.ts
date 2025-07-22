@@ -193,7 +193,7 @@ const TRAINING_MESSAGES = {
 export const generateModelTraining = inngest.createFunction(
   {
     id: slugify('model-training'), // v3 requires id
-    name: 'Model Training', // Optional display name
+    name: '🧠 Model Training', // Optional display name
     concurrency: 2,
   },
   { event: 'model/training.start' },

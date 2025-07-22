@@ -16,6 +16,10 @@ services:
       - CREDENTIALS=true
       - ORIGIN=https://ai-server-u14194.vm.elestio.app
       - LOG_FORMAT=combined
+      # ✅ INNGEST VARIABLES FOR PRODUCTION:
+      - INNGEST_SIGNING_KEY=${INNGEST_SIGNING_KEY}
+      - INNGEST_EVENT_KEY=${INNGEST_EVENT_KEY}
+      - INNGEST_APP_URL=https://ai-server-u14194.vm.elestio.app
     volumes:
       - ./persistent_uploads:/app/dist/uploads
     restart: always

@@ -5,7 +5,7 @@ import { slugify } from 'inngest' // For v3 migration
 export const helloWorld = inngest.createFunction(
   {
     id: slugify('hello-world-test'), // v3 requires id
-    name: 'Hello World Test', // Optional display name
+    name: '👋 Hello World Test', // Optional display name
     retries: 3,
   },
   { event: 'test/hello' },

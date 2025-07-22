@@ -9,7 +9,7 @@ console.log(
 
 export const inngest = new Inngest({
   id: 'ai-training-server', // v3 requires id
-  // eventKey is typically not set in client constructor for v3
+  eventKey: process.env.INNGEST_EVENT_KEY, // ✅ ДОБАВЛЕНО для production
   // signingKey is also usually handled by middleware/serve or env vars
 })
 

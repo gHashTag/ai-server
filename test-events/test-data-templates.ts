@@ -12,8 +12,8 @@
 
 // Базовый шаблон для всех функций
 const baseTemplate = {
-  project_id: 1,
-  requester_telegram_id: '144022504', // ВАЖНО: должен быть string, не number
+  project_id: 38,
+  requester_telegram_id: '289259562', // ВАЖНО: должен быть string, не number
   metadata: {
     timestamp: () => new Date().toISOString(),
     test_env: 'development' as const,
@@ -35,9 +35,9 @@ export const findCompetitorsTestData = {
     name: 'instagram/find-competitors' as const,
     data: {
       ...baseTemplate,
-      username_or_id: 'alexyanovsky',
-      max_users: 3,
-      min_followers: 1000,
+      username_or_id: 'yacheslav_nekludov',
+      max_users: 30,
+      min_followers: 500,
       metadata: {
         ...baseTemplate.metadata,
         test: 'default-competitors',
@@ -51,9 +51,9 @@ export const findCompetitorsTestData = {
     name: 'instagram/find-competitors' as const,
     data: {
       ...baseTemplate,
-      username_or_id: 'alexyanovsky',
-      max_users: 10,
-      min_followers: 5000,
+      username_or_id: 'yacheslav_nekludov',
+      max_users: 30,
+      min_followers: 500,
       metadata: {
         ...baseTemplate.metadata,
         test: 'large-batch-competitors',
@@ -67,9 +67,9 @@ export const findCompetitorsTestData = {
     name: 'instagram/find-competitors' as const,
     data: {
       ...baseTemplate,
-      username_or_id: 'alexyanovsky',
-      max_users: 1,
-      min_followers: 100,
+      username_or_id: 'yacheslav_nekludov',
+      max_users: 30,
+      min_followers: 500,
       metadata: {
         ...baseTemplate.metadata,
         test: 'minimal-competitors',
@@ -87,7 +87,7 @@ export const analyzeCompetitorReelsTestData = {
     name: 'instagram/analyze-reels' as const,
     data: {
       ...baseTemplate,
-      username: 'alexyanovsky',
+      username: 'yacheslav_nekludov',
       days_back: 7,
       max_reels: 5,
       metadata: {
@@ -103,7 +103,7 @@ export const analyzeCompetitorReelsTestData = {
     name: 'instagram/analyze-reels' as const,
     data: {
       ...baseTemplate,
-      username: 'alexyanovsky',
+      username: 'yacheslav_nekludov',
       days_back: 30,
       max_reels: 15,
       metadata: {
@@ -119,7 +119,7 @@ export const analyzeCompetitorReelsTestData = {
     name: 'instagram/analyze-reels' as const,
     data: {
       ...baseTemplate,
-      username: 'alexyanovsky',
+      username: 'yacheslav_nekludov',
       days_back: 3,
       max_reels: 2,
       metadata: {
@@ -136,10 +136,10 @@ export const extractTopContentTestData = {
   // Дефолтные значения
   default: {
     id: () => generateEventId('extractTopContent', 'default'),
-    name: 'instagram/extract-top-content' as const,
+    name: 'instagram/extract-top' as const,
     data: {
       ...baseTemplate,
-      username: 'alexyanovsky',
+      username: 'yacheslav_nekludov',
       days_back: 14,
       limit: 5,
       metadata: {
@@ -152,10 +152,10 @@ export const extractTopContentTestData = {
   // Тест с большим лимитом
   large_limit: {
     id: () => generateEventId('extractTopContent', 'large-limit'),
-    name: 'instagram/extract-top-content' as const,
+    name: 'instagram/extract-top' as const,
     data: {
       ...baseTemplate,
-      username: 'alexyanovsky',
+      username: 'yacheslav_nekludov',
       days_back: 30,
       limit: 20,
       metadata: {
@@ -168,10 +168,10 @@ export const extractTopContentTestData = {
   // Тест с минимальными параметрами
   minimal: {
     id: () => generateEventId('extractTopContent', 'minimal'),
-    name: 'instagram/extract-top-content' as const,
+    name: 'instagram/extract-top' as const,
     data: {
       ...baseTemplate,
-      username: 'alexyanovsky',
+      username: 'yacheslav_nekludov',
       days_back: 7,
       limit: 3,
       metadata: {
@@ -188,7 +188,7 @@ export const generateContentScriptsTestData = {
   // Дефолтные значения
   default: {
     id: () => generateEventId('generateContentScripts', 'default'),
-    name: 'instagram/generate-content-scripts' as const,
+    name: 'instagram/generate-scripts' as const,
     data: {
       ...baseTemplate,
       reel_id: 'test_reel_default',
@@ -203,7 +203,7 @@ export const generateContentScriptsTestData = {
   // Тест с реальным рилсом
   real_reel: {
     id: () => generateEventId('generateContentScripts', 'real-reel'),
-    name: 'instagram/generate-content-scripts' as const,
+    name: 'instagram/generate-scripts' as const,
     data: {
       ...baseTemplate,
       reel_id: '3565423054066818531_11632928642', // Реальный ID из БД
@@ -218,7 +218,7 @@ export const generateContentScriptsTestData = {
   // Тест с другим рилсом
   alternative_reel: {
     id: () => generateEventId('generateContentScripts', 'alternative'),
-    name: 'instagram/generate-content-scripts' as const,
+    name: 'instagram/generate-scripts' as const,
     data: {
       ...baseTemplate,
       reel_id: 'test_reel_alternative',
@@ -240,9 +240,9 @@ export const instagramScraperV2TestData = {
     name: 'instagram/scrape-similar-users' as const,
     data: {
       ...baseTemplate,
-      username_or_id: 'alexyanovsky',
-      max_users: 5,
-      max_reels_per_user: 3,
+      username_or_id: 'yacheslav_nekludov',
+      max_users: 30,
+      max_reels_per_user: 5,
       scrape_reels: true,
       metadata: {
         ...baseTemplate.metadata,
@@ -257,9 +257,9 @@ export const instagramScraperV2TestData = {
     name: 'instagram/scrape-similar-users' as const,
     data: {
       ...baseTemplate,
-      username_or_id: 'alexyanovsky',
-      max_users: 10,
-      max_reels_per_user: 0,
+      username_or_id: 'yacheslav_nekludov',
+      max_users: 30,
+      max_reels_per_user: 5,
       scrape_reels: false,
       metadata: {
         ...baseTemplate.metadata,
@@ -274,8 +274,8 @@ export const instagramScraperV2TestData = {
     name: 'instagram/scrape-similar-users' as const,
     data: {
       ...baseTemplate,
-      username_or_id: 'alexyanovsky',
-      max_users: 3,
+      username_or_id: 'yacheslav_nekludov',
+      max_users: 30,
       max_reels_per_user: 10,
       scrape_reels: true,
       metadata: {
@@ -341,3 +341,153 @@ export const generateTestEvent = (
 export const TEST_PROJECT_ID = 1
 export const TEST_TELEGRAM_ID = '144022504'
 export const TEST_USERNAME = 'neuro_coder'
+
+/**
+ * ВАЖНО: yacheslav_nekludov НЕ СУЩЕСТВУЕТ в Instagram
+ * API возвращает ошибку: "Username is not valid"
+ * Используем рабочий username для тестов: treff_8
+ */
+/**
+ * ИСПРАВЛЕНО: Правильный username vyacheslav_nekludov (с буквой "v")
+ * Предыдущая ошибка: yacheslav_nekludov (без буквы "v")
+ */
+export const INSTAGRAM_SCRAPER_BASE_PARAMS = {
+  username_or_id: 'vyacheslav_nekludov', // ИСПРАВЛЕНО: добавлена буква "v"
+  requester_telegram_id: '289259562',
+  project_id: 38,
+  max_users: 30,
+  max_reels_per_user: 10,
+  scrape_reels: true,
+  metadata: {
+    source: 'test_event',
+    timestamp: new Date().toISOString(),
+    test_run: true,
+  },
+}
+
+// Альтернативные варианты для тестов
+export const ALTERNATIVE_USERNAMES = {
+  main_target: 'vyacheslav_nekludov', // ИСПРАВЛЕНО: с буквой "v"
+  working_music_producer: 'treff_8',
+  verified_user: 'amazing_marina', // проверенный из списка
+  business_user: 'groozz', // бизнес-аккаунт
+  // yacheslav_nekludov: 'НЕ СУЩЕСТВУЕТ (без буквы "v")'
+}
+
+// Базовые параметры для создания событий
+export const getBaseEventParams = () => ({
+  username_or_id: 'vyacheslav_nekludov', // ИСПРАВЛЕНО: добавлена буква "v"
+  requester_telegram_id: '289259562',
+  project_id: 38,
+  max_users: 30,
+  max_reels_per_user: 10,
+  scrape_reels: true,
+  metadata: {
+    source: 'test_event',
+    timestamp: new Date().toISOString(),
+    test_run: true,
+  },
+})
+
+// Массив событий для тестирования
+export const INSTAGRAM_SCRAPER_EVENTS = [
+  {
+    name: 'instagram/scraper-v2',
+    data: {
+      ...getBaseEventParams(),
+      max_users: 5,
+      max_reels_per_user: 3,
+      scrape_reels: false,
+    },
+  },
+  {
+    name: 'instagram/scraper-v2',
+    data: {
+      ...getBaseEventParams(),
+      max_users: 10,
+      max_reels_per_user: 5,
+      scrape_reels: true,
+    },
+  },
+  {
+    name: 'instagram/scraper-v2',
+    data: {
+      ...getBaseEventParams(),
+      max_users: 1,
+      max_reels_per_user: 1,
+      scrape_reels: false,
+    },
+  },
+  {
+    name: 'instagram/scraper-v2',
+    data: {
+      ...getBaseEventParams(),
+      max_users: 15,
+      max_reels_per_user: 10,
+      scrape_reels: true,
+    },
+  },
+  {
+    name: 'instagram/scraper-v2',
+    data: {
+      ...getBaseEventParams(),
+      max_users: 2,
+      max_reels_per_user: 2,
+      scrape_reels: false,
+    },
+  },
+  {
+    name: 'instagram/scraper-v2',
+    data: {
+      ...getBaseEventParams(),
+      max_users: 20,
+      max_reels_per_user: 15,
+      scrape_reels: true,
+    },
+  },
+  {
+    name: 'instagram/scraper-v2',
+    data: {
+      ...getBaseEventParams(),
+      max_users: 3,
+      max_reels_per_user: 1,
+      scrape_reels: false,
+    },
+  },
+  {
+    name: 'instagram/scraper-v2',
+    data: {
+      ...getBaseEventParams(),
+      max_users: 25,
+      max_reels_per_user: 20,
+      scrape_reels: true,
+    },
+  },
+  {
+    name: 'instagram/scraper-v2',
+    data: {
+      ...getBaseEventParams(),
+      max_users: 1,
+      max_reels_per_user: 1,
+      scrape_reels: true,
+    },
+  },
+  {
+    name: 'instagram/scraper-v2',
+    data: {
+      ...getBaseEventParams(),
+      max_users: 30,
+      max_reels_per_user: 10,
+      scrape_reels: false,
+    },
+  },
+  {
+    name: 'instagram/scraper-v2',
+    data: {
+      ...getBaseEventParams(),
+      max_users: 30,
+      max_reels_per_user: 10,
+      scrape_reels: true,
+    },
+  },
+]

@@ -136,8 +136,8 @@ class InstagramCompetitorAPI {
 // Main findCompetitors function
 export const findCompetitors = inngest.createFunction(
   {
-    id: slugify('find-competitors'),
-    name: 'Find Instagram Competitors',
+    id: 'find-competitors',
+    name: '🔍 Find Instagram Competitors',
     concurrency: 2,
   },
   { event: 'instagram/find-competitors' },

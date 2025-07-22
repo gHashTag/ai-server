@@ -145,3 +145,4 @@ describe('findCompetitors', () => {
     expect(mockEvent).toHaveProperty('project_id')
   })
 })
+ 

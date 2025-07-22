@@ -6,6 +6,7 @@ import OpenAI from 'openai'
 // Validation schema for input data
 const generateContentScriptsSchema = z.object({
   reel_id: z.string().min(1, 'Reel ID is required'),
+  ig_reel_url: z.string().url('Valid URL is required').optional(),
   project_id: z.number().int().positive('Project ID must be positive'),
   openai_api_key: z.string().optional(),
 })
@@ -43,7 +44,7 @@ export interface ReelData {
 export const generateContentScripts = inngest.createFunction(
   {
     id: 'generate-content-scripts',
-    name: 'Generate Content Scripts',
+    name: '🎬 Generate Content Scripts',
   },
   { event: 'instagram/generate-scripts' },
   async ({ event, step }) => {

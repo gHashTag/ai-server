@@ -27,6 +27,9 @@ export const inngestRouter = serve({
   client: inngest,
   functions: functions, // Используем готовый массив функций
   signingKey: process.env.INNGEST_SIGNING_KEY,
+  // ✅ ДОБАВЛЕНО для production:
+  serveHost: process.env.INNGEST_APP_URL || process.env.ORIGIN,
+  servePath: '/api/inngest',
   // dev: isDev, // The 'dev' flag is often handled by INNGEST_DEV env var or absence of event key in v3
 })
 
