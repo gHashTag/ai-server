@@ -21,7 +21,7 @@ export interface BroadcastEventData {
 export const broadcastMessage = inngest.createFunction(
   {
     id: slugify('broadcast-message'), // v3 requires id, using slugify for existing name
-    name: 'Broadcast Message', // Optional display name for v3
+    name: '📢 Broadcast Message', // Optional display name for v3
     retries: 3,
   },
   { event: 'broadcast/send-message' },

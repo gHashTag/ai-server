@@ -7,6 +7,10 @@ import { slugify } from 'inngest'
 import axios from 'axios'
 import pkg from 'pg'
 const { Pool } = pkg
+import * as XLSX from 'xlsx'
+import archiver from 'archiver'
+import { promises as fs } from 'fs'
+import path from 'path'
 
 // Используем основной Inngest клиент
 import { inngest } from '@/core/inngest/clients'
@@ -709,6 +713,479 @@ class InstagramDatabase {
   }
 }
 
+// Report Generator для создания красивых отчётов и архивов
+class ReportGenerator {
+  constructor(private outputDir: string = './output') {}
+
+  /**
+   * Создаёт HTML отчёт с красивой версткой
+   */
+  async generateHTMLReport(
+    targetUsername: string,
+    competitors: any[],
+    reelsData: any[],
+    metadata: any,
+    log: any
+  ): Promise<string> {
+    const totalCompetitors = competitors.length
+    const verifiedCount = competitors.filter(c => c.is_verified).length
+    const privateCount = competitors.filter(c => c.is_private).length
+    const totalReels = reelsData?.length || 0
+
+    const html = `
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Instagram Competitors Analysis - @${targetUsername}</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #ff6b6b, #ffa500);
+            color: white;
+            padding: 40px;
+            text-align: center;
+        }
+        
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+        }
+        
+        .header .subtitle {
+            font-size: 1.2rem;
+            opacity: 0.9;
+        }
+        
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            padding: 40px;
+            background: #f8f9fa;
+        }
+        
+        .stat-card {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            text-align: center;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+            transition: transform 0.3s ease;
+        }
+        
+        .stat-card:hover {
+            transform: translateY(-5px);
+        }
+        
+        .stat-card .number {
+            font-size: 3rem;
+            font-weight: bold;
+            color: #667eea;
+            margin-bottom: 10px;
+        }
+        
+        .stat-card .label {
+            color: #666;
+            font-size: 1.1rem;
+        }
+        
+        .competitors {
+            padding: 40px;
+        }
+        
+        .section-title {
+            font-size: 2rem;
+            margin-bottom: 30px;
+            color: #333;
+            border-bottom: 3px solid #667eea;
+            padding-bottom: 10px;
+        }
+        
+        .competitor-grid {
+            display: grid;
+            gap: 25px;
+        }
+        
+        .competitor-card {
+            background: white;
+            border: 1px solid #e0e0e0;
+            border-radius: 15px;
+            padding: 25px;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .competitor-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, #667eea, #764ba2);
+        }
+        
+        .competitor-card:hover {
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
+            transform: translateY(-2px);
+        }
+        
+        .competitor-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 15px;
+        }
+        
+        .competitor-info {
+            flex: 1;
+        }
+        
+        .competitor-username {
+            font-size: 1.3rem;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 5px;
+        }
+        
+        .competitor-name {
+            color: #666;
+            font-size: 1rem;
+        }
+        
+        .competitor-badges {
+            display: flex;
+            gap: 8px;
+        }
+        
+        .badge {
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: bold;
+        }
+        
+        .badge.verified {
+            background: #e3f2fd;
+            color: #1976d2;
+        }
+        
+        .badge.private {
+            background: #fff3e0;
+            color: #f57c00;
+        }
+        
+        .category {
+            margin: 15px 0;
+            padding: 12px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border-left: 4px solid #667eea;
+        }
+        
+        .social-context {
+            margin-top: 15px;
+            color: #666;
+            font-style: italic;
+        }
+        
+        .footer {
+            background: #333;
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        
+        @media (max-width: 768px) {
+            .stats {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 15px;
+                padding: 20px;
+            }
+            
+            .competitors {
+                padding: 20px;
+            }
+            
+            .header h1 {
+                font-size: 2rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <h1>🎯 Instagram Competitors Analysis</h1>
+            <div class="subtitle">Анализ конкурентов для @${targetUsername}</div>
+        </header>
+        
+        <section class="stats">
+            <div class="stat-card">
+                <div class="number">${totalCompetitors}</div>
+                <div class="label">Всего конкурентов</div>
+            </div>
+            <div class="stat-card">
+                <div class="number">${verifiedCount}</div>
+                <div class="label">Верифицированных</div>
+            </div>
+            <div class="stat-card">
+                <div class="number">${privateCount}</div>
+                <div class="label">Приватных аккаунтов</div>
+            </div>
+            <div class="stat-card">
+                <div class="number">${totalReels}</div>
+                <div class="label">Проанализировано рилсов</div>
+            </div>
+        </section>
+        
+        <section class="competitors">
+            <h2 class="section-title">📋 Список конкурентов</h2>
+            <div class="competitor-grid">
+                ${competitors
+                  .map(
+                    (competitor, index) => `
+                    <div class="competitor-card">
+                        <div class="competitor-header">
+                            <div class="competitor-info">
+                                <div class="competitor-username">@${
+                                  competitor.username
+                                }</div>
+                                <div class="competitor-name">${
+                                  competitor.full_name || 'Имя не указано'
+                                }</div>
+                            </div>
+                            <div class="competitor-badges">
+                                ${
+                                  competitor.is_verified
+                                    ? '<span class="badge verified">✓ Verified</span>'
+                                    : ''
+                                }
+                                ${
+                                  competitor.is_private
+                                    ? '<span class="badge private">🔒 Private</span>'
+                                    : ''
+                                }
+                            </div>
+                        </div>
+                        
+                        ${
+                          competitor.profile_chaining_secondary_label
+                            ? `
+                            <div class="category">
+                                <strong>Категория:</strong> ${competitor.profile_chaining_secondary_label}
+                            </div>
+                        `
+                            : ''
+                        }
+                        
+                        ${
+                          competitor.social_context
+                            ? `
+                            <div class="social_context">
+                                💬 ${competitor.social_context}
+                            </div>
+                        `
+                            : ''
+                        }
+                    </div>
+                `
+                  )
+                  .join('')}
+            </div>
+        </section>
+        
+        <footer class="footer">
+            <p>📊 Отчёт сгенерирован ${new Date().toLocaleDateString(
+              'ru-RU'
+            )} в ${new Date().toLocaleTimeString('ru-RU')}</p>
+            <p>🤖 Instagram Scraper V2 - Powered by AI</p>
+        </footer>
+    </div>
+</body>
+</html>
+    `
+
+    const fileName = `instagram_analysis_${targetUsername}_${Date.now()}.html`
+    const filePath = path.join(this.outputDir, fileName)
+
+    await fs.mkdir(this.outputDir, { recursive: true })
+    await fs.writeFile(filePath, html, 'utf-8')
+
+    log.info(`📄 HTML отчёт создан: ${fileName}`)
+    return filePath
+  }
+
+  /**
+   * Создаёт Excel файл с данными
+   */
+  async generateExcelReport(
+    targetUsername: string,
+    competitors: any[],
+    reelsData: any[]
+  ): Promise<string> {
+    // Создаём новую рабочую книгу
+    const workbook = XLSX.utils.book_new()
+
+    // Лист с конкурентами
+    const competitorsData = competitors.map((comp, index) => ({
+      '№': index + 1,
+      Username: comp.username,
+      'Полное имя': comp.full_name || '',
+      Верифицирован: comp.is_verified ? 'Да' : 'Нет',
+      Приватный: comp.is_private ? 'Да' : 'Нет',
+      Категория: comp.profile_chaining_secondary_label || '',
+      'Социальный контекст': comp.social_context || '',
+      'URL профиля': comp.profile_url || '',
+      'Дата парсинга': new Date(
+        comp.created_at || new Date()
+      ).toLocaleDateString('ru-RU'),
+    }))
+
+    const competitorsSheet = XLSX.utils.json_to_sheet(competitorsData)
+    XLSX.utils.book_append_sheet(workbook, competitorsSheet, 'Конкуренты')
+
+    // Лист с рилсами (если есть)
+    if (reelsData && reelsData.length > 0) {
+      const reelsSheetData = reelsData.map((reel, index) => ({
+        '№': index + 1,
+        Автор: reel.owner_username || '',
+        Shortcode: reel.shortcode || '',
+        Лайки: reel.like_count || 0,
+        Комментарии: reel.comment_count || 0,
+        Просмотры: reel.play_count || 0,
+        'Длительность (сек)': reel.video_duration || 0,
+        'Дата создания': reel.taken_at_timestamp
+          ? new Date(reel.taken_at_timestamp * 1000).toLocaleDateString('ru-RU')
+          : '',
+        URL: reel.display_url || '',
+      }))
+
+      const reelsSheet = XLSX.utils.json_to_sheet(reelsSheetData)
+      XLSX.utils.book_append_sheet(workbook, reelsSheet, 'Рилсы')
+    }
+
+    // Лист с аналитикой
+    const analyticsData = [
+      ['Показатель', 'Значение'],
+      ['Целевой аккаунт', `@${targetUsername}`],
+      ['Всего конкурентов найдено', competitors.length],
+      [
+        'Верифицированных аккаунтов',
+        competitors.filter(c => c.is_verified).length,
+      ],
+      ['Приватных аккаунтов', competitors.filter(c => c.is_private).length],
+      ['Публичных аккаунтов', competitors.filter(c => !c.is_private).length],
+      ['Всего рилсов проанализировано', reelsData?.length || 0],
+      ['Дата анализа', new Date().toLocaleDateString('ru-RU')],
+      ['Время анализа', new Date().toLocaleTimeString('ru-RU')],
+    ]
+
+    const analyticsSheet = XLSX.utils.aoa_to_sheet(analyticsData)
+    XLSX.utils.book_append_sheet(workbook, analyticsSheet, 'Аналитика')
+
+    const fileName = `instagram_data_${targetUsername}_${Date.now()}.xlsx`
+    const filePath = path.join(this.outputDir, fileName)
+
+    await fs.mkdir(this.outputDir, { recursive: true })
+    XLSX.writeFile(workbook, filePath)
+
+    log.info(`📊 Excel файл создан: ${fileName}`)
+    return filePath
+  }
+
+  /**
+   * Создаёт ZIP архив с отчётами
+   */
+  async createReportArchive(
+    targetUsername: string,
+    htmlPath: string,
+    excelPath: string,
+    log: any
+  ): Promise<string> {
+    const archiveName = `instagram_competitors_${targetUsername}_${Date.now()}.zip`
+    const archivePath = path.join(this.outputDir, archiveName)
+
+    return new Promise((resolve, reject) => {
+      const output = require('fs').createWriteStream(archivePath)
+      const archive = archiver('zip', { zlib: { level: 9 } })
+
+      output.on('close', () => {
+        log.info(`📦 Архив создан: ${archiveName} (${archive.pointer()} bytes)`)
+        resolve(archivePath)
+      })
+
+      archive.on('error', err => {
+        log.error('❌ Ошибка создания архива:', err)
+        reject(err)
+      })
+
+      archive.pipe(output)
+
+      // Добавляем файлы в архив
+      archive.file(htmlPath, { name: path.basename(htmlPath) })
+      archive.file(excelPath, { name: path.basename(excelPath) })
+
+      // Создаём README файл
+      const readmeContent = `
+# 🎯 Instagram Competitors Analysis Report
+
+## Описание
+Этот архив содержит результаты анализа Instagram конкурентов для аккаунта @${targetUsername}
+
+## Содержимое архива:
+- 📄 HTML отчёт - красивый визуальный отчёт для просмотра в браузере
+- 📊 Excel файл - данные в табличном формате для анализа
+- 📝 README.txt - данный файл с описанием
+
+## Как использовать:
+1. Откройте HTML файл в браузере для просмотра красивого отчёта
+2. Откройте Excel файл для работы с данными в табличном виде
+3. В Excel файле есть несколько листов:
+   - "Конкуренты" - список всех найденных конкурентов
+   - "Рилсы" - данные по рилсам (если включен парсинг)
+   - "Аналитика" - общая статистика
+
+## Дата создания: ${new Date().toLocaleDateString(
+        'ru-RU'
+      )} ${new Date().toLocaleTimeString('ru-RU')}
+## Создано с помощью: Instagram Scraper V2
+      `
+
+      archive.append(readmeContent, { name: 'README.txt' })
+
+      archive.finalize()
+    })
+  }
+}
+
 // Main Instagram Scraper Function with Zod validation
 export const instagramScraperV2 = inngest.createFunction(
   {
@@ -990,7 +1467,89 @@ export const instagramScraperV2 = inngest.createFunction(
       log.info('⏭️ Reels scraping skipped (not enabled or no users found)')
     }
 
-    // Final result with Zod validation
+    // Step 7: Generate reports and archive
+    const reportResult = await step.run(
+      'generate-reports-archive',
+      async () => {
+        log.info('📋 Создаём красивые отчёты и архив для клиента...')
+
+        try {
+          const reportGenerator = new ReportGenerator('./output')
+
+          // Получаем данные рилсов для отчёта
+          let allReelsData: any[] = []
+          if (scrape_reels && reelsResults.length > 0) {
+            // Собираем все рилсы из результатов
+            const client = await dbPool.connect()
+            try {
+              const reelsQuery = `
+              SELECT * FROM instagram_user_reels 
+              WHERE project_id = $1 AND scraped_for_user_pk IN (
+                SELECT user_pk FROM instagram_similar_users 
+                WHERE search_username = $2 AND project_id = $1
+              )
+              ORDER BY like_count DESC
+              LIMIT 100
+            `
+              const reelsResult = await client.query(reelsQuery, [
+                project_id,
+                username_or_id,
+              ])
+              allReelsData = reelsResult.rows
+            } finally {
+              client.release()
+            }
+          }
+
+          // Генерируем HTML отчёт
+          const htmlPath = await reportGenerator.generateHTMLReport(
+            username_or_id,
+            processedUsers.validUsers,
+            allReelsData,
+            {
+              runId,
+              projectId: project_id,
+              scrapeDate: new Date(),
+              totalUsers: processedUsers.validCount,
+            },
+            log
+          )
+
+          // Генерируем Excel файл
+          const excelPath = await reportGenerator.generateExcelReport(
+            username_or_id,
+            processedUsers.validUsers,
+            allReelsData
+          )
+
+          // Создаём ZIP архив
+          const archivePath = await reportGenerator.createReportArchive(
+            username_or_id,
+            htmlPath,
+            excelPath,
+            log
+          )
+
+          log.info('✅ Отчёты и архив созданы успешно!')
+
+          return {
+            success: true,
+            htmlReportPath: htmlPath,
+            excelReportPath: excelPath,
+            archivePath: archivePath,
+            archiveFileName: path.basename(archivePath),
+          }
+        } catch (error) {
+          log.error('❌ Ошибка создания отчётов:', error)
+          return {
+            success: false,
+            error: error instanceof Error ? error.message : String(error),
+          }
+        }
+      }
+    )
+
+    // Final result with reports
     const finalResult = {
       success: true,
       searchTarget: username_or_id,
@@ -1016,7 +1575,31 @@ export const instagramScraperV2 = inngest.createFunction(
         duplicatesSkipped: r.duplicatesSkipped,
         totalProcessed: r.totalProcessed,
       })),
-      mode: 'REAL_API_V2_WITH_NEON_DB_SIMPLIFIED',
+      // Reports and archive info
+      reports: {
+        generated: reportResult.success,
+        htmlReport:
+          reportResult.success && 'htmlReportPath' in reportResult
+            ? reportResult.htmlReportPath
+            : null,
+        excelReport:
+          reportResult.success && 'excelReportPath' in reportResult
+            ? reportResult.excelReportPath
+            : null,
+        archivePath:
+          reportResult.success && 'archivePath' in reportResult
+            ? reportResult.archivePath
+            : null,
+        archiveFileName:
+          reportResult.success && 'archiveFileName' in reportResult
+            ? reportResult.archiveFileName
+            : null,
+        error:
+          !reportResult.success && 'error' in reportResult
+            ? reportResult.error
+            : null,
+      },
+      mode: 'REAL_API_V2_WITH_NEON_DB_SIMPLIFIED_WITH_REPORTS',
     }
 
     log.info(

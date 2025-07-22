@@ -84,7 +84,7 @@ class SimpleInstagramAPI {
 export const instagramReelsTest = instagramInngest.createFunction(
   {
     id: slugify('instagram-reels-test'),
-    name: 'Instagram Reels Test Function',
+    name: '🧪 Instagram Reels Test Function',
     concurrency: 1,
   },
   { event: 'instagram/test-reels' },

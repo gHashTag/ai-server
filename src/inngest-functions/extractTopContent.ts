@@ -4,9 +4,9 @@ import { supabase } from '@/core/supabase'
 
 // Validation schema for input data
 const extractTopContentSchema = z.object({
-  comp_username: z.string().min(1, 'Username is required'),
+  username: z.string().min(1, 'Username is required'),
   project_id: z.number().int().positive('Project ID must be positive'),
-  days_limit: z.number().int().positive().default(14),
+  days_back: z.number().int().positive().default(14),
   limit: z.number().int().positive().default(10),
 })
 
@@ -33,7 +33,7 @@ export interface TopReelData {
 export const extractTopContent = inngest.createFunction(
   {
     id: 'extract-top-content',
-    name: 'Extract Top Content',
+    name: '📊 Extract Top Content',
   },
   { event: 'instagram/extract-top' },
   async ({ event, step }) => {
@@ -44,12 +44,12 @@ export const extractTopContent = inngest.createFunction(
       const { data, error } = await supabase
         .from('reels_analysis')
         .select('*')
-        .eq('comp_username', input.comp_username)
+        .eq('comp_username', input.username)
         .eq('project_id', input.project_id)
         .gte(
           'created_at_instagram',
           new Date(
-            Date.now() - input.days_limit * 24 * 60 * 60 * 1000
+            Date.now() - input.days_back * 24 * 60 * 60 * 1000
           ).toISOString()
         )
         .order('views_count', { ascending: false })

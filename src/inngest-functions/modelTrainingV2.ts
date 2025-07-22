@@ -36,7 +36,7 @@ async function encodeFileToBase64(url: string): Promise<string> {
 export const modelTrainingV2 = inngest.createFunction(
   {
     id: slugify('model-training-v2'), // v3 requires id
-    name: 'Model Training V2', // Optional display name
+    name: '🚀 Model Training V2', // Optional display name
   },
   { event: 'model/training.v2.requested' },
   async ({ event, step, runId }) => {
