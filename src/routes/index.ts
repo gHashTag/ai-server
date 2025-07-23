@@ -13,6 +13,7 @@ import { WebhookBFLRoute } from './webhook-bfl.route'
 import { WebhookBFLNeurophotoRoute } from './webhook-bfl-neurophoto.route'
 import { NexrenderRoute } from './nexrender.route'
 import { ReplicateWebhookRoute } from './replicateWebhook.route'
+import { DownloadRoute } from './download.route'
 
 export const routes = [
   new UploadRoute(),
@@ -30,4 +31,5 @@ export const routes = [
   new WebhookBFLNeurophotoRoute(),
   new NexrenderRoute(),
   new ReplicateWebhookRoute(),
+  new DownloadRoute(),
 ]

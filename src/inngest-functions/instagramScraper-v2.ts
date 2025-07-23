@@ -1549,7 +1549,208 @@ export const instagramScraperV2 = inngest.createFunction(
       }
     )
 
-    // Final result with reports
+    // Step 8: Send results to user via Telegram
+    const telegramResult = await step.run(
+      'send-results-to-telegram',
+      async () => {
+        // Стандартизированная структура ответа
+        const createTelegramResponse = (
+          sent: boolean,
+          options: {
+            bot_name?: string
+            archive_sent?: boolean
+            summary_sent?: boolean
+            error?: string
+            telegram_id?: string | number
+            message_type?: string
+            reason?: string
+          } = {}
+        ) => ({
+          sent,
+          bot_name: options.bot_name || 'unknown',
+          archive_sent: options.archive_sent || false,
+          summary_sent: options.summary_sent || false,
+          error: options.error || null,
+          telegram_id: options.telegram_id || requester_telegram_id,
+          message_type: options.message_type || 'none',
+          reason: options.reason || null,
+        })
+
+        // Проверяем есть ли requester_telegram_id для отправки
+        if (!requester_telegram_id) {
+          log.warn('⚠️ Нет requester_telegram_id для отправки результатов')
+          return createTelegramResponse(false, { reason: 'no_telegram_id' })
+        }
+
+        // Получаем bot_name из события или используем дефолтный
+        const bot_name = eventData.bot_name || 'neuro_blogger_bot'
+
+        try {
+          // Получаем экземпляр бота
+          const { getBotByName } = await import('@/core/bot')
+          const botResult = getBotByName(bot_name)
+
+          if (!botResult || !botResult.bot) {
+            log.error(`❌ Бот не найден: ${bot_name}`)
+            return createTelegramResponse(false, {
+              bot_name,
+              reason: 'bot_not_found',
+            })
+          }
+
+          const { bot } = botResult
+
+          // Если отчеты созданы успешно и есть архив
+          if (
+            reportResult.success &&
+            'archivePath' in reportResult &&
+            reportResult.archivePath
+          ) {
+            // Отправляем архив пользователю
+            const fs = await import('fs')
+
+            if (fs.existsSync(reportResult.archivePath)) {
+              // Создаем сообщение на русском/английском
+              const language = eventData.language || 'ru'
+              const isRu = language === 'ru'
+
+              const message = isRu
+                ? `🎯 Анализ Instagram конкурентов завершен!
+
+📊 **Результаты:**
+• Найдено конкурентов: ${processedUsers.validCount}
+• Сохранено в базу: ${saveResult.saved}
+${scrape_reels ? `• Проанализировано рилсов: ${totalReelsSaved}` : ''}
+
+📦 **В архиве:**
+• HTML отчёт с красивой визуализацией
+• Excel файл с данными для анализа
+• README с инструкциями
+
+Целевой аккаунт: @${username_or_id}`
+                : `🎯 Instagram competitors analysis completed!
+
+📊 **Results:**
+• Competitors found: ${processedUsers.validCount}
+• Saved to database: ${saveResult.saved}
+${scrape_reels ? `• Reels analyzed: ${totalReelsSaved}` : ''}
+
+📦 **Archive contains:**
+• HTML report with beautiful visualization  
+• Excel file with data for analysis
+• README with instructions
+
+Target account: @${username_or_id}`
+
+              // Создаём URL для скачивания архива
+              const archiveFilename = path.basename(reportResult.archivePath)
+              const API_URL =
+                process.env.ORIGIN ||
+                process.env.API_URL ||
+                'http://localhost:3000'
+              const downloadUrl = `${API_URL}/download/instagram-archive/${archiveFilename}`
+
+              // Отправляем сообщение с URL для скачивания
+              const messageWithUrl = `${message}
+
+📥 **Скачать архив:** [${archiveFilename}](${downloadUrl})
+
+⚠️ _Ссылка действительна в течение 24 часов_`
+
+              await bot.telegram.sendMessage(
+                requester_telegram_id.toString(),
+                messageWithUrl,
+                {
+                  parse_mode: 'Markdown',
+                  link_preview_options: { is_disabled: false },
+                }
+              )
+
+              log.info('✅ URL архива отправлен пользователю успешно', {
+                telegram_id: requester_telegram_id,
+                bot_name,
+                archive_size: fs.statSync(reportResult.archivePath).size,
+                download_url: downloadUrl,
+                archive_filename: archiveFilename,
+              })
+
+              return createTelegramResponse(true, {
+                bot_name,
+                archive_sent: true,
+                telegram_id: requester_telegram_id,
+                message_type: 'download_url_message',
+              })
+            } else {
+              log.error('❌ Файл архива не существует', {
+                archivePath: reportResult.archivePath,
+              })
+
+              // Отправляем сообщение об ошибке
+              const errorMessage =
+                eventData.language === 'ru'
+                  ? '❌ Извините, произошла ошибка при создании архива с отчётами.'
+                  : '❌ Sorry, there was an error creating the reports archive.'
+
+              await bot.telegram.sendMessage(
+                requester_telegram_id.toString(),
+                errorMessage
+              )
+
+              return createTelegramResponse(true, {
+                bot_name,
+                archive_sent: false,
+                error: 'archive_file_missing',
+                summary_sent: true,
+                telegram_id: requester_telegram_id,
+                message_type: 'error_message',
+              })
+            }
+          } else {
+            // Если отчеты не созданы, отправляем краткую сводку
+            const language = eventData.language || 'ru'
+            const summaryMessage =
+              language === 'ru'
+                ? `📊 Анализ Instagram завершен!
+
+Целевой аккаунт: @${username_or_id}
+Найдено конкурентов: ${processedUsers.validCount}
+Сохранено в базу: ${saveResult.saved}
+${scrape_reels ? `Рилсов проанализировано: ${totalReelsSaved}` : ''}
+
+⚠️ Отчеты не были созданы из-за ошибки.`
+                : `📊 Instagram analysis completed!
+
+Target account: @${username_or_id}
+Competitors found: ${processedUsers.validCount}
+Saved to database: ${saveResult.saved}
+${scrape_reels ? `Reels analyzed: ${totalReelsSaved}` : ''}
+
+⚠️ Reports were not created due to an error.`
+
+            await bot.telegram.sendMessage(
+              requester_telegram_id.toString(),
+              summaryMessage
+            )
+
+            return createTelegramResponse(true, {
+              bot_name,
+              archive_sent: false,
+              summary_sent: true,
+              telegram_id: requester_telegram_id,
+              message_type: 'summary_message',
+            })
+          }
+        } catch (error) {
+          log.error('❌ Ошибка отправки результатов в Telegram:', error)
+          return createTelegramResponse(false, {
+            bot_name,
+            error: error instanceof Error ? error.message : String(error),
+          })
+        }
+      }
+    )
+
+    // Final result with reports and telegram delivery info
     const finalResult = {
       success: true,
       searchTarget: username_or_id,
@@ -1599,17 +1800,28 @@ export const instagramScraperV2 = inngest.createFunction(
             ? reportResult.error
             : null,
       },
-      mode: 'REAL_API_V2_WITH_NEON_DB_SIMPLIFIED_WITH_REPORTS',
+      // Telegram delivery info
+      telegram: {
+        sent: telegramResult.sent,
+        bot_name: telegramResult.bot_name || 'unknown',
+        archive_sent: telegramResult.archive_sent || false,
+        summary_sent: telegramResult.summary_sent || false,
+        error: telegramResult.error || null,
+        telegram_id: telegramResult.telegram_id || requester_telegram_id,
+      },
+      mode: 'REAL_API_V2_WITH_NEON_DB_SIMPLIFIED_WITH_REPORTS_AND_TELEGRAM',
     }
 
     log.info(
-      '🎉 Instagram Scraper V2 completed successfully (simplified validation)',
+      '🎉 Instagram Scraper V2 completed successfully with Telegram delivery',
       {
         target: username_or_id,
         scraped: finalResult.usersScraped,
         saved: finalResult.usersSaved,
         projectId: finalResult.projectId,
         validationErrors: finalResult.validationErrors.length,
+        telegram_sent: finalResult.telegram.sent,
+        archive_sent: finalResult.telegram.archive_sent,
       }
     )
 
