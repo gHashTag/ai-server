@@ -49,10 +49,11 @@ if [ "$HTTP_STATUS" -eq 200 ]; then
     
     # Проверяем количество функций
     FUNCTIONS_COUNT=$(echo "$RESPONSE_BODY" | grep -o '"functionsFound":[0-9]*' | cut -d':' -f2)
-    if [ "$FUNCTIONS_COUNT" -gt 0 ]; then
+    if [ ! -z "$FUNCTIONS_COUNT" ] && [ "$FUNCTIONS_COUNT" -gt 0 ]; then
         echo -e "   ${GREEN}✅ Найдено функций: $FUNCTIONS_COUNT${NC}"
     else
         echo -e "   ${RED}❌ Функции не найдены${NC}"
+        FUNCTIONS_COUNT=0
     fi
     
     # Проверяем signing key
