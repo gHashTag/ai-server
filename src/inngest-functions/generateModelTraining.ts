@@ -499,7 +499,7 @@ export const generateModelTraining = inngest.createFunction(
               {
                 description: `LoRA: ${eventData.triggerWord}`,
                 visibility: 'public',
-                hardware: 'gpu-t4',
+                hardware: 'gpu-l40s',
               }
             )
             logger.info('✅ Модель создана:', newModel.latest_version?.id)
@@ -727,7 +727,7 @@ export const generateModelTraining = inngest.createFunction(
               {
                 description: `LoRA: ${eventData.triggerWord}`,
                 visibility: 'public',
-                hardware: 'gpu-t4',
+                hardware: 'gpu-l40s',
               }
             )
             logger.info('✅ Новая модель создана:', newModel.url)

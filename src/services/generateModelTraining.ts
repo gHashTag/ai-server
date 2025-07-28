@@ -174,7 +174,7 @@ export async function generateModelTraining(
         await replicate.models.create(username, modelName, {
           description: `LoRA model trained with trigger word: ${triggerWord}`,
           visibility: 'public',
-          hardware: 'gpu-t4',
+          hardware: 'gpu-l40s',
         })
         console.log(`Model ${username}/${modelName} created.`)
         await new Promise(resolve => setTimeout(resolve, 3000))
