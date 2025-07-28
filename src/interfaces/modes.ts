@@ -16,6 +16,7 @@ export enum ModeEnum {
   ImageToVideo = 'image_to_video',
   TextToVideo = 'text_to_video',
   TextToImage = 'text_to_image',
+  ImageMorphing = 'image_morphing', // NEW: Морфинг изображений
   LipSync = 'lip_sync',
   SelectNeuroPhoto = 'select_neuro_photo',
   ChangeSize = 'change_size',
@@ -50,6 +51,7 @@ export enum ModeEnum {
   RublePaymentScene = 'rublePaymentScene',
   StarPaymentScene = 'starPaymentScene',
   MenuScene = 'menuScene',
+  ScenarioClips = 'scenario_clips', // NEW: Сценарные клипы
 }
 
 // Определяем интерфейсы прямо здесь для предотвращения циклических зависимостей

@@ -16,6 +16,19 @@ POST https://d8dc81a4a0aa.ngrok.app/generate/morph-images
 
 ---
 
+## 🤖 **ВАЖНО: Выбор рабочего бота**
+
+После диагностики токенов выявлено:
+
+| Bot Name | Status | Token Status | Recommendation |
+|----------|---------|--------------|----------------|
+| `ai_koshey_bot` | ❌ | Token Invalid (401) | **НЕ ИСПОЛЬЗОВАТЬ** |
+| `clip_maker_neuro_bot` | ✅ | Working | **РЕКОМЕНДУЕТСЯ** |
+
+**⚠️ Для фронтенда используйте: `bot_name: "clip_maker_neuro_bot"`**
+
+---
+
 ## 📋 **Required Parameters**
 
 | Parameter | Type | Required | Description | Example |
@@ -27,7 +40,7 @@ POST https://d8dc81a4a0aa.ngrok.app/generate/morph-images
 | `morphing_type` | string | ✅ | Type of morphing | `"seamless"` or `"loop"` |
 | `model` | string | ✅ | AI model to use | `"kling-v1.6-pro"` |
 | `is_ru` | string | ✅ | Russian language flag | `"true"` or `"false"` |
-| `bot_name` | string | ✅ | Bot identifier | `"ai_koshey_bot"` |
+| `bot_name` | string | ✅ | **USE: "clip_maker_neuro_bot"** | `"clip_maker_neuro_bot"` |
 | `images_zip` | File | ✅ | ZIP archive with images | Binary file |
 
 ---
@@ -55,7 +68,7 @@ async function createMorphingVideo(imageFiles, options = {}) {
   formData.append('morphing_type', options.morphing_type || 'seamless');
   formData.append('model', 'kling-v1.6-pro');
   formData.append('is_ru', options.is_ru ? 'true' : 'false');
-  formData.append('bot_name', options.bot_name || 'ai_koshey_bot');
+  formData.append('bot_name', 'clip_maker_neuro_bot'); // ✅ ИСПОЛЬЗУЕМ РАБОЧИЙ БОТ
   formData.append('images_zip', zipBlob, 'morphing_images.zip');
   
   try {
@@ -102,7 +115,7 @@ const handleMorphingSubmit = async (imageFiles) => {
     username: 'test_user',
     morphing_type: 'seamless',
     is_ru: true,
-    bot_name: 'ai_koshey_bot'
+    bot_name: 'clip_maker_neuro_bot' // ✅ ОБЯЗАТЕЛЬНО ИСПОЛЬЗУЕМ ЭТОТ БОТ
   });
   
   if (result.success) {
@@ -123,7 +136,7 @@ const handleMorphingSubmit = async (imageFiles) => {
 ```json
 {
   "message": "Морфинг отправлен на обработку",
-  "job_id": "morph_144022504_1753688688175",
+  "job_id": "morph_144022504_1753689096544",
   "status": "processing", 
   "estimated_time": "5-10 минут"
 }
@@ -153,7 +166,7 @@ const handleMorphingSubmit = async (imageFiles) => {
 3. **Validation** → Parameters and files validated
 4. **Queue** → Job added to Inngest processing queue
 5. **AI Processing** → Kling API creates morphing video (5-10 min)
-6. **Delivery** → Video sent via Telegram bot
+6. **Delivery** → Video sent via **clip_maker_neuro_bot** Telegram bot
 7. **Notification** → User receives video in Telegram
 
 ---
@@ -187,7 +200,7 @@ Our system uses **modern AI-powered morphing** through Kling API:
 
 ### Manual Testing
 ```bash
-# Test with curl
+# Test with curl (WORKING BOT)
 curl -X POST https://d8dc81a4a0aa.ngrok.app/generate/morph-images \
   -F "type=morphing" \
   -F "telegram_id=144022504" \
@@ -196,12 +209,18 @@ curl -X POST https://d8dc81a4a0aa.ngrok.app/generate/morph-images \
   -F "morphing_type=seamless" \
   -F "model=kling-v1.6-pro" \
   -F "is_ru=true" \
-  -F "bot_name=ai_koshey_bot" \
+  -F "bot_name=clip_maker_neuro_bot" \
   -F "images_zip=@your_test_images.zip"
 ```
 
+### Token Diagnostics
+```bash
+# Check bot tokens validity
+node debug-bot-tokens.js
+```
+
 ### Common Issues
-- **401 Unauthorized:** ✅ FIXED - Bot tokens now properly loaded
+- **401 Unauthorized:** ✅ FIXED - Use `clip_maker_neuro_bot` instead of `ai_koshey_bot`
 - **404 Not Found:** Check ngrok URL is active  
 - **File size limits:** Keep ZIP under 10MB
 - **Image formats:** Use JPG, PNG, WebP
@@ -226,6 +245,7 @@ curl -X POST https://d8dc81a4a0aa.ngrok.app/generate/morph-images \
 - [ ] Image selection UI (2-10 images)
 - [ ] ZIP creation from selected images  
 - [ ] Form data preparation with all required parameters
+- [ ] **Set bot_name to "clip_maker_neuro_bot"** ⚠️
 - [ ] API call with proper error handling
 - [ ] Processing status indicator
 - [ ] Success/error feedback to user
@@ -235,10 +255,16 @@ curl -X POST https://d8dc81a4a0aa.ngrok.app/generate/morph-images \
 
 ## 📞 **Support**
 
-If you encounter any issues:
-1. Check the browser console for errors
-2. Verify all required parameters are included
-3. Test with the provided curl command first
-4. Contact backend team with job_id for investigation
+### Bot Token Issues:
+- ❌ `ai_koshey_bot` - Token invalid (401: Unauthorized)
+- ✅ `clip_maker_neuro_bot` - Working correctly
 
-**Status:** All systems operational ✅ Last tested: 2025-01-28 
+### Troubleshooting:
+1. Always use `bot_name: "clip_maker_neuro_bot"`
+2. Check the browser console for errors
+3. Verify all required parameters are included
+4. Test with the provided curl command first
+5. Contact backend team with job_id for investigation
+
+**Status:** All systems operational ✅ Last tested: 2025-01-28  
+**Working Bot:** clip_maker_neuro_bot ✅ 

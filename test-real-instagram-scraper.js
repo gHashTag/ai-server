@@ -1,51 +1,57 @@
+#!/usr/bin/env node
+
 /**
- * Тестовый скрипт для запуска реальной Instagram Scraper V2 функции
+ * 🎯 РЕАЛЬНАЯ INSTAGRAM ФУНКЦИЯ с внешним API
  */
 
+require('dotenv').config({ path: '.env' })
 const { Inngest } = require('inngest')
 
-// Создаем клиент Inngest
-const inngest = new Inngest({ id: 'test-app' })
+console.log('🎯 ЗАПУСК РЕАЛЬНОЙ INSTAGRAM ФУНКЦИИ')
+console.log('====================================')
+console.log('')
 
-async function testInstagramScrapperV2() {
-  console.log('🚀 Запускаем тест Instagram Scraper V2...')
+const inngest = new Inngest({
+  id: 'real-instagram-test-client',
+  name: 'Real Instagram Test Client',
+})
 
+async function testRealInstagramScraper() {
   try {
-    // Отправляем событие в Inngest функцию
-    const result = await inngest.send({
+    console.log('🚀 ОТПРАВЛЯЕМ СОБЫТИЕ ДЛЯ РЕАЛЬНОЙ INSTAGRAM ФУНКЦИИ...')
+
+    const realEvent = {
       name: 'instagram/scraper-v2',
       data: {
-        username_or_id: 'instagram', // Тестируем на официальном аккаунте Instagram
-        max_users: 10,
-        max_reels_per_user: 5,
-        scrape_reels: true,
-        requester_telegram_id: '123456789',
-        project_id: 1, // Тестовый project_id
+        username_or_id: 'cristiano',
+        project_id: 12345,
+        max_users: 5,
+        max_reels_per_user: 3,
+        scrape_reels: false,
+        requester_telegram_id: '144022504',
+        language: 'ru',
       },
-    })
+    }
 
-    console.log('✅ Событие отправлено в Inngest:', result)
-    console.log('🔍 Event IDs:', result.ids)
+    const result = await inngest.send(realEvent)
 
-    return result
+    console.log('')
+    console.log('🎉 СОБЫТИЕ ДЛЯ РЕАЛЬНОЙ INSTAGRAM ФУНКЦИИ ОТПРАВЛЕНО!')
+    console.log(`📋 Event ID: ${result.ids?.[0] || 'unknown'}`)
+
+    console.log('')
+    console.log('🎯 ОЖИДАЕМЫЙ РЕЗУЛЬТАТ:')
+    console.log('   • Реальная функция запросит данные у Instagram API')
+    console.log('   • Создаст архив с HTML отчетом и Excel файлом')
+    console.log('   • Отправит ссылку на скачивание в Telegram')
+    console.log('   • Если НЕ РАБОТАЕТ - проблема в Instagram API или коде')
+
+    console.log('')
+    console.log('⏱️  Ожидаем результат 60 секунд...')
   } catch (error) {
-    console.error('❌ Ошибка при отправке события:', error.message)
-    console.error('Детали ошибки:', error)
-    throw error
+    console.error('❌ Ошибка отправки события:', error.message)
   }
 }
 
 // Запускаем тест
-if (require.main === module) {
-  testInstagramScrapperV2()
-    .then(result => {
-      console.log('🎉 Тест завершен успешно!')
-      process.exit(0)
-    })
-    .catch(error => {
-      console.error('💥 Тест провалился:', error)
-      process.exit(1)
-    })
-}
-
-module.exports = { testInstagramScrapperV2 }
+testRealInstagramScraper()

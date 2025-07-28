@@ -130,8 +130,20 @@ export const BASE_COSTS: Partial<Record<ModeEnum, CostValue>> = {
   [ModeEnum.ImageToVideo]: 0,
   [ModeEnum.TextToVideo]: 0,
   [ModeEnum.TextToImage]: 0,
+  [ModeEnum.ImageMorphing]: (imageCount: number) => {
+    // Kling API для морфинга стоит ~$0.25 за видео + $0.05 за каждое дополнительное изображение
+    const baseCost = 0.25 + (imageCount - 2) * 0.05 // Минимум 2 изображения
+    return calculateFinalStarCostFromDollars(baseCost)
+  },
   [ModeEnum.LipSync]: calculateFinalStarCostFromDollars(0.9),
   [ModeEnum.VoiceToText]: calculateFinalStarCostFromDollars(0.08),
+  [ModeEnum.ScenarioClips]: (totalImages: number) => {
+    // FLUX Kontext Max стоит ~$0.065 за изображение
+    // totalImages = scene_count * variants_per_scene
+    const baseCostPerImage = 0.065
+    const totalCost = baseCostPerImage * totalImages
+    return calculateFinalStarCostFromDollars(totalCost)
+  },
 }
 export interface CostCalculationParams {
   mode: ModeEnum | string
@@ -181,7 +193,12 @@ export function calculateModeCost(
     } else {
       let numericCostValue: number
       if (typeof costValue === 'function') {
-        if (steps === undefined || steps === null) {
+        if (mode === ModeEnum.ScenarioClips) {
+          // Для ScenarioClips передаем количество изображений как параметр
+          const totalImages =
+            (params as any).totalImages || params.numImages || 1
+          numericCostValue = costValue(totalImages)
+        } else if (steps === undefined || steps === null) {
           logger.error({
             message:
               '❌ Не передано количество шагов для режима с функцией стоимости',
@@ -203,6 +220,9 @@ export function calculateModeCost(
         steps
       ) {
         stars = numericCostValue * numImages
+      } else if (normalizedMode === ModeEnum.ScenarioClips) {
+        // Для ScenarioClips стоимость уже рассчитана с учетом всех изображений
+        stars = numericCostValue
       } else {
         stars = numericCostValue * numImages
       }
@@ -232,6 +252,7 @@ export function calculateModeCost(
 }
 
 export const modeCosts: Record<ModeEnum, CostValue> = {
+  [ModeEnum.Subscribe]: calculateModeCost({ mode: ModeEnum.Subscribe }).stars,
   [ModeEnum.DigitalAvatarBody]: (steps: number) =>
     calculateModeCost({ mode: ModeEnum.DigitalAvatarBody, steps }).stars,
   [ModeEnum.DigitalAvatarBodyV2]: (steps: number) =>
@@ -251,6 +272,9 @@ export const modeCosts: Record<ModeEnum, CostValue> = {
   [ModeEnum.SelectAiTextModel]: calculateModeCost({
     mode: ModeEnum.SelectAiTextModel,
   }).stars,
+  [ModeEnum.SelectModelWizard]: calculateModeCost({
+    mode: ModeEnum.SelectModelWizard,
+  }).stars,
   [ModeEnum.Voice]: calculateModeCost({ mode: ModeEnum.Voice }).stars,
   [ModeEnum.TextToSpeech]: calculateModeCost({ mode: ModeEnum.TextToSpeech })
     .stars,
@@ -260,23 +284,29 @@ export const modeCosts: Record<ModeEnum, CostValue> = {
     .stars,
   [ModeEnum.TextToImage]: calculateModeCost({ mode: ModeEnum.TextToImage })
     .stars,
+  [ModeEnum.ImageMorphing]: (imageCount: number) =>
+    calculateModeCost({ mode: ModeEnum.ImageMorphing, numImages: imageCount })
+      .stars,
   [ModeEnum.LipSync]: calculateModeCost({ mode: ModeEnum.LipSync }).stars,
-  [ModeEnum.VoiceToText]: calculateModeCost({ mode: ModeEnum.VoiceToText })
+  [ModeEnum.SelectNeuroPhoto]: calculateModeCost({
+    mode: ModeEnum.SelectNeuroPhoto,
+  }).stars,
+  [ModeEnum.ChangeSize]: calculateModeCost({ mode: ModeEnum.ChangeSize }).stars,
+  [ModeEnum.Invite]: calculateModeCost({ mode: ModeEnum.Invite }).stars,
+  [ModeEnum.Help]: calculateModeCost({ mode: ModeEnum.Help }).stars,
+  [ModeEnum.MainMenu]: calculateModeCost({ mode: ModeEnum.MainMenu }).stars,
+  [ModeEnum.Balance]: calculateModeCost({ mode: ModeEnum.Balance }).stars,
+  [ModeEnum.ImprovePrompt]: calculateModeCost({
+    mode: ModeEnum.ImprovePrompt,
+  }).stars,
+  [ModeEnum.TopUpBalance]: calculateModeCost({ mode: ModeEnum.TopUpBalance })
     .stars,
-  [ModeEnum.Subscribe]: 0,
-  [ModeEnum.SelectModelWizard]: 0,
-  [ModeEnum.SelectNeuroPhoto]: 0,
-  [ModeEnum.ChangeSize]: 0,
-  [ModeEnum.Invite]: 0,
-  [ModeEnum.Help]: 0,
-  [ModeEnum.MainMenu]: 0,
-  [ModeEnum.Balance]: 0,
-  [ModeEnum.ImprovePrompt]: 0,
-  [ModeEnum.TopUpBalance]: 0,
-  [ModeEnum.VideoInUrl]: 0,
-  [ModeEnum.Support]: 0,
-  [ModeEnum.Stats]: 0,
-  [ModeEnum.BroadcastWizard]: 0,
+  [ModeEnum.VideoInUrl]: calculateModeCost({ mode: ModeEnum.VideoInUrl }).stars,
+  [ModeEnum.Support]: calculateModeCost({ mode: ModeEnum.Support }).stars,
+  [ModeEnum.Stats]: calculateModeCost({ mode: ModeEnum.Stats }).stars,
+  [ModeEnum.BroadcastWizard]: calculateModeCost({
+    mode: ModeEnum.BroadcastWizard,
+  }).stars,
   [ModeEnum.SubscriptionCheckScene]: 0,
   [ModeEnum.ImprovePromptWizard]: 0,
   [ModeEnum.SizeWizard]: 0,
@@ -292,11 +322,18 @@ export const modeCosts: Record<ModeEnum, CostValue> = {
   [ModeEnum.GetRuBillWizard]: 0,
   [ModeEnum.SubscriptionScene]: 0,
   [ModeEnum.CreateUserScene]: 0,
+  [ModeEnum.VoiceToText]: calculateModeCost({ mode: ModeEnum.VoiceToText })
+    .stars,
   [ModeEnum.StartScene]: 0,
   [ModeEnum.Price]: 0,
   [ModeEnum.RublePaymentScene]: 0,
   [ModeEnum.StarPaymentScene]: 0,
   [ModeEnum.MenuScene]: 0,
+  [ModeEnum.ScenarioClips]: (totalImages: number) =>
+    calculateModeCost({
+      mode: ModeEnum.ScenarioClips,
+      numImages: totalImages,
+    }).stars,
 }
 // Найдите минимальную и максимальную стоимость среди всех моделей
 export const minCost = Math.min(
