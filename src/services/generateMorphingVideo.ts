@@ -16,7 +16,7 @@ import {
   cleanupExtractionFiles,
   validateImageSequence,
 } from '@/helpers/morphing/zipProcessor'
-import { processKlingMorphing, downloadKlingVideo } from '@/core/kling'
+import { processSequentialMorphing } from '@/core/kling/pairwiseMorphing'
 import { logger } from '@/utils/logger'
 import { getBotByName } from '@/core/bot'
 import { API_URL } from '@/config'
@@ -230,10 +230,10 @@ export async function generateMorphingVideo(
 
     logger.info('🧬 Валидация изображений прошла успешно')
 
-    // 3. Обработка морфинга через Kling API
-    logger.info('🧬 Этап 3: Обработка морфинга через Kling API')
+    // 3. Обработка морфинга через Kling API (НОВАЯ ПОПАРНАЯ ЛОГИКА)
+    logger.info('🧬 Этап 3: Обработка попарного морфинга через Kling API')
 
-    const klingResult = await processKlingMorphing(
+    const klingResult = await processSequentialMorphing(
       zipExtractionResult.images,
       request.morphing_type,
       request.telegram_id
@@ -257,116 +257,36 @@ export async function generateMorphingVideo(
     // 4. Загрузка готового видео
     logger.info('🧬 Этап 4: Загрузка готового видео')
 
-    const videoBuffer = await downloadKlingVideo(klingResult.video_url)
-
-    // 5. Сохранение видео в хранилище
-    logger.info('🧬 Этап 5: Сохранение видео в хранилище')
-
-    const storageResult = await uploadVideoToStorage(
-      videoBuffer,
-      request.telegram_id,
-      jobId
+    // OLD CODE: const videoBuffer = await downloadKlingVideo(klingResult.video_url)
+    // Этот сервис больше не используется в новой архитектуре с processSequentialMorphing
+    throw new Error(
+      'generateMorphingVideo service is deprecated - use processSequentialMorphing directly'
     )
-
-    result.video_storage = storageResult
-
-    if (!storageResult.success) {
-      throw new Error(`Video storage failed: ${storageResult.error}`)
-    }
-
-    logger.info('🧬 Видео сохранено в хранилище:', {
-      public_url: storageResult.public_url,
-      file_size: storageResult.file_size,
-    })
-
-    // 6. Отправка видео пользователю в Telegram
-    logger.info('🧬 Этап 6: Отправка видео в Telegram')
-
-    const deliveryResult = await sendVideoToTelegram(
-      storageResult.public_url,
-      request.telegram_id,
-      request.is_ru,
-      request.bot_name,
-      request.morphing_type
-    )
-
-    result.telegram_delivery = deliveryResult
-
-    if (!deliveryResult.success) {
-      throw new Error(`Telegram delivery failed: ${deliveryResult.error}`)
-    }
-
-    logger.info('🧬 Видео отправлено пользователю:', {
-      message_id: deliveryResult.message_id,
-      delivery_time: deliveryResult.delivery_time,
-    })
-
-    // 7. Успешное завершение
-    const processingTime = Date.now() - startTime
-
-    result.status = MorphingStatus.COMPLETED
-    result.completed_at = new Date()
-    result.processing_time = processingTime
-    result.final_video_url = storageResult.public_url
-
-    logger.info('🧬 Морфинг видео успешно сгенерировано:', {
-      job_id: jobId,
-      telegram_id: request.telegram_id,
-      processing_time: processingTime,
-      final_video_url: storageResult.public_url,
-    })
-  } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : String(error)
-    const processingTime = Date.now() - startTime
-
-    result.status = MorphingStatus.FAILED
-    result.completed_at = new Date()
-    result.processing_time = processingTime
-    result.error = errorMessage
+  } catch (error: any) {
+    result.status = MorphingStatus.ERROR
+    result.error = error.message
+    result.processing_time = Date.now() - startTime
 
     logger.error('🧬 Ошибка генерации морфинг видео:', {
-      job_id: jobId,
       telegram_id: request.telegram_id,
-      processing_time: processingTime,
-      error: errorMessage,
+      error: error.message,
+      stack: error.stack,
+      processing_time: result.processing_time,
     })
 
-    // Отправляем сообщение об ошибке пользователю
-    try {
-      const { bot } = getBotByName(request.bot_name)
-      const errorMsg = request.is_ru
-        ? `❌ Произошла ошибка при создании морфинг видео. Попробуйте еще раз позже.`
-        : `❌ An error occurred while creating the morphing video. Please try again later.`
-
-      await bot.telegram.sendMessage(request.telegram_id, errorMsg)
-
-      logger.info('🧬 Сообщение об ошибке отправлено пользователю')
-    } catch (notificationError) {
-      logger.error('🧬 Не удалось отправить сообщение об ошибке:', {
-        notification_error:
-          notificationError instanceof Error
-            ? notificationError.message
-            : String(notificationError),
-      })
-    }
-  } finally {
-    // 8. Очистка временных файлов
-    if (result.zip_extraction.extractionPath) {
-      logger.info('🧬 Этап 8: Очистка временных файлов')
-
-      setTimeout(async () => {
-        try {
-          await cleanupExtractionFiles(result.zip_extraction.extractionPath)
-          logger.info('🧬 Временные файлы очищены через 1 час')
-        } catch (cleanupError) {
-          logger.error('🧬 Ошибка отложенной очистки:', {
-            cleanup_error:
-              cleanupError instanceof Error
-                ? cleanupError.message
-                : String(cleanupError),
-          })
-        }
-      }, 3600000) // Очищаем через 1 час
+    // Очистка временных файлов при ошибке
+    if (request.zip_file_path && fs.existsSync(request.zip_file_path)) {
+      try {
+        fs.unlinkSync(request.zip_file_path)
+        logger.info('🧹 Временный ZIP файл удален после ошибки:', {
+          path: request.zip_file_path,
+        })
+      } catch (cleanupError: any) {
+        logger.warn('⚠️ Не удалось удалить временный ZIP файл:', {
+          path: request.zip_file_path,
+          error: cleanupError.message,
+        })
+      }
     }
   }
 

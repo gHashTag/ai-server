@@ -1,411 +1,209 @@
 /**
- * 🧬 Kling API Client для Морфинг Видео
- * Интеграция с Kling-v1.6 для создания морфинг видео
+ * 🧬 Replicate Kling API Client для Морфинг Видео
+ * Интеграция с kwaivgi/kling-v1.6-pro через Replicate
  */
 
-import axios, { AxiosResponse } from 'axios'
+import { replicate } from '@/core/replicate'
 import {
-  KlingMorphingRequest,
-  KlingMorphingResponse,
-  KlingProcessingResult,
   MorphingType,
   ExtractedImage,
-  DEFAULT_MORPHING_CONFIG,
+  KlingProcessingResult,
 } from '@/interfaces/morphing.interface'
 import { logger } from '@/utils/logger'
+import fs from 'fs'
+import { VIDEO_MODELS_CONFIG } from '@/config/models.config'
 
 /**
- * Конвертирует изображение в Base64
+ * Конвертирует изображение в Base64 из файла для Replicate
  */
-function imageBufferToBase64(buffer: Buffer): string {
-  return buffer.toString('base64')
-}
-
-/**
- * Проверяет переменные окружения для Kling API
- */
-function validateKlingEnv(): void {
-  if (!process.env.KLING_API_KEY) {
-    throw new Error('KLING_API_KEY environment variable is required')
-  }
-
-  if (!process.env.KLING_API_URL) {
-    logger.warn(
-      '🧬 KLING_API_URL not set, using default:',
-      DEFAULT_MORPHING_CONFIG.kling_api_url
-    )
-  }
-}
-
-/**
- * Создает запрос к Kling API для морфинга
- */
-export async function createKlingMorphingRequest(
-  images: ExtractedImage[],
-  morphingType: MorphingType,
-  webhookUrl?: string
-): Promise<KlingMorphingRequest> {
-  logger.info('🧬 Подготовка запроса к Kling API:', {
-    image_count: images.length,
-    morphing_type: morphingType,
-    has_webhook: !!webhookUrl,
-  })
-
-  // Конвертируем изображения в Base64
-  const base64Images: string[] = []
-
-  for (const image of images) {
-    try {
-      const base64 = imageBufferToBase64(image.buffer)
-      base64Images.push(base64)
-
-      logger.info('🧬 Изображение конвертировано в Base64:', {
-        filename: image.filename,
-        original_size: image.buffer.length,
-        base64_size: base64.length,
-      })
-    } catch (error) {
-      logger.error('🧬 Ошибка конвертации изображения в Base64:', {
-        filename: image.filename,
-        error: error instanceof Error ? error.message : String(error),
-      })
-      throw new Error(
-        `Failed to convert image ${image.filename} to Base64: ${error}`
-      )
-    }
-  }
-
-  const request: KlingMorphingRequest = {
-    model: DEFAULT_MORPHING_CONFIG.kling_model,
-    task_type: 'image_morphing',
-    images: base64Images,
-    transition_type: morphingType,
-    output_format: 'mp4',
-    quality: 'high',
-    webhook_url: webhookUrl,
-  }
-
-  logger.info('🧬 Kling запрос подготовлен:', {
-    model: request.model,
-    task_type: request.task_type,
-    image_count: request.images.length,
-    transition_type: request.transition_type,
-    output_format: request.output_format,
-    quality: request.quality,
-    has_webhook: !!request.webhook_url,
-  })
-
-  return request
-}
-
-/**
- * Отправляет задачу морфинга в Kling API
- */
-export async function submitKlingMorphingJob(
-  images: ExtractedImage[],
-  morphingType: MorphingType,
-  telegramId: string,
-  webhookUrl?: string
-): Promise<KlingProcessingResult> {
-  logger.info('🧬 Отправка задачи морфинга в Kling API:', {
-    telegram_id: telegramId,
-    image_count: images.length,
-    morphing_type: morphingType,
-  })
-
+function imageFileToBase64(filePath: string): string {
   try {
-    // Валидация окружения
-    validateKlingEnv()
+    const fs = require('fs')
 
-    // Подготовка запроса
-    const morphingRequest = await createKlingMorphingRequest(
-      images,
-      morphingType,
-      webhookUrl
-    )
-
-    // URL API (используем переменную окружения или дефолтное значение)
-    const apiUrl =
-      process.env.KLING_API_URL || DEFAULT_MORPHING_CONFIG.kling_api_url
-    const endpoint = `${apiUrl}/morphing/create`
-
-    // Заголовки запроса
-    const headers = {
-      Authorization: `Bearer ${process.env.KLING_API_KEY}`,
-      'Content-Type': 'application/json',
-      'User-Agent': 'AI-Server-Morphing/1.0',
-    }
-
-    logger.info('🧬 Отправляем запрос к Kling API:', {
-      endpoint,
-      headers: { ...headers, Authorization: 'Bearer [HIDDEN]' },
-      payload_size: JSON.stringify(morphingRequest).length,
+    logger.info('🖼️ Читаем изображение для Base64:', {
+      description: 'Reading image file for base64 conversion',
+      filePath,
+      fileExists: fs.existsSync(filePath),
     })
 
-    const startTime = Date.now()
+    if (!fs.existsSync(filePath)) {
+      throw new Error(`File does not exist: ${filePath}`)
+    }
 
-    // Отправляем запрос
-    const response: AxiosResponse<KlingMorphingResponse> = await axios.post(
-      endpoint,
-      morphingRequest,
-      {
-        headers,
-        timeout: 30000, // 30 секунд таймаут
-        validateStatus: status => status < 500, // Не бросаем ошибку для 4xx статусов
-      }
-    )
+    const buffer = fs.readFileSync(filePath)
+    const base64Data = buffer.toString('base64')
+    const dataUri = `data:image/jpeg;base64,${base64Data}`
 
-    const processingTime = Date.now() - startTime
-
-    logger.info('🧬 Ответ от Kling API получен:', {
-      status: response.status,
-      processing_time_ms: processingTime,
-      response_data: response.data,
+    logger.info('✅ Base64 конвертация завершена:', {
+      description: 'Base64 conversion completed',
+      filePath,
+      bufferSize: buffer.length,
+      base64Length: base64Data.length,
+      dataUriLength: dataUri.length,
+      dataUriPrefix: dataUri.substring(0, 50) + '...',
     })
 
-    // Обработка ответа
-    if (response.status !== 200 && response.status !== 201) {
-      throw new Error(
-        `Kling API returned status ${response.status}: ${JSON.stringify(
-          response.data
-        )}`
-      )
-    }
-
-    const klingResponse = response.data
-
-    // Валидация ответа
-    if (!klingResponse.id) {
-      throw new Error('Kling API response is missing job ID')
-    }
-
-    const result: KlingProcessingResult = {
-      success: true,
-      job_id: klingResponse.id,
-      video_url: klingResponse.output_url,
-      processing_time: processingTime,
-    }
-
-    // Если видео уже готово (синхронная обработка)
-    if (klingResponse.status === 'completed' && klingResponse.output_url) {
-      logger.info('🧬 Морфинг видео готово синхронно:', {
-        job_id: klingResponse.id,
-        video_url: klingResponse.output_url,
-        duration: klingResponse.output_duration,
-      })
-
-      result.video_url = klingResponse.output_url
-    } else {
-      logger.info('🧬 Морфинг задача отправлена в очередь:', {
-        job_id: klingResponse.id,
-        status: klingResponse.status,
-        estimated_time: klingResponse.estimated_time,
-      })
-    }
-
-    return result
+    return dataUri
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : String(error)
-
-    logger.error('🧬 Ошибка при отправке задачи в Kling API:', {
-      telegram_id: telegramId,
-      error: errorMessage,
-      stack: error instanceof Error ? error.stack : undefined,
-    })
-
-    if (axios.isAxiosError(error)) {
-      logger.error('🧬 Детали Axios ошибки:', {
-        status: error.response?.status,
-        status_text: error.response?.statusText,
-        response_data: error.response?.data,
-        request_url: error.config?.url,
-        request_method: error.config?.method,
-      })
-    }
-
-    return {
-      success: false,
-      job_id: '',
-      error: errorMessage,
-    }
-  }
-}
-
-/**
- * Проверяет статус задачи морфинга в Kling API
- */
-export async function checkKlingJobStatus(
-  jobId: string
-): Promise<KlingMorphingResponse> {
-  logger.info('🧬 Проверка статуса задачи Kling:', { job_id: jobId })
-
-  try {
-    validateKlingEnv()
-
-    const apiUrl =
-      process.env.KLING_API_URL || DEFAULT_MORPHING_CONFIG.kling_api_url
-    const endpoint = `${apiUrl}/morphing/status/${jobId}`
-
-    const headers = {
-      Authorization: `Bearer ${process.env.KLING_API_KEY}`,
-      'Content-Type': 'application/json',
-    }
-
-    const response: AxiosResponse<KlingMorphingResponse> = await axios.get(
-      endpoint,
-      {
-        headers,
-        timeout: 10000, // 10 секунд таймаут для проверки статуса
-      }
-    )
-
-    logger.info('🧬 Статус задачи получен:', {
-      job_id: jobId,
-      status: response.data.status,
-      output_url: response.data.output_url,
-      error: response.data.error,
-    })
-
-    return response.data
-  } catch (error) {
-    logger.error('🧬 Ошибка проверки статуса задачи Kling:', {
-      job_id: jobId,
+    logger.error('❌ Ошибка конвертации изображения в Base64:', {
+      description: 'Error converting image to base64',
+      filePath,
       error: error instanceof Error ? error.message : String(error),
     })
-
     throw error
   }
 }
 
 /**
- * Загружает готовое видео из Kling
+ * Отправляет задачу морфинга в Replicate с моделью kwaivgi/kling-v1.6-pro
  */
-export async function downloadKlingVideo(videoUrl: string): Promise<Buffer> {
-  logger.info('🧬 Начинаем загрузку видео из Kling:', { video_url: videoUrl })
-
-  try {
-    const response = await axios.get(videoUrl, {
-      responseType: 'arraybuffer',
-      timeout: 300000, // 5 минут на загрузку видео
-      validateStatus: status => status === 200,
-    })
-
-    const videoBuffer = Buffer.from(response.data)
-
-    logger.info('🧬 Видео успешно загружено:', {
-      video_url: videoUrl,
-      size_bytes: videoBuffer.length,
-      size_mb: (videoBuffer.length / (1024 * 1024)).toFixed(2),
-    })
-
-    return videoBuffer
-  } catch (error) {
-    logger.error('🧬 Ошибка загрузки видео из Kling:', {
-      video_url: videoUrl,
-      error: error instanceof Error ? error.message : String(error),
-    })
-
-    throw new Error(`Failed to download video from Kling: ${error}`)
-  }
-}
-
-/**
- * Полный цикл обработки морфинга через Kling API
- * (отправка задачи + ожидание + загрузка результата)
- */
-export async function processKlingMorphing(
+export async function submitKlingMorphingJob(
   images: ExtractedImage[],
   morphingType: MorphingType,
-  telegramId: string,
-  maxWaitTimeMs = 600000 // 10 минут по умолчанию
+  telegramId: string
 ): Promise<KlingProcessingResult> {
-  logger.info('🧬 Начинаем полный цикл обработки морфинга:', {
-    telegram_id: telegramId,
-    image_count: images.length,
-    morphing_type: morphingType,
-    max_wait_time_ms: maxWaitTimeMs,
-  })
+  // 🔒 ВАЛИДАЦИЯ: Kling API принимает ТОЛЬКО 2 изображения!
+  if (images.length !== 2) {
+    const errorMsg = `Kling API accepts exactly 2 images, got ${images.length}. Use processSequentialMorphing for multiple images.`
+    logger.error('🧬 Неправильное количество изображений для Kling API:', {
+      telegram_id: telegramId,
+      provided_count: images.length,
+      required_count: 2,
+      error: errorMsg,
+    })
+    return {
+      success: false,
+      job_id: '',
+      error: errorMsg,
+    }
+  }
 
   try {
-    // 1. Отправляем задачу
-    const submitResult = await submitKlingMorphingJob(
-      images,
-      morphingType,
-      telegramId
-    )
+    const modelConfig = VIDEO_MODELS_CONFIG['kling-v1.6-pro']
 
-    if (!submitResult.success) {
-      throw new Error(submitResult.error || 'Failed to submit morphing job')
-    }
-
-    const jobId = submitResult.job_id
-
-    // Если видео уже готово синхронно, возвращаем результат
-    if (submitResult.video_url) {
-      return submitResult
-    }
-
-    // 2. Ожидаем завершения обработки
-    const startTime = Date.now()
-    const pollInterval = 10000 // Проверяем каждые 10 секунд
-
-    while (Date.now() - startTime < maxWaitTimeMs) {
-      await new Promise(resolve => setTimeout(resolve, pollInterval))
-
-      try {
-        const status = await checkKlingJobStatus(jobId)
-
-        if (status.status === 'completed' && status.output_url) {
-          logger.info('🧬 Морфинг задача завершена успешно:', {
-            job_id: jobId,
-            total_time_ms: Date.now() - startTime,
-            video_url: status.output_url,
-          })
-
-          return {
-            success: true,
-            job_id: jobId,
-            video_url: status.output_url,
-            processing_time: Date.now() - startTime,
-          }
-        }
-
-        if (status.status === 'failed') {
-          throw new Error(
-            `Kling job failed: ${status.error || 'Unknown error'}`
-          )
-        }
-
-        logger.info('🧬 Задача еще обрабатывается:', {
-          job_id: jobId,
-          status: status.status,
-          elapsed_time_ms: Date.now() - startTime,
-        })
-      } catch (statusError) {
-        logger.warn('🧬 Ошибка проверки статуса, продолжаем ожидание:', {
-          job_id: jobId,
-          error:
-            statusError instanceof Error
-              ? statusError.message
-              : String(statusError),
-        })
-      }
-    }
-
-    // Таймаут ожидания
-    throw new Error(`Morphing job timed out after ${maxWaitTimeMs}ms`)
-  } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : String(error)
-
-    logger.error('🧬 Ошибка в полном цикле обработки морфинга:', {
+    logger.info('🧬 Начинаем морфинг job с Replicate:', {
+      description: 'Starting Replicate morphing job',
       telegram_id: telegramId,
-      error: errorMessage,
+      morphing_type: morphingType,
+      model: modelConfig.api.model,
+      images_count: images.length,
+      image_paths: images.map(img => img.path),
+    })
+
+    // Получаем base64 изображения
+    logger.info('🔄 Конвертируем изображения в Base64...', {
+      telegram_id: telegramId,
+      image1_path: images[0].path,
+      image2_path: images[1].path,
+    })
+
+    const image1Base64 = imageFileToBase64(images[0].path)
+    const image2Base64 = imageFileToBase64(images[1].path)
+
+    // Подготавливаем input для Replicate
+    const input = {
+      ...modelConfig.api.input,
+      prompt: 'Smooth morphing transition between two images', // ОБЯЗАТЕЛЬНОЕ ПОЛЕ!
+      start_image: image1Base64, // Начальное изображение для морфинга
+      end_image: image2Base64, // Конечное изображение для морфинга
+      duration: 5, // 5 секунд
+      aspect_ratio: '16:9', // Соотношение сторон
+      negative_prompt: 'blur, distort, and low quality', // Негативный промпт
+    }
+
+    logger.info('🚀 Отправляем запрос в Replicate:', {
+      description: 'Sending request to Replicate',
+      telegram_id: telegramId,
+      model: modelConfig.api.model,
+      input_keys: Object.keys(input),
+      start_image_length: input.start_image?.length || 0,
+      end_image_length: input.end_image?.length || 0,
+      prompt: input.prompt,
+    })
+
+    // Отправляем запрос в Replicate
+    const result = await replicate.run(modelConfig.api.model as any, { input })
+
+    logger.info('✅ Получен результат от Replicate:', {
+      description: 'Received result from Replicate',
+      telegram_id: telegramId,
+      result_type: typeof result,
+      result_is_array: Array.isArray(result),
+      result_length: Array.isArray(result) ? result.length : 1,
+    })
+
+    // Результат может быть массивом или строкой
+    const videoUrl = Array.isArray(result) ? result[0] : result
+
+    logger.info('🎬 Морфинг видео готово:', {
+      description: 'Morphing video completed',
+      telegram_id: telegramId,
+      video_url: videoUrl,
+      video_url_type: typeof videoUrl,
+    })
+
+    return {
+      success: true,
+      job_id: `replicate_${Date.now()}`,
+      video_url: videoUrl,
+    }
+  } catch (error) {
+    logger.error('❌ Ошибка при создании морфинг видео:', {
+      description: 'Error creating morphing video',
+      telegram_id: telegramId,
+      error: error instanceof Error ? error.message : String(error),
+      error_details: error,
     })
 
     return {
       success: false,
       job_id: '',
-      error: errorMessage,
+      error: error instanceof Error ? error.message : 'Unknown error occurred',
     }
   }
+}
+
+/**
+ * Проверяет статус задачи (для совместимости с существующим кодом)
+ * Replicate выполняется синхронно, поэтому эта функция не нужна
+ */
+export async function pollKlingJobStatus(
+  jobId: string,
+  telegramId: string
+): Promise<KlingProcessingResult> {
+  logger.warn('🧬 pollKlingJobStatus вызвана для Replicate (не нужна):', {
+    telegram_id: telegramId,
+    job_id: jobId,
+  })
+
+  return {
+    success: false,
+    job_id: jobId,
+    error: 'Replicate runs synchronously, polling not needed',
+  }
+}
+
+/**
+ * Основная функция для создания морфинг видео через Replicate
+ */
+export async function createKlingMorphingVideo(
+  images: ExtractedImage[],
+  morphingType: MorphingType,
+  telegramId: string
+): Promise<KlingProcessingResult> {
+  logger.info('🧬 Создание морфинг видео через Replicate:', {
+    telegram_id: telegramId,
+    images_count: images.length,
+    morphing_type: morphingType,
+  })
+
+  if (images.length !== 2) {
+    return {
+      success: false,
+      job_id: '',
+      error: `Expected exactly 2 images for Kling morphing, got ${images.length}`,
+    }
+  }
+
+  return await submitKlingMorphingJob(images, morphingType, telegramId)
 }

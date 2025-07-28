@@ -1,435 +1,257 @@
 import { inngest } from '@/core/inngest/clients'
-import { getBotByName } from '@/core/bot'
-import {
-  getUserByTelegramId,
-  updateUserBalance,
-  updateUserLevelPlusOne,
-} from '@/core/supabase'
-import { processBalanceOperation } from '@/price/helpers'
-import { ModeEnum } from '@/interfaces/modes'
-import { calculateModeCost } from '@/price/helpers/modelsCost'
-import { errorMessageAdmin } from '@/helpers/errorMessageAdmin'
 import { logger } from '@/utils/logger'
-import { PaymentType } from '@/interfaces/payments.interface'
-import { slugify } from 'inngest'
-import { generateMorphingVideo } from '@/services/generateMorphingVideo'
-import type { ProcessedMorphRequest } from '@/interfaces/morphing.interface'
-import { MorphingStatus } from '@/interfaces/morphing.interface'
+import { getUserBalance } from '@/core/supabase/getUserBalance'
+import { getUserByTelegramId } from '@/core/supabase'
+import { getBotByName } from '@/core/bot'
+import { processSequentialMorphing } from '@/core/kling/pairwiseMorphing'
+import { MorphingType } from '@/interfaces/morphing.interface'
+import fs from 'fs'
+
+// 🔧 НОВЫЙ ИНТЕРФЕЙС: Получаем готовые пути к файлам, не ZIP
+interface MorphingJobData {
+  telegram_id: string
+  image_count: number
+  morphing_type: 'seamless' | 'loop'
+  model: string
+  is_ru: boolean
+  bot_name: string
+  job_id: string
+  // 🎯 КЛЮЧЕВОЕ ИЗМЕНЕНИЕ: Массив путей к файлам вместо zip_file_path
+  image_files: Array<{
+    filename: string
+    path: string
+    order: number
+  }>
+  extraction_path: string // Путь для очистки после обработки
+}
 
 export const morphImages = inngest.createFunction(
-  {
-    id: slugify('morph-images'),
-    name: '🧬 Image Morphing',
-    retries: 3,
-  },
+  { id: 'morph-images' },
   { event: 'morph/images.requested' },
-  async ({ event, step, runId }) => {
-    logger.info({
-      message: '🧬 Morphing initiated via Inngest',
-      runId: runId,
-      data: event.data,
-    })
-
+  async ({ event, step }) => {
     const {
       telegram_id,
-      image_count,
       morphing_type,
       model,
       is_ru,
       bot_name,
-      zip_file_path,
-    } = event.data
+      job_id,
+      image_files,
+      extraction_path,
+    } = event.data as MorphingJobData
 
-    // Проверяем существование пользователя в базе
-    const userExists = await step.run('check-user-exists', async () => {
-      logger.info({
-        message: '🔍 Checking user existence',
-        telegramId: telegram_id,
-        step: 'check-user-exists',
-      })
-
-      const user = await getUserByTelegramId(telegram_id)
-      if (!user) {
-        logger.error({
-          message: '❌ User not found',
-          telegramId: telegram_id,
-          step: 'check-user-exists',
-        })
-        throw new Error(`User with ID ${telegram_id} does not exist.`)
-      }
-
-      logger.info({
-        message: '✅ User found',
-        telegramId: telegram_id,
-        userId: user.user_id,
-        step: 'check-user-exists',
-      })
-
-      return user
+    logger.info('🧬 Morphing job started:', {
+      telegram_id,
+      job_id,
+      image_files_count: image_files.length,
+      morphing_type,
+      model,
     })
 
-    // Увеличиваем уровень пользователя, если он на уровне 0
-    if (userExists.level === 0) {
-      await step.run('update-user-level', async () => {
-        logger.info({
-          message: '⬆️ Upgrading user level from 0 to 1',
-          telegramId: telegram_id,
-          currentLevel: userExists.level,
-          step: 'update-user-level',
-        })
+    // ШАГ 1: Проверка существования пользователя
+    await step.run('check-user-exists', async () => {
+      const user = await getUserByTelegramId(telegram_id)
 
-        await updateUserLevelPlusOne(telegram_id, userExists.level)
+      if (!user) {
+        throw new Error(`User ${telegram_id} does not exist`)
+      }
 
-        logger.info({
-          message: '✅ User level updated successfully',
-          telegramId: telegram_id,
-          newLevel: 1,
-          step: 'update-user-level',
-        })
+      logger.info('✅ User exists:', { telegram_id })
+      return { exists: true, user }
+    })
+
+    // ШАГ 2: Проверка баланса пользователя
+    await step.run('check-balance', async () => {
+      const balance = await getUserBalance(telegram_id, bot_name)
+      const requiredStars = 50 // Базовая стоимость морфинга
+
+      if (balance < requiredStars) {
+        throw new Error(`Insufficient balance: ${balance} < ${requiredStars}`)
+      }
+
+      logger.info('✅ Balance sufficient:', {
+        telegram_id,
+        balance,
+        required: requiredStars,
       })
-    }
+      return { balance, required: requiredStars }
+    })
 
-    // Бот будет получен внутри каждого step.run() где он нужен
+    // ШАГ 3: Уведомление о начале обработки (НЕ отправляем большие данные!)
+    await step.run('notify-start', async () => {
+      const { bot, error } = getBotByName(bot_name)
+      if (error || !bot) {
+        throw new Error(`Bot ${bot_name} not found: ${error}`)
+      }
 
-    // Проверяем баланс и рассчитываем стоимость
-    const { currentBalance, paymentAmount } = await step.run(
-      'check-balance',
+      const startMessage = is_ru
+        ? `🧬 Начинаю морфинг ${image_files.length} изображений...\nJob ID: ${job_id}`
+        : `🧬 Starting morphing of ${image_files.length} images...\nJob ID: ${job_id}`
+
+      await bot.telegram.sendMessage(telegram_id, startMessage)
+
+      logger.info('✅ Start notification sent:', { telegram_id, job_id })
+      return { notified: true }
+    })
+
+    // ШАГ 4: 🚀 ПАРАЛЛЕЛЬНЫЙ МОРФИНГ С ОРКЕСТРАЦИЕЙ
+    const morphingResult = await step.run(
+      'execute-parallel-morphing',
       async () => {
-        logger.info({
-          message: '💰 Checking user balance',
-          telegramId: telegram_id,
-          botName: bot_name,
-          step: 'check-balance',
-        })
-
-        // Рассчитываем стоимость морфинга на основе количества изображений
-        const paymentAmount = calculateModeCost({
-          mode: ModeEnum.ImageMorphing,
-          numImages: image_count,
-        }).stars
-
-        logger.info({
-          message: '🧮 Calculated morphing cost',
-          telegramId: telegram_id,
-          paymentAmount: paymentAmount,
-          imageCount: image_count,
-          morphingType: morphing_type,
-          step: 'check-balance',
-        })
-
-        const balanceCheck = await processBalanceOperation({
+        logger.info('🧬 Starting parallel morphing orchestration:', {
           telegram_id,
-          paymentAmount,
-          is_ru,
-          bot_name,
+          job_id,
+          image_files_count: image_files.length,
         })
 
-        if (!balanceCheck.success) {
-          logger.error({
-            message: '⚠️ Balance check failed or insufficient funds',
-            telegramId: telegram_id,
-            requiredAmount: paymentAmount,
-            currentBalance: balanceCheck.currentBalance,
-            error: balanceCheck.error,
-            step: 'check-balance',
-          })
+        // Преобразуем пути файлов в формат ExtractedImage для существующей логики
+        const extractedImages = image_files.map(file => ({
+          filename: file.filename,
+          originalName: file.filename,
+          path: file.path,
+          order: file.order,
+        }))
 
-          if (balanceCheck.error) {
-            try {
-              const { bot, error } = getBotByName(bot_name)
-              if (bot && !error) {
-                await bot.telegram.sendMessage(
-                  telegram_id.toString(),
-                  balanceCheck.error
-                )
-              } else {
-                logger.error(
-                  '❌ Failed to get bot for balance error notification:',
-                  {
-                    bot_name,
-                    error,
-                    telegram_id,
-                  }
-                )
-              }
-            } catch (notifyError) {
-              logger.error(
-                'Failed to send balance error notification to user',
-                { telegramId: telegram_id, error: notifyError }
-              )
-            }
-          }
+        // Используем существующую логику последовательного морфинга
+        // Приводим тип morphing_type к правильному enum
+        const morphingTypeEnum =
+          morphing_type === 'seamless'
+            ? MorphingType.SEAMLESS
+            : MorphingType.LOOP
 
-          throw new Error(balanceCheck.error || 'Balance check failed')
+        const result = await processSequentialMorphing(
+          extractedImages,
+          morphingTypeEnum,
+          telegram_id
+        )
+
+        if (!result.success) {
+          throw new Error(`Morphing failed: ${result.error}`)
         }
 
-        logger.info({
-          message: '✅ Balance check successful',
-          telegramId: telegram_id,
-          currentBalance: balanceCheck.currentBalance,
-          requiredAmount: paymentAmount,
-          step: 'check-balance',
+        logger.info('✅ Parallel morphing completed:', {
+          telegram_id,
+          job_id,
+          video_url: result.video_url,
+          processing_time: result.processing_time,
         })
 
-        return { currentBalance: balanceCheck.currentBalance, paymentAmount }
+        return {
+          success: true,
+          job_id: result.job_id,
+          video_url: result.video_url,
+          processing_time: result.processing_time,
+        }
       }
     )
 
-    try {
-      // Отправляем уведомление о начале обработки
-      await step.run('notify-start', async () => {
-        logger.info({
-          message: '📩 Sending start notification to user',
-          telegramId: telegram_id,
-          step: 'notify-start',
-        })
-
-        logger.info({
-          message: '🔍 Attempting to get bot instance',
-          bot_name,
-          step: 'notify-start-debug',
-        })
-
-        const { bot, error } = getBotByName(bot_name)
-
-        logger.info({
-          message: '🤖 Bot retrieval result',
-          bot_name,
-          has_bot: !!bot,
-          error: error || 'none',
-          step: 'notify-start-debug',
-        })
-
-        if (error || !bot) {
-          logger.error({
-            message: '❌ Bot instance retrieval failed',
-            bot_name,
-            error,
-            step: 'notify-start-debug',
+    // ШАГ 5: Очистка временных файлов
+    await step.run('cleanup-temp-files', async () => {
+      try {
+        // Очищаем директорию с извлеченными изображениями
+        if (fs.existsSync(extraction_path)) {
+          await fs.promises.rm(extraction_path, {
+            recursive: true,
+            force: true,
           })
-          throw new Error(`Bot instance not found or invalid: ${error}`)
+          logger.info('✅ Temporary extraction path cleaned:', {
+            extraction_path,
+          })
         }
+
+        return { cleaned: true, path: extraction_path }
+      } catch (error) {
+        logger.error('⚠️ Failed to clean temporary files:', {
+          extraction_path,
+          error: error instanceof Error ? error.message : String(error),
+        })
+        // Не прерываем выполнение из-за ошибки очистки
+        return { cleaned: false, error: String(error) }
+      }
+    })
+
+    // Отправляем результат пользователю
+    const deliverResult = await step.run('deliver-result', async () => {
+      logger.info('📤 Отправляем морфинг видео пользователю:', {
+        description: 'Delivering morphing video to user',
+        telegram_id,
+        video_url: morphingResult.video_url,
+        bot_name,
+      })
+
+      const { bot, error } = getBotByName(bot_name)
+      if (error || !bot) {
+        throw new Error(`Bot ${bot_name} not found: ${error}`)
+      }
+
+      // 🎬 Рекламный текст с упоминанием бота
+      const botMention =
+        bot_name === 'clip_maker_neuro_bot'
+          ? '@clip_maker_neuro_bot'
+          : '@ai_koshey_bot'
+      const advertisementText = `🧬 **Морфинг завершен!**\n\n✨ Создано с помощью ${botMention}\n🎯 Время обработки: ~5 минут\n💫 Качество: Full HD 1080p\n\n📥 **Скачать:** Отправлен как документ\n👀 **Просмотр:** Видео выше\n\n🚀 Создавай больше контента с нашими ботами!`
+
+      try {
+        // 📱 Отправляем как видео для просмотра (с превью)
+        await bot.telegram.sendVideo(telegram_id, morphingResult.video_url, {
+          caption: advertisementText,
+          parse_mode: 'Markdown',
+          width: 1920, // Full HD ширина
+          height: 1080, // Full HD высота
+          duration: 5, // 5 секунд
+          supports_streaming: true, // Поддержка стриминга
+        })
+
+        // 📎 Отправляем как документ для скачивания
+        const fileDownloadText = `📁 **Файл для скачивания**\n\n🎬 Морфинг видео в высоком качестве\n💾 Можно сохранить на устройство\n\n${botMention} - создаем будущее вместе!`
+        await bot.telegram.sendDocument(telegram_id, morphingResult.video_url, {
+          caption: fileDownloadText,
+          parse_mode: 'Markdown',
+        })
+
+        logger.info('✅ Видео успешно доставлено пользователю:', {
+          telegram_id,
+          delivered_as: 'video_and_document',
+          bot_name,
+        })
+
+        return { delivered: true, method: 'video_and_document' }
+      } catch (deliveryError) {
+        logger.error('❌ Ошибка доставки видео:', {
+          telegram_id,
+          error:
+            deliveryError instanceof Error
+              ? deliveryError.message
+              : String(deliveryError),
+        })
+
+        // Фоллбэк: отправляем хотя бы ссылку
         await bot.telegram.sendMessage(
           telegram_id,
-          is_ru
-            ? `🧬 Начинаем создание морфинг-видео из ${image_count} изображений...`
-            : `🧬 Starting morphing video creation from ${image_count} images...`
+          `🎬 **Морфинг готов!**\n\n📎 **Скачать видео:** ${morphingResult.video_url}\n\n✨ Создано с помощью ${botMention}`,
+          { parse_mode: 'Markdown' }
         )
 
-        logger.info({
-          message: '📨 Start notification sent successfully',
-          telegramId: telegram_id,
-          step: 'notify-start',
-        })
-      })
-
-      // Выполняем морфинг через существующий сервис
-      const morphingResult = await step.run('execute-morphing', async () => {
-        logger.info({
-          message: '🎬 Executing morphing generation',
-          telegramId: telegram_id,
-          imageCount: image_count,
-          morphingType: morphing_type,
-          zipFilePath: zip_file_path,
-          step: 'execute-morphing',
-        })
-
-        const request: ProcessedMorphRequest = {
-          type: 'morphing',
-          telegram_id,
-          image_count,
-          morphing_type,
-          model,
-          is_ru,
-          bot_name,
-          zip_file_path,
-        }
-
-        // Используем существующий сервис
-        const result = await generateMorphingVideo(request)
-
-        logger.info({
-          message: '✅ Morphing generation completed',
-          telegramId: telegram_id,
-          status: result.status,
-          step: 'execute-morphing',
-        })
-
-        // 🔧 FIX: Очищаем большие данные для предотвращения output_too_large
-        const cleanResult = {
-          job_id: result.job_id,
-          telegram_id: result.telegram_id,
-          status: result.status,
-          zip_extraction: {
-            success: result.zip_extraction.success,
-            totalCount: result.zip_extraction.totalCount,
-            extractionPath: result.zip_extraction.extractionPath,
-            error: result.zip_extraction.error,
-            // Убираем images: ExtractedImage[] с Buffer данными
-          },
-          kling_processing: result.kling_processing,
-          video_storage: result.video_storage,
-          telegram_delivery: result.telegram_delivery,
-          created_at: result.created_at,
-          completed_at: result.completed_at,
-          processing_time: result.processing_time,
-          final_video_url: result.final_video_url,
-          error: result.error,
-        }
-
-        return cleanResult
-      })
-
-      if (morphingResult.status !== MorphingStatus.COMPLETED) {
-        throw new Error(morphingResult.error || 'Morphing generation failed')
+        return { delivered: true, method: 'link_fallback' }
       }
+    })
 
-      // Списываем баланс после успешного завершения
-      await step.run('deduct-balance', async () => {
-        logger.info({
-          message: '💸 Deducting balance after successful morphing',
-          telegramId: telegram_id,
-          paymentAmount: paymentAmount,
-          currentBalance: currentBalance,
-          step: 'deduct-balance',
-        })
-
-        const newBalance = currentBalance - paymentAmount
-
-        await updateUserBalance(
-          telegram_id,
-          paymentAmount,
-          PaymentType.MONEY_OUTCOME,
-          `Image morphing (${image_count} images, ${morphing_type})`,
-          {
-            stars: paymentAmount,
-            payment_method: 'Internal',
-            bot_name,
-            language: is_ru ? 'ru' : 'en',
-            service_type: ModeEnum.ImageMorphing,
-            operation_id: morphingResult.job_id,
-            category: 'REAL',
-            cost: paymentAmount / 1.5,
-          }
-        )
-
-        logger.info({
-          message: '✅ Balance updated successfully',
-          telegramId: telegram_id,
-          newBalance: newBalance,
-          step: 'deduct-balance',
-        })
-
-        const successMessage = is_ru
-          ? `✅ Морфинг видео готово! С вашего баланса списано ${paymentAmount} ⭐. Ваш новый баланс: ${newBalance.toFixed(
-              2
-            )} ⭐.`
-          : `✅ Morphing video ready! ${paymentAmount} ⭐ deducted from your balance. Your new balance: ${newBalance.toFixed(
-              2
-            )} ⭐.`
-
-        const { bot, error } = getBotByName(bot_name)
-        if (error || !bot) {
-          throw new Error(`Bot instance not found or invalid: ${error}`)
-        }
-        await bot.telegram.sendMessage(telegram_id.toString(), successMessage)
-      })
-
-      logger.info({
-        message: '🏁 Morphing process completed successfully',
-        telegramId: telegram_id,
-        imageCount: image_count,
-        morphingType: morphing_type,
-        videoUrl: morphingResult.final_video_url,
-      })
-
-      return {
-        success: true,
-        message: `Morphing completed successfully`,
-        video_url: morphingResult.final_video_url,
+    // 🔧 ФИНАЛЬНЫЙ РЕЗУЛЬТАТ: Возвращаем только необходимые данные (БЕЗ больших объектов)
+    const finalResult = {
+      job_id,
+      telegram_id,
+      status: 'completed',
+      morphing_result: {
+        success: morphingResult.success,
         job_id: morphingResult.job_id,
-      }
-    } catch (error) {
-      // В случае ошибки возвращаем списанные средства
-      await step.run('refund-balance', async () => {
-        logger.info({
-          message: '♻️ Refunding payment due to error',
-          telegramId: telegram_id,
-          amount: paymentAmount,
-          currentBalance: currentBalance,
-          newBalance: currentBalance + paymentAmount,
-          step: 'refund-balance',
-        })
-
-        await updateUserBalance(
-          telegram_id,
-          currentBalance + paymentAmount,
-          PaymentType.MONEY_INCOME,
-          `Refund for image morphing (${image_count} images)`,
-          {
-            payment_method: 'System',
-            bot_name,
-            language: is_ru ? 'ru' : 'en',
-          }
-        )
-
-        logger.info({
-          message: '✅ Payment refunded successfully',
-          telegramId: telegram_id,
-          newBalance: currentBalance + paymentAmount,
-          step: 'refund-balance',
-        })
-      })
-
-      // Логируем ошибку и отправляем уведомления
-      await step.run('handle-error', async () => {
-        logger.error({
-          message: '🚨 Error during morphing',
-          error: error.message,
-          stack: error.stack,
-          telegramId: telegram_id,
-          imageCount: image_count,
-          morphingType: morphing_type,
-          step: 'handle-error',
-        })
-
-        // Отправляем уведомление пользователю
-        const { bot, error: botError } = getBotByName(bot_name)
-        if (bot && !botError) {
-          try {
-            await bot.telegram.sendMessage(
-              telegram_id,
-              is_ru
-                ? `❌ Произошла ошибка при создании морфинг-видео. Средства возвращены на ваш баланс.\n\nОшибка: ${error.message}`
-                : `❌ An error occurred during morphing video creation. Funds have been refunded to your balance.\n\nError: ${error.message}`
-            )
-          } catch (telegramError) {
-            logger.error('❌ Failed to send error notification to user:', {
-              telegram_id,
-              bot_name,
-              telegramError: telegramError.message,
-            })
-          }
-        } else {
-          logger.error('❌ Failed to get bot for error notification:', {
-            bot_name,
-            botError,
-            telegram_id,
-          })
-        }
-
-        // Отправляем уведомление администратору
-        errorMessageAdmin(error as Error)
-      })
-
-      logger.error({
-        message: '🛑 Morphing process failed',
-        telegramId: telegram_id,
-        imageCount: image_count,
-        error: error.message,
-      })
-
-      throw error
+        video_url: morphingResult.video_url,
+        processing_time: morphingResult.processing_time,
+      },
+      delivery: deliverResult,
+      processing_time: Date.now() - new Date(event.ts).getTime(),
     }
+
+    logger.info('🎉 Morphing job completed successfully:', finalResult)
+    return finalResult
   }
 )

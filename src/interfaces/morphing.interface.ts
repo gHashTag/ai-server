@@ -94,7 +94,7 @@ export interface ExtractedImage {
   filename: string
   originalName: string
   path: string
-  buffer: Buffer
+  // Убираем buffer: Buffer - это вызывало output_too_large
   order: number // Порядок в последовательности (извлекается из имени файла)
 }
 
