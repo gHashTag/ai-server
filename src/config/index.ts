@@ -2,6 +2,9 @@ import { MyContext } from '@/interfaces'
 import { config as dotenvConfig } from 'dotenv'
 import { Telegraf } from 'telegraf'
 
+// Загружаем основной .env файл первым (для токенов ботов)
+dotenvConfig({ path: '.env' })
+// Затем загружаем специфичный для окружения (может переопределить некоторые значения)
 dotenvConfig({ path: `.env.${process.env.NODE_ENV || 'development'}.local` })
 
 export const isDev = process.env.NODE_ENV === 'development'
