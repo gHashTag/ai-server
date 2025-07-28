@@ -13,6 +13,137 @@ import { logger } from '@/utils/logger'
 import fs from 'fs'
 import { VIDEO_MODELS_CONFIG } from '@/config/models.config'
 
+// 🕐 ТАЙМАУТ ДЛЯ REPLICATE API (15 минут)
+const REPLICATE_TIMEOUT_MS = 15 * 60 * 1000
+
+// 🔄 НАСТРОЙКИ RETRY
+const MAX_RETRIES = 3
+const INITIAL_RETRY_DELAY = 5000 // 5 секунд
+const RETRY_BACKOFF_MULTIPLIER = 2
+
+/**
+ * Создает Promise с таймаутом для Replicate API вызовов
+ */
+function withTimeout<T>(
+  promise: Promise<T>,
+  timeoutMs: number,
+  operation: string
+): Promise<T> {
+  return Promise.race([
+    promise,
+    new Promise<T>((_, reject) => {
+      setTimeout(() => {
+        reject(
+          new Error(`${operation} timed out after ${timeoutMs / 1000} seconds`)
+        )
+      }, timeoutMs)
+    }),
+  ])
+}
+
+/**
+ * Ждет указанное количество миллисекунд
+ */
+function sleep(ms: number): Promise<void> {
+  return new Promise(resolve => setTimeout(resolve, ms))
+}
+
+/**
+ * Retry функция с exponential backoff
+ */
+async function withRetryAndBackoff<T>(
+  operation: () => Promise<T>,
+  operationName: string,
+  telegramId: string,
+  maxRetries = MAX_RETRIES
+): Promise<T> {
+  let lastError: Error | null = null
+
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      logger.info(`🔄 ${operationName} - попытка ${attempt}/${maxRetries}:`, {
+        telegram_id: telegramId,
+        attempt,
+        max_retries: maxRetries,
+        is_retry: attempt > 1,
+      })
+
+      const result = await operation()
+
+      if (attempt > 1) {
+        logger.info(`✅ ${operationName} успешен после ${attempt} попыток:`, {
+          telegram_id: telegramId,
+          successful_attempt: attempt,
+          total_attempts: attempt,
+        })
+      }
+
+      return result
+    } catch (error) {
+      lastError = error instanceof Error ? error : new Error(String(error))
+      const errorMessage = lastError.message
+
+      // Определяем, стоит ли повторять попытку
+      const isRetryableError =
+        errorMessage.includes('timed out') ||
+        errorMessage.includes('500') ||
+        errorMessage.includes('502') ||
+        errorMessage.includes('503') ||
+        errorMessage.includes('504') ||
+        errorMessage.includes('ECONNRESET') ||
+        errorMessage.includes('ETIMEDOUT') ||
+        errorMessage.includes('network')
+
+      logger.error(
+        `❌ ${operationName} - ошибка на попытке ${attempt}/${maxRetries}:`,
+        {
+          telegram_id: telegramId,
+          attempt,
+          max_retries: maxRetries,
+          error: errorMessage,
+          is_retryable: isRetryableError,
+          will_retry: attempt < maxRetries && isRetryableError,
+        }
+      )
+
+      // Если это последняя попытка или ошибка неповторяемая - выбрасываем
+      if (attempt >= maxRetries || !isRetryableError) {
+        logger.error(`💥 ${operationName} окончательно провален:`, {
+          telegram_id: telegramId,
+          final_attempt: attempt,
+          total_attempts: attempt,
+          final_error: errorMessage,
+          reason:
+            attempt >= maxRetries
+              ? 'max_retries_reached'
+              : 'non_retryable_error',
+        })
+        throw lastError
+      }
+
+      // Экспоненциальная задержка перед следующей попыткой
+      const delayMs =
+        INITIAL_RETRY_DELAY * Math.pow(RETRY_BACKOFF_MULTIPLIER, attempt - 1)
+
+      logger.info(`⏳ ${operationName} - ждем ${delayMs}ms перед повтором:`, {
+        telegram_id: telegramId,
+        current_attempt: attempt,
+        next_attempt: attempt + 1,
+        delay_ms: delayMs,
+        delay_sec: Math.round(delayMs / 1000),
+      })
+
+      await sleep(delayMs)
+    }
+  }
+
+  // Этот код никогда не должен выполниться, но для TypeScript
+  throw (
+    lastError ||
+    new Error(`${operationName} failed after ${maxRetries} attempts`)
+  )
+}
+
 /**
  * Конвертирует изображение в Base64 из файла для Replicate
  */
@@ -78,6 +209,8 @@ export async function submitKlingMorphingJob(
     }
   }
 
+  const startTime = Date.now()
+
   try {
     const modelConfig = VIDEO_MODELS_CONFIG['kling-v1.6-pro']
 
@@ -88,6 +221,7 @@ export async function submitKlingMorphingJob(
       model: modelConfig.api.model,
       images_count: images.length,
       image_paths: images.map(img => img.path),
+      timeout_seconds: REPLICATE_TIMEOUT_MS / 1000,
     })
 
     // Получаем base64 изображения
@@ -111,22 +245,36 @@ export async function submitKlingMorphingJob(
       negative_prompt: 'blur, distort, and low quality', // Негативный промпт
     }
 
-    logger.info('🚀 Отправляем запрос в Replicate:', {
-      description: 'Sending request to Replicate',
+    logger.info('🚀 Отправляем запрос в Replicate с таймаутом:', {
+      description: 'Sending request to Replicate with timeout',
       telegram_id: telegramId,
       model: modelConfig.api.model,
       input_keys: Object.keys(input),
       start_image_length: input.start_image?.length || 0,
       end_image_length: input.end_image?.length || 0,
       prompt: input.prompt,
+      timeout_ms: REPLICATE_TIMEOUT_MS,
     })
 
-    // Отправляем запрос в Replicate
-    const result = await replicate.run(modelConfig.api.model as any, { input })
+    // 🕐 ОТПРАВЛЯЕМ ЗАПРОС С ТАЙМАУТОМ И RETRY
+    const result = await withRetryAndBackoff(
+      () =>
+        withTimeout(
+          replicate.run(modelConfig.api.model as any, { input }),
+          REPLICATE_TIMEOUT_MS,
+          `Replicate API call for morphing job ${telegramId}`
+        ),
+      `Replicate API call for morphing job`,
+      telegramId
+    )
+
+    const processingTime = Date.now() - startTime
 
     logger.info('✅ Получен результат от Replicate:', {
       description: 'Received result from Replicate',
       telegram_id: telegramId,
+      processing_time_ms: processingTime,
+      processing_time_sec: Math.round(processingTime / 1000),
       result_type: typeof result,
       result_is_array: Array.isArray(result),
       result_length: Array.isArray(result) ? result.length : 1,
@@ -140,25 +288,42 @@ export async function submitKlingMorphingJob(
       telegram_id: telegramId,
       video_url: videoUrl,
       video_url_type: typeof videoUrl,
+      total_processing_time_ms: processingTime,
     })
 
     return {
       success: true,
       job_id: `replicate_${Date.now()}`,
       video_url: videoUrl,
+      processing_time: processingTime,
     }
   } catch (error) {
+    const processingTime = Date.now() - startTime
+    const errorMessage = error instanceof Error ? error.message : String(error)
+
+    // 🔍 ДЕТАЛЬНАЯ ДИАГНОСТИКА ОШИБОК
     logger.error('❌ Ошибка при создании морфинг видео:', {
       description: 'Error creating morphing video',
       telegram_id: telegramId,
-      error: error instanceof Error ? error.message : String(error),
+      error: errorMessage,
       error_details: error,
+      processing_time_ms: processingTime,
+      processing_time_sec: Math.round(processingTime / 1000),
+      is_timeout: errorMessage.includes('timed out'),
+      is_replicate_error:
+        errorMessage.includes('Prediction failed') ||
+        errorMessage.includes('422'),
+      is_network_error:
+        errorMessage.includes('ECONNRESET') ||
+        errorMessage.includes('ETIMEDOUT'),
     })
 
     return {
       success: false,
       job_id: '',
-      error: error instanceof Error ? error.message : 'Unknown error occurred',
+      error: `Replicate API error (${Math.round(
+        processingTime / 1000
+      )}s): ${errorMessage}`,
     }
   }
 }
