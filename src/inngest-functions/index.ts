@@ -1,61 +1,66 @@
+// Main Inngest functions export
 import { helloWorld } from './helloworld'
-import { neuroImageGeneration } from './neuroImageGeneration'
-import { generateModelTraining } from './generateModelTraining'
-import { modelTrainingV2 } from './modelTrainingV2'
-import { broadcastMessage } from './broadcastMessage'
-import { processPayment } from './paymentProcessing'
-import { instagramScraperV2, createInstagramUser } from './instagramScraper-v2'
-import { instagramScraperV2Test } from './instagramScraper-v2-test'
-import { instagramReelsTest } from './instagramScraper-v2-simple'
-import { findCompetitors } from './findCompetitors'
 import { analyzeCompetitorReels } from './analyzeCompetitorReels'
+import { instagramScraperV2 } from './instagramScraper-v2'
+import { findCompetitors } from './findCompetitors'
 import { extractTopContent } from './extractTopContent'
 import { generateContentScripts } from './generateContentScripts'
+import { generateScenarioClips } from './generateScenarioClips'
+import { generateDetailedScript } from './generateDetailedScript'
+import { generateModelTraining } from './generateModelTraining'
+import { modelTrainingV2 } from './modelTrainingV2'
+import { neuroImageGeneration } from './neuroImageGeneration'
+import { broadcastMessage } from './broadcastMessage'
+import { processPayment } from './paymentProcessing'
+import { morphImages } from './morphImages'
 
-// Экспортируем массив функций для Inngest
+// Export all functions in array (for Inngest registration)
 export const functions = [
   helloWorld,
-  neuroImageGeneration,
-  generateModelTraining,
-  modelTrainingV2,
-  broadcastMessage,
-  processPayment,
-  instagramScraperV2, // Real Instagram API integration
-  instagramScraperV2Test, // TEST version without external APIs
-  createInstagramUser, // Manual Instagram user creation
-  instagramReelsTest, // Test function for reels API
-  findCompetitors, // Job 1: Find Instagram Competitors
-  analyzeCompetitorReels, // Job 2: Analyze Competitor Reels
-  extractTopContent, // Job 3: Extract Top Content
-  generateContentScripts, // Job 4: Generate Content Scripts
-]
-
-// Экспортируем отдельные функции для прямого импорта
-export {
-  helloWorld,
-  neuroImageGeneration,
-  generateModelTraining,
-  modelTrainingV2,
-  broadcastMessage,
-  processPayment,
-  instagramScraperV2,
-  createInstagramUser,
-  instagramReelsTest,
-  findCompetitors,
   analyzeCompetitorReels,
+  instagramScraperV2,
+  findCompetitors,
   extractTopContent,
   generateContentScripts,
-}
+  generateScenarioClips, // Функция для генерации сценарных клипов
+  generateDetailedScript, // ⭐ НОВАЯ функция для генерации детальных скриптов раскадровки
+  generateModelTraining,
+  modelTrainingV2,
+  neuroImageGeneration,
+  broadcastMessage,
+  processPayment,
+  morphImages, // 🧬 НОВАЯ функция для морфинга изображений
+]
 
-// Также экспортируем все через старый способ для совместимости
+// Individual exports for compatibility
+export { helloWorld }
+export { analyzeCompetitorReels }
+export { instagramScraperV2 }
+export { findCompetitors }
+export { extractTopContent }
+export { generateContentScripts }
+export { generateScenarioClips } // Функция генерации сценарных клипов
+export { generateDetailedScript } // ⭐ НОВАЯ функция генерации детальных скриптов
+export { generateModelTraining }
+export { modelTrainingV2 }
+export { neuroImageGeneration }
+export { broadcastMessage }
+export { processPayment }
+export { morphImages } // 🧬 НОВАЯ функция для морфинга изображений
+
+// Export everything
 export * from './helloworld'
-export * from './neuroImageGeneration'
-export * from './generateModelTraining'
-export * from './modelTrainingV2'
-export * from './broadcastMessage'
-export * from './paymentProcessing'
+export * from './analyzeCompetitorReels'
 export * from './instagramScraper-v2'
 export * from './findCompetitors'
-export * from './analyzeCompetitorReels'
 export * from './extractTopContent'
 export * from './generateContentScripts'
+export * from './generateScenarioClips' // Экспорт всего из новой функции
+export * from './generateModelTraining'
+export * from './modelTrainingV2'
+export * from './neuroImageGeneration'
+export * from './broadcastMessage'
+export * from './paymentProcessing'
+export * from './morphImages' // 🧬 НОВАЯ функция для морфинга изображений
+
+export default functions

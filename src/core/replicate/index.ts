@@ -9,6 +9,7 @@ export type { WebhookEventType }
 export const modelPricing: Record<string, string> = {
   'black-forest-labs/flux-1.1-pro': '$0.040 / image',
   'black-forest-labs/flux-1.1-pro-ultra': '$0.060 / image',
+  'black-forest-labs/flux-kontext-max': '$0.065 / image', // ⭐ ОСНОВНАЯ МОДЕЛЬ ДЛЯ СЦЕНАРНЫХ КЛИПОВ
   'black-forest-labs/flux-canny-dev': '$0.025 / image',
   'black-forest-labs/flux-canny-pro': '$0.050 / image',
   'black-forest-labs/flux-depth-dev': '$0.025 / image',

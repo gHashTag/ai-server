@@ -9,6 +9,12 @@ import { generateNeuroImage } from '@/services/generateNeuroImage'
 import { validateUserParams } from '@/middlewares/validateUserParams'
 import { generateNeuroImageV2 } from '@/services/generateNeuroImageV2'
 import { generateLipSync } from '@/services/generateLipSync'
+import { startMorphingVideoGeneration } from '@/services/generateMorphingVideo'
+import {
+  ProcessedMorphRequest,
+  MorphingType,
+  MorphingModel,
+} from '@/interfaces/morphing.interface'
 
 import { API_URL } from '@/config'
 import { deleteFile } from '@/helpers'
@@ -751,6 +757,162 @@ export class GenerationController {
       }
     } catch (error) {
       console.error('❌ Ошибка в neuroPhotoSync:', error)
+      next(error)
+    }
+  }
+
+  public morphImages = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> => {
+    console.log('🧬 CASE: morphImages')
+    try {
+      const {
+        type,
+        telegram_id,
+        image_count,
+        morphing_type,
+        model,
+        is_ru,
+        bot_name,
+        username, // Added for validateUserParams
+      } = req.body
+
+      console.log('🧬 Morph request body:', req.body)
+      console.log('🧬 Morph request file:', req.file)
+
+      // Валидация входных параметров
+      if (!type || type !== 'morphing') {
+        res.status(400).json({
+          message: 'type must be "morphing"',
+          status: 'error',
+        })
+        return
+      }
+
+      if (!telegram_id) {
+        res.status(400).json({
+          message: 'telegram_id is required',
+          status: 'error',
+        })
+        return
+      }
+
+      if (!image_count || isNaN(parseInt(image_count))) {
+        res.status(400).json({
+          message: 'image_count must be a valid number',
+          status: 'error',
+        })
+        return
+      }
+
+      const imageCountNum = parseInt(image_count)
+      if (imageCountNum < 2 || imageCountNum > 100) {
+        res.status(400).json({
+          message: 'image_count must be between 2 and 100',
+          status: 'error',
+        })
+        return
+      }
+
+      if (!morphing_type || !['seamless', 'loop'].includes(morphing_type)) {
+        res.status(400).json({
+          message: 'morphing_type must be "seamless" or "loop"',
+          status: 'error',
+        })
+        return
+      }
+
+      if (!model || model !== 'kling-v1.6-pro') {
+        res.status(400).json({
+          message: 'model must be "kling-v1.6-pro"',
+          status: 'error',
+        })
+        return
+      }
+
+      if (!bot_name) {
+        res.status(400).json({
+          message: 'bot_name is required',
+          status: 'error',
+        })
+        return
+      }
+
+      // Проверка наличия ZIP файла
+      const zipFile = req.file
+      if (!zipFile || zipFile.fieldname !== 'images_zip') {
+        res.status(400).json({
+          message: 'images_zip file is required',
+          status: 'error',
+        })
+        return
+      }
+
+      console.log('🧬 ZIP file info:', {
+        filename: zipFile.filename,
+        originalName: zipFile.originalname,
+        size: zipFile.size,
+        mimetype: zipFile.mimetype,
+        path: zipFile.path,
+      })
+
+      // Валидация пользователя (используем существующий middleware)
+      try {
+        validateUserParams(req)
+      } catch (validationError) {
+        res.status(400).json({
+          message: `User validation failed: ${validationError.message}`,
+          status: 'error',
+        })
+        return
+      }
+
+      // Отправляем немедленный ответ клиенту
+      const jobId = `morph_${telegram_id}_${Date.now()}`
+      res.status(200).json({
+        message:
+          is_ru === 'true'
+            ? 'Морфинг отправлен на обработку'
+            : 'Morphing sent for processing',
+        job_id: jobId,
+        status: 'processing',
+        estimated_time: is_ru === 'true' ? '5-10 минут' : '5-10 minutes',
+      })
+
+      console.log('🧬 Morphing job started:', {
+        job_id: jobId,
+        telegram_id,
+        image_count: parseInt(image_count),
+        morphing_type,
+        zip_file: zipFile.filename,
+      })
+
+      // Запускаем Inngest функцию для асинхронной обработки
+      const { inngest } = await import('@/core/inngest/clients')
+
+      await inngest.send({
+        name: 'morph/images.requested',
+        data: {
+          telegram_id,
+          image_count: imageCountNum,
+          morphing_type,
+          model,
+          is_ru: is_ru === 'true',
+          bot_name,
+          zip_file_path: zipFile.path,
+          job_id: jobId,
+        },
+      })
+
+      console.log('🧬 Inngest event sent successfully:', {
+        job_id: jobId,
+        telegram_id,
+        zip_file: zipFile.filename,
+      })
+    } catch (error) {
+      console.error('❌ Ошибка в morphImages controller:', error)
       next(error)
     }
   }

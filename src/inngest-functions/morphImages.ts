@@ -184,8 +184,29 @@ export const morphImages = inngest.createFunction(
           step: 'notify-start',
         })
 
+        logger.info({
+          message: '🔍 Attempting to get bot instance',
+          bot_name,
+          step: 'notify-start-debug',
+        })
+
         const { bot, error } = getBotByName(bot_name)
+
+        logger.info({
+          message: '🤖 Bot retrieval result',
+          bot_name,
+          has_bot: !!bot,
+          error: error || 'none',
+          step: 'notify-start-debug',
+        })
+
         if (error || !bot) {
+          logger.error({
+            message: '❌ Bot instance retrieval failed',
+            bot_name,
+            error,
+            step: 'notify-start-debug',
+          })
           throw new Error(`Bot instance not found or invalid: ${error}`)
         }
         await bot.telegram.sendMessage(

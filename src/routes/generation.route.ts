@@ -63,5 +63,10 @@ export class GenerationRoute implements Routes {
       `${this.path}/create-lip-sync`,
       this.generationController.createLipSync
     )
+    this.router.post(
+      `${this.path}/morph-images`,
+      fileUpload.single('images_zip'),
+      this.generationController.morphImages
+    )
   }
 }
