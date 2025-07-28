@@ -377,50 +377,81 @@ async function concatenateAllVideos(
       localVideoPaths.push(localPath)
     }
 
-    // Склеиваем видео с помощью FFmpeg
-    const outputPath = path.join(tempDir, `final_morphing_${Date.now()}.mp4`)
-    const listFilePath = outputPath.replace('.mp4', '_list.txt')
-    const listContent = localVideoPaths
-      .map(videoPath => `file '${videoPath}'`)
-      .join('\n')
+    // 🔧 ПОПЫТКА СКЛЕЙКИ С FALLBACK РЕШЕНИЕМ
+    try {
+      // Пробуем FFmpeg склейку
+      const outputPath = path.join(tempDir, `final_morphing_${Date.now()}.mp4`)
+      const listFilePath = outputPath.replace('.mp4', '_list.txt')
+      const listContent = localVideoPaths
+        .map(videoPath => `file '${videoPath}'`)
+        .join('\n')
 
-    await fs.promises.writeFile(listFilePath, listContent)
+      await fs.promises.writeFile(listFilePath, listContent)
 
-    const { exec } = require('child_process')
-    const { promisify } = require('util')
-    const execAsync = promisify(exec)
+      const { exec } = require('child_process')
+      const { promisify } = require('util')
+      const execAsync = promisify(exec)
 
-    const ffmpegCommand = `ffmpeg -f concat -safe 0 -i "${listFilePath}" -c copy "${outputPath}"`
+      const ffmpegCommand = `ffmpeg -f concat -safe 0 -i "${listFilePath}" -c copy "${outputPath}"`
 
-    logger.info('🔧 Выполняем FFmpeg команду:', {
-      job_id: job.id,
-      command: ffmpegCommand,
-      input_videos: localVideoPaths.length,
-    })
+      logger.info('🔧 Выполняем FFmpeg команду:', {
+        job_id: job.id,
+        command: ffmpegCommand,
+        input_videos: localVideoPaths.length,
+      })
 
-    await execAsync(ffmpegCommand)
+      await execAsync(ffmpegCommand)
 
-    // Проверяем результат
-    if (!fs.existsSync(outputPath)) {
-      throw new Error('Final video was not created by FFmpeg')
-    }
-
-    logger.info('✅ Склейка видео завершена:', {
-      job_id: job.id,
-      telegram_id: job.telegram_id,
-      final_video_path: outputPath,
-      input_videos: videoUrls.length,
-    })
-
-    // Очищаем временные файлы (кроме финального видео)
-    await fs.promises.unlink(listFilePath)
-    for (const videoPath of localVideoPaths) {
-      if (fs.existsSync(videoPath)) {
-        await fs.promises.unlink(videoPath)
+      // Проверяем результат
+      if (!fs.existsSync(outputPath)) {
+        throw new Error('Final video was not created by FFmpeg')
       }
-    }
 
-    return outputPath
+      logger.info('✅ Склейка видео завершена:', {
+        job_id: job.id,
+        telegram_id: job.telegram_id,
+        final_video_path: outputPath,
+        input_videos: videoUrls.length,
+      })
+
+      // Очищаем временные файлы (кроме финального видео)
+      await fs.promises.unlink(listFilePath)
+      for (const videoPath of localVideoPaths) {
+        if (fs.existsSync(videoPath)) {
+          await fs.promises.unlink(videoPath)
+        }
+      }
+
+      return outputPath
+    } catch (ffmpegError) {
+      logger.warn('⚠️ FFmpeg недоступен, используем fallback решение:', {
+        job_id: job.id,
+        telegram_id: job.telegram_id,
+        ffmpeg_error:
+          ffmpegError instanceof Error
+            ? ffmpegError.message
+            : String(ffmpegError),
+      })
+
+      // 🔄 FALLBACK: Возвращаем путь к первому видео, остальные отправим отдельно
+      if (localVideoPaths.length === 0) {
+        throw new Error('No videos downloaded for fallback delivery')
+      }
+
+      // Помечаем job что используется fallback
+      ;(job as any).fallback_delivery = {
+        multiple_videos: localVideoPaths,
+        reason: 'ffmpeg_not_available',
+      }
+
+      logger.info('📤 Fallback: Будем отправлять видео по отдельности:', {
+        job_id: job.id,
+        telegram_id: job.telegram_id,
+        video_count: localVideoPaths.length,
+      })
+
+      return localVideoPaths[0] // Возвращаем первое видео как "основное"
+    }
   } catch (error) {
     // Очистка при ошибке
     if (fs.existsSync(tempDir)) {
@@ -459,31 +490,77 @@ async function deliverResult(
     : `✨ Created with @${job.bot_name} ✨`
 
   try {
-    // Отправляем как видео с превью
-    await bot.telegram.sendVideo(
-      job.telegram_id,
-      { source: videoPath },
-      {
-        caption: job.is_ru
-          ? `🎉 Ваше морфинг видео готово! Обработано ${job.progress.completed_pairs} пар изображений. ${advertisementText}`
-          : `🎉 Your morphing video is ready! Processed ${job.progress.completed_pairs} image pairs. ${advertisementText}`,
-        width: 1920,
-        height: 1080,
-        duration: 5,
-        supports_streaming: true,
-      }
-    )
+    // 🔄 ПРОВЕРЯЕМ FALLBACK РЕЖИМ
+    const fallbackDelivery = (job as any).fallback_delivery
 
-    // Отправляем как файл для скачивания
-    await bot.telegram.sendDocument(
-      job.telegram_id,
-      { source: videoPath },
-      {
-        caption: job.is_ru
-          ? `⬇️ Скачать видеофайл: ${advertisementText}`
-          : `⬇️ Download video file: ${advertisementText}`,
+    if (fallbackDelivery && fallbackDelivery.multiple_videos) {
+      logger.info('📤 Fallback доставка: отправляем видео по отдельности:', {
+        job_id: job.id,
+        telegram_id: job.telegram_id,
+        video_count: fallbackDelivery.multiple_videos.length,
+        reason: fallbackDelivery.reason,
+      })
+
+      // Отправляем сообщение с объяснением
+      await bot.telegram.sendMessage(
+        job.telegram_id,
+        job.is_ru
+          ? `🎬 Ваше морфинг видео готово!\n\n📊 Обработано ${job.progress.completed_pairs} пар изображений\n📤 Отправляем видео частями из-за технических ограничений\n\n${advertisementText}`
+          : `🎬 Your morphing video is ready!\n\n📊 Processed ${job.progress.completed_pairs} image pairs\n📤 Sending videos in parts due to technical limitations\n\n${advertisementText}`
+      )
+
+      // Отправляем каждое видео отдельно
+      for (let i = 0; i < fallbackDelivery.multiple_videos.length; i++) {
+        const videoPath = fallbackDelivery.multiple_videos[i]
+        const partNumber = i + 1
+
+        await bot.telegram.sendVideo(
+          job.telegram_id,
+          { source: videoPath },
+          {
+            caption: job.is_ru
+              ? `🎬 Часть ${partNumber}/${fallbackDelivery.multiple_videos.length}`
+              : `🎬 Part ${partNumber}/${fallbackDelivery.multiple_videos.length}`,
+            width: 1920,
+            height: 1080,
+            duration: 5,
+            supports_streaming: true,
+          }
+        )
+
+        // Небольшая задержка между отправками
+        if (i < fallbackDelivery.multiple_videos.length - 1) {
+          await new Promise(resolve => setTimeout(resolve, 2000))
+        }
       }
-    )
+    } else {
+      // 🎬 ОБЫЧНАЯ ДОСТАВКА (склеенное видео)
+      // Отправляем как видео с превью
+      await bot.telegram.sendVideo(
+        job.telegram_id,
+        { source: videoPath },
+        {
+          caption: job.is_ru
+            ? `🎉 Ваше морфинг видео готово! Обработано ${job.progress.completed_pairs} пар изображений. ${advertisementText}`
+            : `🎉 Your morphing video is ready! Processed ${job.progress.completed_pairs} image pairs. ${advertisementText}`,
+          width: 1920,
+          height: 1080,
+          duration: 5,
+          supports_streaming: true,
+        }
+      )
+
+      // Отправляем как файл для скачивания
+      await bot.telegram.sendDocument(
+        job.telegram_id,
+        { source: videoPath },
+        {
+          caption: job.is_ru
+            ? `⬇️ Скачать видеофайл: ${advertisementText}`
+            : `⬇️ Download video file: ${advertisementText}`,
+        }
+      )
+    }
 
     logger.info('✅ Результат доставлен пользователю:', {
       job_id: job.id,
