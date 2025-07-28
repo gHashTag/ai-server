@@ -244,8 +244,8 @@ export const DEFAULT_MORPHING_CONFIG: MorphingConfig = {
   cleanup_delay_ms: 3600000, // 1 час
   kling_api_url: 'https://api.kling.kuaishou.com/v1',
   kling_model: 'kling-v1.6-pro',
-  temp_dir: './tmp/morphing',
-  output_dir: './uploads/morphing',
+  temp_dir: process.cwd() + '/tmp/morphing', // Абсолютный путь
+  output_dir: process.cwd() + '/uploads/morphing', // Абсолютный путь
 }
 
 // ================================
