@@ -26,7 +26,11 @@ interface MorphingJobData {
 }
 
 export const morphImages = inngest.createFunction(
-  { id: 'morph-images' },
+  {
+    id: 'morph-images',
+    name: '🧬 Morph Images', // Добавляем emoji и название как у других функций
+    retries: 3,
+  },
   { event: 'morph/images.requested' },
   async ({ event, step }) => {
     const {
