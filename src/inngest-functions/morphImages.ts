@@ -255,7 +255,29 @@ export const morphImages = inngest.createFunction(
           step: 'execute-morphing',
         })
 
-        return result
+        // 🔧 FIX: Очищаем большие данные для предотвращения output_too_large
+        const cleanResult = {
+          job_id: result.job_id,
+          telegram_id: result.telegram_id,
+          status: result.status,
+          zip_extraction: {
+            success: result.zip_extraction.success,
+            totalCount: result.zip_extraction.totalCount,
+            extractionPath: result.zip_extraction.extractionPath,
+            error: result.zip_extraction.error,
+            // Убираем images: ExtractedImage[] с Buffer данными
+          },
+          kling_processing: result.kling_processing,
+          video_storage: result.video_storage,
+          telegram_delivery: result.telegram_delivery,
+          created_at: result.created_at,
+          completed_at: result.completed_at,
+          processing_time: result.processing_time,
+          final_video_url: result.final_video_url,
+          error: result.error,
+        }
+
+        return cleanResult
       })
 
       if (morphingResult.status !== MorphingStatus.COMPLETED) {
