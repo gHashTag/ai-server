@@ -3,9 +3,10 @@ import { logger } from '@/utils/logger'
 import { getUserBalance } from '@/core/supabase/getUserBalance'
 import { getUserByTelegramId } from '@/core/supabase'
 import { getBotByName } from '@/core/bot'
-import { processSequentialMorphing } from '@/core/kling/pairwiseMorphing'
+import { createKlingMorphingVideo } from '@/core/kling'
 import { MorphingType } from '@/interfaces/morphing.interface'
 import fs from 'fs'
+import path from 'path'
 
 // 🔧 НОВЫЙ ИНТЕРФЕЙС: Получаем готовые пути к файлам, не ZIP
 interface MorphingJobData {
@@ -98,58 +99,221 @@ export const morphImages = inngest.createFunction(
       return { notified: true }
     })
 
-    // ШАГ 4: 🚀 ПАРАЛЛЕЛЬНЫЙ МОРФИНГ С ОРКЕСТРАЦИЕЙ
-    const morphingResult = await step.run(
-      'execute-parallel-morphing',
-      async () => {
-        logger.info('🧬 Starting parallel morphing orchestration:', {
-          telegram_id,
-          job_id,
-          image_files_count: image_files.length,
-        })
+    // ШАГ 4: 🚀 ПОШАГОВАЯ ОБРАБОТКА МОРФИНГ ПАР
+    // Преобразуем пути файлов в формат ExtractedImage для существующей логики
+    const extractedImages = image_files.map(file => ({
+      filename: file.filename,
+      originalName: file.filename,
+      path: file.path,
+      order: file.order,
+    }))
 
-        // Преобразуем пути файлов в формат ExtractedImage для существующей логики
-        const extractedImages = image_files.map(file => ({
-          filename: file.filename,
-          originalName: file.filename,
-          path: file.path,
-          order: file.order,
-        }))
+    // Приводим тип morphing_type к правильному enum
+    const morphingTypeEnum =
+      morphing_type === 'seamless' ? MorphingType.SEAMLESS : MorphingType.LOOP
 
-        // Используем существующую логику последовательного морфинга
-        // Приводим тип morphing_type к правильному enum
-        const morphingTypeEnum =
-          morphing_type === 'seamless'
-            ? MorphingType.SEAMLESS
-            : MorphingType.LOOP
+    // Определяем сколько пар нужно обработать
+    const totalPairs =
+      extractedImages.length -
+      1 +
+      (morphingTypeEnum === MorphingType.LOOP && extractedImages.length > 2
+        ? 1
+        : 0)
+    const pairVideoUrls: string[] = []
 
-        const result = await processSequentialMorphing(
-          extractedImages,
+    logger.info('🧬 🎯 Начинаем пошаговую обработку морфинг пар:', {
+      telegram_id,
+      total_images: extractedImages.length,
+      total_pairs: totalPairs,
+      morphing_type: morphingTypeEnum,
+      includes_loop:
+        morphingTypeEnum === MorphingType.LOOP && extractedImages.length > 2,
+    })
+
+    // ШАГ 4.1: Обрабатываем основные пары (изображение i с изображением i+1)
+    for (let i = 0; i < extractedImages.length - 1; i++) {
+      const pairIndex = i + 1
+      const image1 = extractedImages[i]
+      const image2 = extractedImages[i + 1]
+
+      const pairVideoUrl = await step.run(
+        `process-pair-${pairIndex}`,
+        async () => {
+          logger.info(`🧬 ⏳ Обрабатываем пару ${pairIndex}/${totalPairs}:`, {
+            telegram_id,
+            pair_index: pairIndex,
+            total_pairs: totalPairs,
+            from: image1.filename,
+            to: image2.filename,
+          })
+
+          const result = await createKlingMorphingVideo(
+            [image1, image2],
+            morphingTypeEnum,
+            telegram_id
+          )
+
+          if (!result.success || !result.video_url) {
+            throw new Error(
+              `Pair ${pairIndex} morphing failed: ${result.error}`
+            )
+          }
+
+          logger.info(`✅ Пара ${pairIndex}/${totalPairs} завершена:`, {
+            telegram_id,
+            pair_index: pairIndex,
+            video_url: result.video_url,
+          })
+
+          return result.video_url
+        }
+      )
+
+      pairVideoUrls.push(pairVideoUrl)
+    }
+
+    // ШАГ 4.2: Если LOOP - обрабатываем замыкающую пару (последнее с первым)
+    let loopVideoUrl: string | null = null
+    if (morphingTypeEnum === MorphingType.LOOP && extractedImages.length > 2) {
+      const loopPairIndex = totalPairs
+      const lastImage = extractedImages[extractedImages.length - 1]
+      const firstImage = extractedImages[0]
+
+      loopVideoUrl = await step.run(`process-loop-pair`, async () => {
+        logger.info(
+          `🔄 Обрабатываем LOOP пару ${loopPairIndex}/${totalPairs}:`,
+          {
+            telegram_id,
+            pair_index: loopPairIndex,
+            total_pairs: totalPairs,
+            from: lastImage.filename,
+            to: firstImage.filename,
+          }
+        )
+
+        const result = await createKlingMorphingVideo(
+          [lastImage, firstImage],
           morphingTypeEnum,
           telegram_id
         )
 
-        if (!result.success) {
-          throw new Error(`Morphing failed: ${result.error}`)
+        if (!result.success || !result.video_url) {
+          throw new Error(`Loop pair morphing failed: ${result.error}`)
         }
 
-        logger.info('✅ Parallel morphing completed:', {
+        logger.info(`✅ LOOP пара ${loopPairIndex}/${totalPairs} завершена:`, {
           telegram_id,
-          job_id,
           video_url: result.video_url,
-          processing_time: result.processing_time,
         })
 
-        return {
-          success: true,
-          job_id: result.job_id,
-          video_url: result.video_url,
-          processing_time: result.processing_time,
+        return result.video_url
+      })
+
+      if (loopVideoUrl) {
+        pairVideoUrls.push(loopVideoUrl)
+      }
+    }
+
+    // ШАГ 5: 🎬 СКЛЕЙКА ВСЕХ ВИДЕО
+    const finalVideoResult = await step.run(
+      'concatenate-all-videos',
+      async () => {
+        logger.info('🎬 Начинаем склейку всех видео:', {
+          telegram_id,
+          videos_to_concatenate: pairVideoUrls.length,
+          video_urls: pairVideoUrls,
+        })
+
+        // Создаем временную директорию для склейки
+        const tempDir = path.join(
+          __dirname,
+          '../../../tmp/morphing',
+          telegram_id,
+          `final_concatenation_${Date.now()}`
+        )
+
+        await fs.promises.mkdir(tempDir, { recursive: true })
+
+        try {
+          // Загружаем все видео локально
+          const localVideoPaths: string[] = []
+          for (let i = 0; i < pairVideoUrls.length; i++) {
+            const videoUrl = pairVideoUrls[i]
+            const localPath = path.join(tempDir, `video_${i + 1}.mp4`)
+
+            // Загружаем видео
+            const axios = require('axios')
+            const response = await axios.get(videoUrl, {
+              responseType: 'stream',
+              timeout: 5 * 60 * 1000, // 5 минут
+            })
+
+            const writer = fs.createWriteStream(localPath)
+            response.data.pipe(writer)
+
+            await new Promise<void>((resolve, reject) => {
+              writer.on('finish', () => resolve())
+              writer.on('error', reject)
+            })
+
+            localVideoPaths.push(localPath)
+          }
+
+          // Склеиваем видео с помощью FFmpeg
+          const outputPath = path.join(
+            tempDir,
+            `final_morphing_${Date.now()}.mp4`
+          )
+          const listFilePath = outputPath.replace('.mp4', '_list.txt')
+          const listContent = localVideoPaths
+            .map(videoPath => `file '${videoPath}'`)
+            .join('\n')
+
+          await fs.promises.writeFile(listFilePath, listContent)
+
+          const { exec } = require('child_process')
+          const { promisify } = require('util')
+          const execAsync = promisify(exec)
+
+          const ffmpegCommand = `ffmpeg -f concat -safe 0 -i "${listFilePath}" -c copy "${outputPath}"`
+          await execAsync(ffmpegCommand)
+
+          // Проверяем результат
+          if (!fs.existsSync(outputPath)) {
+            throw new Error('Final video was not created')
+          }
+
+          // Очищаем временные файлы
+          await fs.promises.unlink(listFilePath)
+          for (const videoPath of localVideoPaths) {
+            if (fs.existsSync(videoPath)) {
+              await fs.promises.unlink(videoPath)
+            }
+          }
+
+          logger.info('✅ Склейка завершена успешно:', {
+            telegram_id,
+            final_video_path: outputPath,
+          })
+
+          return {
+            success: true,
+            video_url: outputPath,
+            processing_pairs: pairVideoUrls.length,
+            job_id: `morphing_${telegram_id}_${Date.now()}`,
+            processing_time: 0, // Будет вычислено позже в финальном результате
+          }
+        } catch (error) {
+          // Очистка при ошибке
+          if (fs.existsSync(tempDir)) {
+            await fs.promises.rm(tempDir, { recursive: true, force: true })
+          }
+          throw error
         }
       }
     )
 
-    // ШАГ 5: Очистка временных файлов
+    // ШАГ 6: Очистка временных файлов
     await step.run('cleanup-temp-files', async () => {
       try {
         // Очищаем директорию с извлеченными изображениями
@@ -179,7 +343,7 @@ export const morphImages = inngest.createFunction(
       logger.info('📤 Отправляем морфинг видео пользователю:', {
         description: 'Delivering morphing video to user',
         telegram_id,
-        video_url: morphingResult.video_url,
+        video_url: finalVideoResult.video_url,
         bot_name,
       })
 
@@ -197,7 +361,7 @@ export const morphImages = inngest.createFunction(
 
       try {
         // 📱 Отправляем как видео для просмотра (с превью)
-        await bot.telegram.sendVideo(telegram_id, morphingResult.video_url, {
+        await bot.telegram.sendVideo(telegram_id, finalVideoResult.video_url, {
           caption: advertisementText,
           parse_mode: 'Markdown',
           width: 1920, // Full HD ширина
@@ -208,10 +372,14 @@ export const morphImages = inngest.createFunction(
 
         // 📎 Отправляем как документ для скачивания
         const fileDownloadText = `📁 **Файл для скачивания**\n\n🎬 Морфинг видео в высоком качестве\n💾 Можно сохранить на устройство\n\n${botMention} - создаем будущее вместе!`
-        await bot.telegram.sendDocument(telegram_id, morphingResult.video_url, {
-          caption: fileDownloadText,
-          parse_mode: 'Markdown',
-        })
+        await bot.telegram.sendDocument(
+          telegram_id,
+          finalVideoResult.video_url,
+          {
+            caption: fileDownloadText,
+            parse_mode: 'Markdown',
+          }
+        )
 
         logger.info('✅ Видео успешно доставлено пользователю:', {
           telegram_id,
@@ -232,7 +400,7 @@ export const morphImages = inngest.createFunction(
         // Фоллбэк: отправляем хотя бы ссылку
         await bot.telegram.sendMessage(
           telegram_id,
-          `🎬 **Морфинг готов!**\n\n📎 **Скачать видео:** ${morphingResult.video_url}\n\n✨ Создано с помощью ${botMention}`,
+          `🎬 **Морфинг готов!**\n\n📎 **Скачать видео:** ${finalVideoResult.video_url}\n\n✨ Создано с помощью ${botMention}`,
           { parse_mode: 'Markdown' }
         )
 
@@ -241,18 +409,24 @@ export const morphImages = inngest.createFunction(
     })
 
     // 🔧 ФИНАЛЬНЫЙ РЕЗУЛЬТАТ: Возвращаем только необходимые данные (БЕЗ больших объектов)
+    const processingEndTime = Date.now()
+    const eventTime = new Date(event.ts).getTime()
+    const totalProcessingTime = processingEndTime - eventTime
+
     const finalResult = {
       job_id,
       telegram_id,
       status: 'completed',
       morphing_result: {
-        success: morphingResult.success,
-        job_id: morphingResult.job_id,
-        video_url: morphingResult.video_url,
-        processing_time: morphingResult.processing_time,
+        success: finalVideoResult.success,
+        job_id: finalVideoResult.job_id,
+        video_url: finalVideoResult.video_url,
+        processing_time: totalProcessingTime,
+        processing_pairs: finalVideoResult.processing_pairs,
       },
       delivery: deliverResult,
-      processing_time: Date.now() - new Date(event.ts).getTime(),
+      processing_time: totalProcessingTime,
+      total_pairs_processed: finalVideoResult.processing_pairs,
     }
 
     logger.info('🎉 Morphing job completed successfully:', finalResult)
