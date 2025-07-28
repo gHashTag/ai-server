@@ -146,8 +146,6 @@ export const morphImages = inngest.createFunction(
       (morphingTypeEnum === MorphingType.LOOP && extractedImages.length > 2
         ? 1
         : 0)
-    const pairVideoUrls: string[] = []
-
     logger.info('🧬 🎯 Начинаем пошаговую обработку морфинг пар:', {
       telegram_id,
       total_images: extractedImages.length,
@@ -157,92 +155,321 @@ export const morphImages = inngest.createFunction(
         morphingTypeEnum === MorphingType.LOOP && extractedImages.length > 2,
     })
 
-    // ШАГ 4.1: Обрабатываем основные пары (изображение i с изображением i+1)
-    for (let i = 0; i < extractedImages.length - 1; i++) {
-      const pairIndex = i + 1
-      const image1 = extractedImages[i]
-      const image2 = extractedImages[i + 1]
+    // ШАГ 4.1: Обрабатываем основные пары СТАТИЧЕСКИ (без циклов!)
+    const pairVideoUrls: string[] = []
 
-      const pairVideoUrl = await step.run(
-        `process-pair-${pairIndex}`,
-        async () => {
-          logger.info(`🧬 ⏳ Обрабатываем пару ${pairIndex}/${totalPairs}:`, {
-            telegram_id,
-            pair_index: pairIndex,
-            total_pairs: totalPairs,
-            from: image1.filename,
-            to: image2.filename,
-            image1_path: image1.path,
-            image2_path: image2.path,
-          })
+    // ПАРА 1: Изображение 1 -> Изображение 2 (всегда существует для 2+ изображений)
+    const pair1VideoUrl = await step.run('process-pair-1', async () => {
+      const image1 = extractedImages[0]
+      const image2 = extractedImages[1]
 
-          // 🔍 ПРОВЕРКА СУЩЕСТВОВАНИЯ ФАЙЛОВ ПЕРЕД ОБРАБОТКОЙ
-          if (!fs.existsSync(image1.path)) {
-            const error = `Image 1 file does not exist: ${image1.path}`
-            logger.error('🧬 ❌ Файл изображения 1 не найден:', {
-              telegram_id,
-              pair_index: pairIndex,
-              expected_path: image1.path,
-              cwd: process.cwd(),
-              absolute_path: path.resolve(image1.path),
-            })
-            throw new Error(error)
-          }
+      logger.info(`🧬 ⏳ Обрабатываем пару 1/${totalPairs}:`, {
+        telegram_id,
+        pair_index: 1,
+        total_pairs: totalPairs,
+        from: image1.filename,
+        to: image2.filename,
+        image1_path: image1.path,
+        image2_path: image2.path,
+      })
 
-          if (!fs.existsSync(image2.path)) {
-            const error = `Image 2 file does not exist: ${image2.path}`
-            logger.error('🧬 ❌ Файл изображения 2 не найден:', {
-              telegram_id,
-              pair_index: pairIndex,
-              expected_path: image2.path,
-              cwd: process.cwd(),
-              absolute_path: path.resolve(image2.path),
-            })
-            throw new Error(error)
-          }
+      // 🔍 ПРОВЕРКА СУЩЕСТВОВАНИЯ ФАЙЛОВ ПЕРЕД ОБРАБОТКОЙ
+      if (!fs.existsSync(image1.path)) {
+        const error = `Image 1 file does not exist: ${image1.path}`
+        logger.error('🧬 ❌ Файл изображения 1 не найден:', {
+          telegram_id,
+          pair_index: 1,
+          expected_path: image1.path,
+          cwd: process.cwd(),
+          absolute_path: path.resolve(image1.path),
+        })
+        throw new Error(error)
+      }
 
-          logger.info(
-            `🧬 ✅ Файлы изображений найдены для пары ${pairIndex}:`,
-            {
-              telegram_id,
-              image1_size: fs.statSync(image1.path).size,
-              image2_size: fs.statSync(image2.path).size,
-            }
-          )
+      if (!fs.existsSync(image2.path)) {
+        const error = `Image 2 file does not exist: ${image2.path}`
+        logger.error('🧬 ❌ Файл изображения 2 не найден:', {
+          telegram_id,
+          pair_index: 1,
+          expected_path: image2.path,
+          cwd: process.cwd(),
+          absolute_path: path.resolve(image2.path),
+        })
+        throw new Error(error)
+      }
 
-          const result = await createKlingMorphingVideo(
-            [image1, image2],
-            morphingTypeEnum,
-            telegram_id
-          )
+      logger.info(`🧬 ✅ Файлы изображений найдены для пары 1:`, {
+        telegram_id,
+        image1_size: fs.statSync(image1.path).size,
+        image2_size: fs.statSync(image2.path).size,
+      })
 
-          if (!result.success || !result.video_url) {
-            throw new Error(
-              `Pair ${pairIndex} morphing failed: ${result.error}`
-            )
-          }
-
-          logger.info(`✅ Пара ${pairIndex}/${totalPairs} завершена:`, {
-            telegram_id,
-            pair_index: pairIndex,
-            video_url: result.video_url,
-          })
-
-          return result.video_url
-        }
+      const result = await createKlingMorphingVideo(
+        [image1, image2],
+        morphingTypeEnum,
+        telegram_id
       )
 
-      pairVideoUrls.push(pairVideoUrl)
+      if (!result.success || !result.video_url) {
+        throw new Error(`Pair 1 morphing failed: ${result.error}`)
+      }
+
+      logger.info(`✅ Пара 1/${totalPairs} завершена:`, {
+        telegram_id,
+        pair_index: 1,
+        video_url: result.video_url,
+      })
+
+      return result.video_url
+    })
+
+    pairVideoUrls.push(pair1VideoUrl)
+
+    // ПАРА 2: Изображение 2 -> Изображение 3 (если есть 3+ изображений)
+    let pair2VideoUrl: string | null = null
+    if (extractedImages.length >= 3) {
+      pair2VideoUrl = await step.run('process-pair-2', async () => {
+        const image1 = extractedImages[1]
+        const image2 = extractedImages[2]
+
+        logger.info(`🧬 ⏳ Обрабатываем пару 2/${totalPairs}:`, {
+          telegram_id,
+          pair_index: 2,
+          total_pairs: totalPairs,
+          from: image1.filename,
+          to: image2.filename,
+          image1_path: image1.path,
+          image2_path: image2.path,
+        })
+
+        // 🔍 ПРОВЕРКА СУЩЕСТВОВАНИЯ ФАЙЛОВ ПЕРЕД ОБРАБОТКОЙ
+        if (!fs.existsSync(image1.path)) {
+          const error = `Image 1 file does not exist: ${image1.path}`
+          logger.error('🧬 ❌ Файл изображения 1 не найден:', {
+            telegram_id,
+            pair_index: 2,
+            expected_path: image1.path,
+            cwd: process.cwd(),
+            absolute_path: path.resolve(image1.path),
+          })
+          throw new Error(error)
+        }
+
+        if (!fs.existsSync(image2.path)) {
+          const error = `Image 2 file does not exist: ${image2.path}`
+          logger.error('🧬 ❌ Файл изображения 2 не найден:', {
+            telegram_id,
+            pair_index: 2,
+            expected_path: image2.path,
+            cwd: process.cwd(),
+            absolute_path: path.resolve(image2.path),
+          })
+          throw new Error(error)
+        }
+
+        logger.info(`🧬 ✅ Файлы изображений найдены для пары 2:`, {
+          telegram_id,
+          image1_size: fs.statSync(image1.path).size,
+          image2_size: fs.statSync(image2.path).size,
+        })
+
+        const result = await createKlingMorphingVideo(
+          [image1, image2],
+          morphingTypeEnum,
+          telegram_id
+        )
+
+        if (!result.success || !result.video_url) {
+          throw new Error(`Pair 2 morphing failed: ${result.error}`)
+        }
+
+        logger.info(`✅ Пара 2/${totalPairs} завершена:`, {
+          telegram_id,
+          pair_index: 2,
+          video_url: result.video_url,
+        })
+
+        return result.video_url
+      })
+
+      if (pair2VideoUrl) {
+        pairVideoUrls.push(pair2VideoUrl)
+      }
+    }
+
+    // ПАРА 3: Изображение 3 -> Изображение 4 (если есть 4+ изображений)
+    let pair3VideoUrl: string | null = null
+    if (extractedImages.length >= 4) {
+      pair3VideoUrl = await step.run('process-pair-3', async () => {
+        const image1 = extractedImages[2]
+        const image2 = extractedImages[3]
+
+        logger.info(`🧬 ⏳ Обрабатываем пару 3/${totalPairs}:`, {
+          telegram_id,
+          pair_index: 3,
+          total_pairs: totalPairs,
+          from: image1.filename,
+          to: image2.filename,
+          image1_path: image1.path,
+          image2_path: image2.path,
+        })
+
+        // 🔍 ПРОВЕРКА СУЩЕСТВОВАНИЯ ФАЙЛОВ ПЕРЕД ОБРАБОТКОЙ
+        if (!fs.existsSync(image1.path)) {
+          const error = `Image 1 file does not exist: ${image1.path}`
+          logger.error('🧬 ❌ Файл изображения 1 не найден:', {
+            telegram_id,
+            pair_index: 3,
+            expected_path: image1.path,
+            cwd: process.cwd(),
+            absolute_path: path.resolve(image1.path),
+          })
+          throw new Error(error)
+        }
+
+        if (!fs.existsSync(image2.path)) {
+          const error = `Image 2 file does not exist: ${image2.path}`
+          logger.error('🧬 ❌ Файл изображения 2 не найден:', {
+            telegram_id,
+            pair_index: 3,
+            expected_path: image2.path,
+            cwd: process.cwd(),
+            absolute_path: path.resolve(image2.path),
+          })
+          throw new Error(error)
+        }
+
+        logger.info(`🧬 ✅ Файлы изображений найдены для пары 3:`, {
+          telegram_id,
+          image1_size: fs.statSync(image1.path).size,
+          image2_size: fs.statSync(image2.path).size,
+        })
+
+        const result = await createKlingMorphingVideo(
+          [image1, image2],
+          morphingTypeEnum,
+          telegram_id
+        )
+
+        if (!result.success || !result.video_url) {
+          throw new Error(`Pair 3 morphing failed: ${result.error}`)
+        }
+
+        logger.info(`✅ Пара 3/${totalPairs} завершена:`, {
+          telegram_id,
+          pair_index: 3,
+          video_url: result.video_url,
+        })
+
+        return result.video_url
+      })
+
+      if (pair3VideoUrl) {
+        pairVideoUrls.push(pair3VideoUrl)
+      }
+    }
+
+    // ПАРА 4: Изображение 4 -> Изображение 5 (если есть 5+ изображений)
+    let pair4VideoUrl: string | null = null
+    if (extractedImages.length >= 5) {
+      pair4VideoUrl = await step.run('process-pair-4', async () => {
+        const image1 = extractedImages[3]
+        const image2 = extractedImages[4]
+
+        logger.info(`🧬 ⏳ Обрабатываем пару 4/${totalPairs}:`, {
+          telegram_id,
+          pair_index: 4,
+          total_pairs: totalPairs,
+          from: image1.filename,
+          to: image2.filename,
+        })
+
+        const result = await createKlingMorphingVideo(
+          [image1, image2],
+          morphingTypeEnum,
+          telegram_id
+        )
+
+        if (!result.success || !result.video_url) {
+          throw new Error(`Pair 4 morphing failed: ${result.error}`)
+        }
+
+        logger.info(`✅ Пара 4/${totalPairs} завершена:`, {
+          telegram_id,
+          pair_index: 4,
+          video_url: result.video_url,
+        })
+
+        return result.video_url
+      })
+
+      if (pair4VideoUrl) {
+        pairVideoUrls.push(pair4VideoUrl)
+      }
+    }
+
+    // ПАРА 5: Изображение 5 -> Изображение 6 (если есть 6+ изображений)
+    let pair5VideoUrl: string | null = null
+    if (extractedImages.length >= 6) {
+      pair5VideoUrl = await step.run('process-pair-5', async () => {
+        const image1 = extractedImages[4]
+        const image2 = extractedImages[5]
+
+        logger.info(`🧬 ⏳ Обрабатываем пару 5/${totalPairs}:`, {
+          telegram_id,
+          pair_index: 5,
+          total_pairs: totalPairs,
+          from: image1.filename,
+          to: image2.filename,
+        })
+
+        const result = await createKlingMorphingVideo(
+          [image1, image2],
+          morphingTypeEnum,
+          telegram_id
+        )
+
+        if (!result.success || !result.video_url) {
+          throw new Error(`Pair 5 morphing failed: ${result.error}`)
+        }
+
+        logger.info(`✅ Пара 5/${totalPairs} завершена:`, {
+          telegram_id,
+          pair_index: 5,
+          video_url: result.video_url,
+        })
+
+        return result.video_url
+      })
+
+      if (pair5VideoUrl) {
+        pairVideoUrls.push(pair5VideoUrl)
+      }
+    }
+
+    // TODO: Добавить больше пар при необходимости (пока поддерживаем до 6 изображений)
+    if (extractedImages.length > 6) {
+      logger.warn(
+        '⚠️ Слишком много изображений, обрабатываем только первые 6:',
+        {
+          telegram_id,
+          total_images: extractedImages.length,
+          supported_images: 6,
+        }
+      )
     }
 
     // ШАГ 4.2: Если LOOP - обрабатываем замыкающую пару (последнее с первым)
     let loopVideoUrl: string | null = null
     if (morphingTypeEnum === MorphingType.LOOP && extractedImages.length > 2) {
-      const loopPairIndex = totalPairs
-      const lastImage = extractedImages[extractedImages.length - 1]
-      const firstImage = extractedImages[0]
+      const actualTotalPairs = Math.min(extractedImages.length - 1, 5) // Максимум 5 основных пар
+      const loopPairIndex = actualTotalPairs + 1
 
-      loopVideoUrl = await step.run(`process-loop-pair`, async () => {
+      loopVideoUrl = await step.run('process-loop-pair', async () => {
+        const lastProcessedIndex = Math.min(extractedImages.length - 1, 5) // Индекс последнего обработанного изображения
+        const lastImage = extractedImages[lastProcessedIndex]
+        const firstImage = extractedImages[0]
+
         logger.info(
           `🔄 Обрабатываем LOOP пару ${loopPairIndex}/${totalPairs}:`,
           {
