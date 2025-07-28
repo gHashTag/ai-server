@@ -68,5 +68,19 @@ export class GenerationRoute implements Routes {
       fileUpload.single('images_zip'),
       this.generationController.morphImages
     )
+
+    // 📊 API для мониторинга фоновых заданий морфинга
+    this.router.get(
+      `${this.path}/morph-jobs/:job_id/status`,
+      this.generationController.getMorphingJobStatus
+    )
+    this.router.get(
+      `${this.path}/morph-jobs/user/:telegram_id`,
+      this.generationController.getUserMorphingJobs
+    )
+    this.router.get(
+      `${this.path}/morph-queue/stats`,
+      this.generationController.getMorphingQueueStats
+    )
   }
 }

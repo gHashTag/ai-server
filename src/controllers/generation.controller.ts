@@ -874,16 +874,8 @@ export class GenerationController {
         extraction_path: zipResult.extractionPath,
       })
 
-      // Отправляем успешный ответ клиенту СРАЗУ
-      res.status(200).json({
-        message:
-          is_ru === 'true'
-            ? 'Морфинг отправлен на обработку'
-            : 'Morphing job started',
-        job_id: jobId,
-        status: 'processing',
-        estimated_time: is_ru === 'true' ? '5-10 минут' : '5-10 minutes',
-      })
+      // Обновляем jobId для последующих логов
+      const actualJobId = jobId // сохраняем для логов
 
       console.log('🧬 Morphing job started:', {
         job_id: jobId,
@@ -893,40 +885,208 @@ export class GenerationController {
         zip_file: zipFile.filename,
       })
 
-      // 🚀 НОВОЕ СОБЫТИЕ: Передаем только ПУТИ к изображениям, не ZIP!
-      const { inngest } = await import('@/core/inngest/clients')
+      // 🚀 НОВАЯ ЛОГИКА: Используем фоновый процессор вместо Inngest
+      const { addMorphingJob } = await import(
+        '@/services/backgroundMorphingProcessor'
+      )
 
-      await inngest.send({
-        name: 'morph/images.requested',
-        data: {
-          telegram_id,
-          image_count: imageCountNum,
-          morphing_type,
-          model,
-          is_ru: is_ru === 'true',
-          bot_name,
-          job_id: jobId,
-          // 🎯 КЛЮЧЕВОЕ ИЗМЕНЕНИЕ: Передаем массив путей к файлам, а не ZIP
-          image_files:
-            zipResult.images?.map(img => ({
-              filename: img.filename,
-              path: img.path,
-              order: img.order,
-            })) || [],
-          extraction_path: zipResult.extractionPath, // Путь для очистки после обработки
-        },
+      const backgroundJobId = await addMorphingJob({
+        telegram_id,
+        bot_name,
+        morphing_type: morphing_type as 'seamless' | 'loop',
+        image_files:
+          zipResult.images?.map(img => ({
+            filename: img.filename,
+            path: img.path,
+            order: img.order,
+          })) || [],
+        extraction_path: zipResult.extractionPath || '',
+        is_ru: is_ru === 'true',
+      })
+
+      console.log('🚀 Background morphing job queued:', {
+        background_job_id: backgroundJobId,
+        original_job_id: jobId,
+        telegram_id,
+        image_count: zipResult.images?.length,
+        estimated_time_minutes: ((zipResult.images?.length || 0) - 1) * 5,
+      })
+
+      // Отправляем успешный ответ клиенту ПОСЛЕ постановки в очередь
+      res.status(202).json({
+        message:
+          is_ru === 'true'
+            ? 'Морфинг поставлен в очередь. Вы получите уведомление когда видео будет готово.'
+            : 'Morphing job queued. You will be notified when the video is ready.',
+        job_id: backgroundJobId,
+        original_job_id: actualJobId,
+        telegram_id,
+        image_count: zipResult.images?.length,
+        morphing_type,
+        estimated_time_minutes: ((zipResult.images?.length || 0) - 1) * 5,
+        status: 'queued',
+        note:
+          is_ru === 'true'
+            ? 'Обработка будет происходить в фоновом режиме без ограничений по времени'
+            : 'Processing will happen in the background without time limits',
       })
 
       // Очищаем оригинальный ZIP файл (изображения уже извлечены)
       await deleteFile(zipFile.path)
 
-      console.log('🧬 Inngest event sent successfully:', {
-        job_id: jobId,
+      console.log('✅ Background morphing job setup completed:', {
+        background_job_id: backgroundJobId,
         telegram_id,
         image_files_count: zipResult.images?.length,
       })
     } catch (error) {
       console.error('❌ Ошибка в morphImages controller:', error)
+      next(error)
+    }
+  }
+
+  /**
+   * 📊 API для проверки статуса фонового задания морфинга
+   */
+  public getMorphingJobStatus = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> => {
+    try {
+      const { job_id } = req.params
+
+      if (!job_id) {
+        res.status(400).json({
+          message: 'job_id is required',
+          status: 'error',
+        })
+        return
+      }
+
+      const { getJobStatus } = await import(
+        '@/services/backgroundMorphingProcessor'
+      )
+      const job = getJobStatus(job_id)
+
+      if (!job) {
+        res.status(404).json({
+          message: 'Job not found',
+          job_id,
+          status: 'error',
+        })
+        return
+      }
+
+      res.status(200).json({
+        job_id: job.id,
+        telegram_id: job.telegram_id,
+        status: job.status,
+        morphing_type: job.morphing_type,
+        image_count: job.image_files.length,
+        progress: {
+          completed_pairs: job.progress.completed_pairs,
+          total_pairs: job.progress.total_pairs,
+          percentage: Math.round(
+            (job.progress.completed_pairs / job.progress.total_pairs) * 100
+          ),
+          current_pair: job.progress.current_pair,
+          estimated_remaining_minutes: job.progress.estimated_remaining_minutes,
+        },
+        timing: {
+          created_at: job.created_at,
+          started_at: job.started_at,
+          completed_at: job.completed_at,
+          processing_time_ms: job.result?.processing_time_ms,
+        },
+        error_message: job.error_message,
+        result: job.result
+          ? {
+              pairs_processed: job.result.pairs_processed,
+              processing_time_minutes: Math.round(
+                job.result.processing_time_ms / 60000
+              ),
+            }
+          : null,
+      })
+    } catch (error) {
+      console.error('❌ Ошибка в getMorphingJobStatus:', error)
+      next(error)
+    }
+  }
+
+  /**
+   * 📊 API для получения всех заданий пользователя
+   */
+  public getUserMorphingJobs = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> => {
+    try {
+      const { telegram_id } = req.params
+
+      if (!telegram_id) {
+        res.status(400).json({
+          message: 'telegram_id is required',
+          status: 'error',
+        })
+        return
+      }
+
+      const { getUserJobs } = await import(
+        '@/services/backgroundMorphingProcessor'
+      )
+      const jobs = getUserJobs(telegram_id)
+
+      res.status(200).json({
+        telegram_id,
+        jobs: jobs.map(job => ({
+          job_id: job.id,
+          status: job.status,
+          morphing_type: job.morphing_type,
+          image_count: job.image_files.length,
+          progress_percentage: Math.round(
+            (job.progress.completed_pairs / job.progress.total_pairs) * 100
+          ),
+          created_at: job.created_at,
+          estimated_remaining_minutes: job.progress.estimated_remaining_minutes,
+          error_message: job.error_message,
+        })),
+        total_jobs: jobs.length,
+        jobs_by_status: {
+          pending: jobs.filter(j => j.status === 'pending').length,
+          processing: jobs.filter(j => j.status === 'processing').length,
+          completed: jobs.filter(j => j.status === 'completed').length,
+          failed: jobs.filter(j => j.status === 'failed').length,
+        },
+      })
+    } catch (error) {
+      console.error('❌ Ошибка в getUserMorphingJobs:', error)
+      next(error)
+    }
+  }
+
+  /**
+   * 📊 API для получения общей статистики очереди
+   */
+  public getMorphingQueueStats = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> => {
+    try {
+      const { getQueueStats } = await import(
+        '@/services/backgroundMorphingProcessor'
+      )
+      const stats = getQueueStats()
+
+      res.status(200).json({
+        queue_stats: stats,
+        timestamp: new Date().toISOString(),
+      })
+    } catch (error) {
+      console.error('❌ Ошибка в getMorphingQueueStats:', error)
       next(error)
     }
   }
