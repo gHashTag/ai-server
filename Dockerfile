@@ -16,6 +16,11 @@ FROM node:20-alpine
 
 WORKDIR /app
 
+# Install system dependencies including FFmpeg for video processing
+RUN apk add --no-cache \
+    ffmpeg \
+    && rm -rf /var/cache/apk/*
+
 # Install production dependencies
 COPY package*.json ./
 RUN npm install --omit=dev
@@ -24,14 +29,17 @@ RUN npm install --omit=dev
 COPY --from=builder /app/dist ./dist
 COPY .env ./
 
-# Create logs and uploads directories with proper permissions
+# Create logs, uploads, and temp directories with proper permissions
 RUN mkdir -p /app/logs && \
     mkdir -p /app/dist/uploads && \
+    mkdir -p /app/tmp && \
     chown -R node:node /app && \
     chown -R node:node /app/logs && \
     chown -R node:node /app/dist/uploads && \
+    chown -R node:node /app/tmp && \
     chmod 755 /app/logs && \
-    chmod 775 /app/dist/uploads
+    chmod 775 /app/dist/uploads && \
+    chmod 775 /app/tmp
 
 # Switch to non-root user
 USER node
