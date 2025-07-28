@@ -9,12 +9,6 @@ import { generateNeuroImage } from '@/services/generateNeuroImage'
 import { validateUserParams } from '@/middlewares/validateUserParams'
 import { generateNeuroImageV2 } from '@/services/generateNeuroImageV2'
 import { generateLipSync } from '@/services/generateLipSync'
-import { startMorphingVideoGeneration } from '@/services/generateMorphingVideo'
-import {
-  ProcessedMorphRequest,
-  MorphingType,
-  MorphingModel,
-} from '@/interfaces/morphing.interface'
 
 import { API_URL } from '@/config'
 import { deleteFile } from '@/helpers'
@@ -824,41 +818,17 @@ export class GenerationController {
         return
       }
 
-      if (!model || model !== 'kling-v1.6-pro') {
+      if (!req.file) {
         res.status(400).json({
-          message: 'model must be "kling-v1.6-pro"',
+          message: 'zip file is required',
           status: 'error',
         })
         return
       }
 
-      if (!bot_name) {
-        res.status(400).json({
-          message: 'bot_name is required',
-          status: 'error',
-        })
-        return
-      }
-
-      // Проверка наличия ZIP файла
       const zipFile = req.file
-      if (!zipFile || zipFile.fieldname !== 'images_zip') {
-        res.status(400).json({
-          message: 'images_zip file is required',
-          status: 'error',
-        })
-        return
-      }
 
-      console.log('🧬 ZIP file info:', {
-        filename: zipFile.filename,
-        originalName: zipFile.originalname,
-        size: zipFile.size,
-        mimetype: zipFile.mimetype,
-        path: zipFile.path,
-      })
-
-      // Валидация пользователя (используем существующий middleware)
+      // Валидация пользователя - исправляем вызов middleware
       try {
         validateUserParams(req)
       } catch (validationError) {
@@ -869,13 +839,47 @@ export class GenerationController {
         return
       }
 
-      // Отправляем немедленный ответ клиенту
       const jobId = `morph_${telegram_id}_${Date.now()}`
+
+      console.log('🧬 Starting morphing job:', {
+        job_id: jobId,
+        telegram_id,
+        image_count: imageCountNum,
+        morphing_type,
+        zip_file: zipFile.filename,
+      })
+
+      // 🔧 НОВАЯ ЛОГИКА: Распаковываем ZIP СРАЗУ В КОНТРОЛЛЕРЕ
+      const { extractImagesFromZip } = await import(
+        '@/helpers/morphing/zipProcessor'
+      )
+
+      console.log('🧬 Распаковываем ZIP файл в контроллере...')
+      const zipResult = await extractImagesFromZip(zipFile.path, telegram_id)
+
+      if (!zipResult.success) {
+        // Очистка загруженного файла при ошибке
+        await deleteFile(zipFile.path)
+
+        res.status(400).json({
+          message: 'Ошибка обработки ZIP архива',
+          error: zipResult.error,
+          status: 'error',
+        })
+        return
+      }
+
+      console.log('🧬 ZIP успешно распакован:', {
+        extracted_images: zipResult.images?.length,
+        extraction_path: zipResult.extractionPath,
+      })
+
+      // Отправляем успешный ответ клиенту СРАЗУ
       res.status(200).json({
         message:
           is_ru === 'true'
             ? 'Морфинг отправлен на обработку'
-            : 'Morphing sent for processing',
+            : 'Morphing job started',
         job_id: jobId,
         status: 'processing',
         estimated_time: is_ru === 'true' ? '5-10 минут' : '5-10 minutes',
@@ -889,7 +893,7 @@ export class GenerationController {
         zip_file: zipFile.filename,
       })
 
-      // Запускаем Inngest функцию для асинхронной обработки
+      // 🚀 НОВОЕ СОБЫТИЕ: Передаем только ПУТИ к изображениям, не ZIP!
       const { inngest } = await import('@/core/inngest/clients')
 
       await inngest.send({
@@ -901,15 +905,25 @@ export class GenerationController {
           model,
           is_ru: is_ru === 'true',
           bot_name,
-          zip_file_path: zipFile.path,
           job_id: jobId,
+          // 🎯 КЛЮЧЕВОЕ ИЗМЕНЕНИЕ: Передаем массив путей к файлам, а не ZIP
+          image_files:
+            zipResult.images?.map(img => ({
+              filename: img.filename,
+              path: img.path,
+              order: img.order,
+            })) || [],
+          extraction_path: zipResult.extractionPath, // Путь для очистки после обработки
         },
       })
+
+      // Очищаем оригинальный ZIP файл (изображения уже извлечены)
+      await deleteFile(zipFile.path)
 
       console.log('🧬 Inngest event sent successfully:', {
         job_id: jobId,
         telegram_id,
-        zip_file: zipFile.filename,
+        image_files_count: zipResult.images?.length,
       })
     } catch (error) {
       console.error('❌ Ошибка в morphImages controller:', error)

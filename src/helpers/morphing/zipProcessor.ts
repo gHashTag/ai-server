@@ -164,7 +164,7 @@ export async function extractImagesFromZip(
           filename,
           originalName: entry.entryName,
           path: filePath,
-          buffer: fileBuffer,
+          // Убираем buffer - используем только путь к файлу
           order,
         }
 
@@ -285,20 +285,26 @@ export function validateImageSequence(images: ExtractedImage[]): {
     errors.push('Duplicate image order numbers detected')
   }
 
-  // Проверяем, что все изображения имеют валидные буферы
-  for (const image of images) {
-    if (!image.buffer || image.buffer.length === 0) {
-      errors.push(`Empty buffer for image: ${image.filename}`)
-    }
-  }
-
-  // Проверяем размеры файлов (не должны быть слишком маленькими)
+  // Проверяем, что все изображения доступны и имеют валидные размеры на диске
   const minFileSize = 1024 // 1KB
+  
   for (const image of images) {
-    if (image.buffer.length < minFileSize) {
-      errors.push(
-        `Image too small: ${image.filename} (${image.buffer.length} bytes)`
-      )
+    try {
+      const fs = require('fs')
+      const stats = fs.statSync(image.path)
+      
+      if (stats.size === 0) {
+        errors.push(`Empty image file: ${image.filename}`)
+        continue
+      }
+
+      if (stats.size < minFileSize) {
+        errors.push(
+          `Image too small: ${image.filename} (${stats.size} bytes)`
+        )
+      }
+    } catch (error) {
+      errors.push(`Cannot access image file: ${image.filename}`)
     }
   }
 
