@@ -108,6 +108,33 @@ export const morphImages = inngest.createFunction(
       order: file.order,
     }))
 
+    // 🔍 ДИАГНОСТИКА: Проверяем extraction_path и все пути к файлам
+    logger.info('🧬 🔍 Диагностика путей к файлам:', {
+      telegram_id,
+      extraction_path,
+      extraction_path_exists: fs.existsSync(extraction_path),
+      cwd: process.cwd(),
+      image_files_received: image_files.length,
+      extracted_images_paths: extractedImages.map(img => ({
+        filename: img.filename,
+        path: img.path,
+        exists: fs.existsSync(img.path),
+        absolute_path: path.resolve(img.path),
+      })),
+    })
+
+    // Проверяем что extraction_path существует
+    if (!fs.existsSync(extraction_path)) {
+      const error = `Extraction path does not exist: ${extraction_path}`
+      logger.error('🧬 ❌ Директория извлечения не найдена:', {
+        telegram_id,
+        extraction_path,
+        cwd: process.cwd(),
+        absolute_extraction_path: path.resolve(extraction_path),
+      })
+      throw new Error(error)
+    }
+
     // Приводим тип morphing_type к правильному enum
     const morphingTypeEnum =
       morphing_type === 'seamless' ? MorphingType.SEAMLESS : MorphingType.LOOP
@@ -145,7 +172,43 @@ export const morphImages = inngest.createFunction(
             total_pairs: totalPairs,
             from: image1.filename,
             to: image2.filename,
+            image1_path: image1.path,
+            image2_path: image2.path,
           })
+
+          // 🔍 ПРОВЕРКА СУЩЕСТВОВАНИЯ ФАЙЛОВ ПЕРЕД ОБРАБОТКОЙ
+          if (!fs.existsSync(image1.path)) {
+            const error = `Image 1 file does not exist: ${image1.path}`
+            logger.error('🧬 ❌ Файл изображения 1 не найден:', {
+              telegram_id,
+              pair_index: pairIndex,
+              expected_path: image1.path,
+              cwd: process.cwd(),
+              absolute_path: path.resolve(image1.path),
+            })
+            throw new Error(error)
+          }
+
+          if (!fs.existsSync(image2.path)) {
+            const error = `Image 2 file does not exist: ${image2.path}`
+            logger.error('🧬 ❌ Файл изображения 2 не найден:', {
+              telegram_id,
+              pair_index: pairIndex,
+              expected_path: image2.path,
+              cwd: process.cwd(),
+              absolute_path: path.resolve(image2.path),
+            })
+            throw new Error(error)
+          }
+
+          logger.info(
+            `🧬 ✅ Файлы изображений найдены для пары ${pairIndex}:`,
+            {
+              telegram_id,
+              image1_size: fs.statSync(image1.path).size,
+              image2_size: fs.statSync(image2.path).size,
+            }
+          )
 
           const result = await createKlingMorphingVideo(
             [image1, image2],
@@ -188,8 +251,39 @@ export const morphImages = inngest.createFunction(
             total_pairs: totalPairs,
             from: lastImage.filename,
             to: firstImage.filename,
+            lastImage_path: lastImage.path,
+            firstImage_path: firstImage.path,
           }
         )
+
+        // 🔍 ПРОВЕРКА СУЩЕСТВОВАНИЯ ФАЙЛОВ ДЛЯ LOOP ПАРЫ
+        if (!fs.existsSync(lastImage.path)) {
+          const error = `Last image file does not exist: ${lastImage.path}`
+          logger.error('🧬 ❌ Файл последнего изображения не найден:', {
+            telegram_id,
+            expected_path: lastImage.path,
+            cwd: process.cwd(),
+            absolute_path: path.resolve(lastImage.path),
+          })
+          throw new Error(error)
+        }
+
+        if (!fs.existsSync(firstImage.path)) {
+          const error = `First image file does not exist: ${firstImage.path}`
+          logger.error('🧬 ❌ Файл первого изображения не найден:', {
+            telegram_id,
+            expected_path: firstImage.path,
+            cwd: process.cwd(),
+            absolute_path: path.resolve(firstImage.path),
+          })
+          throw new Error(error)
+        }
+
+        logger.info(`🔄 ✅ Файлы для LOOP пары найдены:`, {
+          telegram_id,
+          lastImage_size: fs.statSync(lastImage.path).size,
+          firstImage_size: fs.statSync(firstImage.path).size,
+        })
 
         const result = await createKlingMorphingVideo(
           [lastImage, firstImage],
