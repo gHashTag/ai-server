@@ -509,6 +509,15 @@ export class GenerationController {
       const fs = require('fs')
       const path = require('path')
 
+      // ДИАГНОСТИКА: Подробное логирование для отладки
+      logger.info('🔍 ДИАГНОСТИКА: Исходные данные', {
+        originalPath: zipFile.path,
+        filename: zipFile.filename,
+        nodeEnv: process.env.NODE_ENV,
+        cwd: process.cwd(),
+        dirname: __dirname,
+      })
+
       // Определяем правильную директорию в зависимости от окружения
       // В Docker контейнере: /app/dist/uploads (монтируется из persistent_uploads)
       // В локальной разработке: uploads
@@ -517,19 +526,45 @@ export class GenerationController {
           ? '/app/dist/uploads' // Абсолютный путь в Docker контейнере
           : path.join(process.cwd(), 'uploads') // В dev это ./uploads
 
+      logger.info('🔍 ДИАГНОСТИКА: Пути', {
+        uploadsBaseDir,
+        telegram_id,
+        type,
+      })
+
       // Создаем целевую директорию
       const targetDir = path.join(uploadsBaseDir, telegram_id, type)
       fs.mkdirSync(targetDir, { recursive: true })
 
       // Перемещаем файл из tmp в uploads (используем копирование для Docker)
       const targetPath = path.join(targetDir, zipFile.filename)
+      
+      // Проверяем существует ли исходный файл
+      if (!fs.existsSync(zipFile.path)) {
+        logger.error('❌ КРИТИЧЕСКАЯ ОШИБКА: Исходный файл не найден!', {
+          path: zipFile.path,
+          exists: false,
+        })
+        throw new Error(`Source file not found: ${zipFile.path}`)
+      }
+
       fs.copyFileSync(zipFile.path, targetPath)
       fs.unlinkSync(zipFile.path) // Удаляем оригинал после копирования
 
-      logger.info('📁 Файл перемещен:', {
+      // Проверяем что файл скопировался
+      if (!fs.existsSync(targetPath)) {
+        logger.error('❌ КРИТИЧЕСКАЯ ОШИБКА: Файл не скопировался!', {
+          targetPath,
+          exists: false,
+        })
+        throw new Error(`File copy failed: ${targetPath}`)
+      }
+
+      logger.info('📁 Файл успешно перемещен:', {
         from: zipFile.path,
         to: targetPath,
         filename: zipFile.filename,
+        targetExists: fs.existsSync(targetPath),
       })
 
       const zipUrl = `https://${req.headers.host}/uploads/${telegram_id}/${type}/${zipFile.filename}`
