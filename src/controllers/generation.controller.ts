@@ -514,7 +514,7 @@ export class GenerationController {
       // В локальной разработке: uploads
       const uploadsBaseDir =
         process.env.NODE_ENV === 'production'
-          ? path.join(__dirname, '..', 'uploads') // В Docker это /app/dist/uploads (монтируется!)
+          ? '/app/dist/uploads' // Абсолютный путь в Docker контейнере
           : path.join(process.cwd(), 'uploads') // В dev это ./uploads
 
       // Создаем целевую директорию
@@ -681,7 +681,7 @@ export class GenerationController {
 
       const uploadsBaseDir =
         process.env.NODE_ENV === 'production'
-          ? path.join(__dirname, '..', 'uploads')
+          ? '/app/dist/uploads' // Абсолютный путь в Docker контейнере
           : path.join(process.cwd(), 'uploads')
 
       const targetDir = path.join(
@@ -691,11 +691,11 @@ export class GenerationController {
       )
       fs.mkdirSync(targetDir, { recursive: true })
 
-            // Перемещаем видео файл (используем копирование для Docker)
+      // Перемещаем видео файл (используем копирование для Docker)
       const videoTargetPath = path.join(targetDir, videoFile.filename)
       fs.copyFileSync(videoFile.path, videoTargetPath)
       fs.unlinkSync(videoFile.path)
-      
+
       // Перемещаем аудио файл (используем копирование для Docker)
       const audioTargetPath = path.join(targetDir, audioFile.filename)
       fs.copyFileSync(audioFile.path, audioTargetPath)
