@@ -25,30 +25,34 @@ async function ensureDirectoryExistence(filePath: string) {
 
 // Настройка хранилища для multer
 const storage = multer.diskStorage({
-  destination: function (req, file, cb) {
+  destination: async function (req, file, cb) {
     try {
       console.log('CASE: storage destination function entered')
       console.log('req.body:', req.body) // Выводим все тело запроса
 
-      // 🔧 FIX: Используем временную папку, так как req.body может быть не готов
-      // telegram_id будет обработан в контроллере после парсинга всех полей
-      const tempDir = path.join(
+      const telegramId = req.body.telegram_id
+      // Устанавливаем 'model' как тип по умолчанию, если он не предоставлен
+      const type = req.body.type || 'model'
+
+      if (!telegramId) {
+        console.error('Error: telegram_id is missing in req.body')
+        return cb(new Error('telegram_id is missing in request body'), '')
+      }
+
+      // 🔧 RESTORED: Возвращаем РАБОЧУЮ логику - сохраняем сразу в uploads
+      const userDir = path.join(
         __dirname, // Это будет dist/utils
         '..', // Подняться до dist/
         '..', // Подняться до корня проекта (где src/, uploads/)
-        'tmp' // Временная папка
+        'uploads', // Перейти в uploads/
+        String(telegramId), // Используем String() для большей безопасности
+        String(type) // Используем String() для большей безопасности
       )
+      console.log(`Target directory for upload: ${userDir}`)
 
-      // Создаем временную папку если её нет (синхронно)
-      try {
-        const fsSync = require('fs')
-        fsSync.mkdirSync(tempDir, { recursive: true })
-        console.log('📁 Using temp directory:', tempDir)
-        cb(null, tempDir)
-      } catch (mkdirError) {
-        console.error('Error creating temp directory:', mkdirError)
-        cb(mkdirError, '')
-      }
+      await ensureDirectoryExistence(userDir)
+
+      cb(null, userDir)
     } catch (error) {
       console.error('Error in multer destination function:', error)
       cb(error, '')

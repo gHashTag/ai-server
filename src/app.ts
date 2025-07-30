@@ -105,12 +105,11 @@ export class App {
     this.app.use(express.urlencoded({ limit: '10mb', extended: true }))
     this.app.use(cookieParser())
     this.app.use(morgan('combined'))
-    // 🔧 FIX: Правильный путь к uploads в зависимости от окружения
-    const uploadsStaticPath = process.env.NODE_ENV === 'production'
-      ? path.join(__dirname, 'uploads') // В Docker: /app/dist/uploads 
-      : path.join(__dirname, '..', 'uploads') // В dev: ./uploads
-    
-    this.app.use('/uploads', express.static(uploadsStaticPath))
+    // ✅ RESTORED: Простая статическая папка как было раньше 
+    this.app.use(
+      '/uploads',
+      express.static(path.join(__dirname, '..', 'uploads'))
+    )
   }
 
   private initializeRoutes(routes: Routes[]) {
