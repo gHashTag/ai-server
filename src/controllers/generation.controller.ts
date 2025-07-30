@@ -521,9 +521,10 @@ export class GenerationController {
       const targetDir = path.join(uploadsBaseDir, telegram_id, type)
       fs.mkdirSync(targetDir, { recursive: true })
 
-      // Перемещаем файл из tmp в uploads
+      // Перемещаем файл из tmp в uploads (используем копирование для Docker)
       const targetPath = path.join(targetDir, zipFile.filename)
-      fs.renameSync(zipFile.path, targetPath)
+      fs.copyFileSync(zipFile.path, targetPath)
+      fs.unlinkSync(zipFile.path) // Удаляем оригинал после копирования
 
       logger.info('📁 Файл перемещен:', {
         from: zipFile.path,
@@ -690,13 +691,15 @@ export class GenerationController {
       )
       fs.mkdirSync(targetDir, { recursive: true })
 
-      // Перемещаем видео файл
+            // Перемещаем видео файл (используем копирование для Docker)
       const videoTargetPath = path.join(targetDir, videoFile.filename)
-      fs.renameSync(videoFile.path, videoTargetPath)
-
-      // Перемещаем аудио файл
+      fs.copyFileSync(videoFile.path, videoTargetPath)
+      fs.unlinkSync(videoFile.path)
+      
+      // Перемещаем аудио файл (используем копирование для Docker)
       const audioTargetPath = path.join(targetDir, audioFile.filename)
-      fs.renameSync(audioFile.path, audioTargetPath)
+      fs.copyFileSync(audioFile.path, audioTargetPath)
+      fs.unlinkSync(audioFile.path)
 
       const video = `${API_URL}/uploads/${req.body.telegram_id}/lip-sync/${videoFile.filename}`
       console.log(video, 'video')
