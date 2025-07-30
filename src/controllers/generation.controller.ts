@@ -505,66 +505,11 @@ export class GenerationController {
         throw new Error("zipFile with fieldname 'zipUrl' is required")
       }
 
-      // 🔧 FIX: Перемещаем файл из tmp в uploads для корректного доступа
-      const fs = require('fs')
-      const path = require('path')
-
-      // ДИАГНОСТИКА: Подробное логирование для отладки
-      logger.info('🔍 ДИАГНОСТИКА: Исходные данные', {
-        originalPath: zipFile.path,
+            // ✅ RESTORED: Multer теперь сохраняет файлы сразу в правильное место
+      // Никакого перемещения больше не нужно!
+      logger.info('📁 Файл сохранен multer напрямую в:', {
+        path: zipFile.path,
         filename: zipFile.filename,
-        nodeEnv: process.env.NODE_ENV,
-        cwd: process.cwd(),
-        dirname: __dirname,
-      })
-
-      // Определяем правильную директорию в зависимости от окружения
-      // В Docker контейнере: /app/dist/uploads (монтируется из persistent_uploads)
-      // В локальной разработке: uploads
-      const uploadsBaseDir =
-        process.env.NODE_ENV === 'production'
-          ? '/app/dist/uploads' // Абсолютный путь в Docker контейнере
-          : path.join(process.cwd(), 'uploads') // В dev это ./uploads
-
-      logger.info('🔍 ДИАГНОСТИКА: Пути', {
-        uploadsBaseDir,
-        telegram_id,
-        type,
-      })
-
-      // Создаем целевую директорию
-      const targetDir = path.join(uploadsBaseDir, telegram_id, type)
-      fs.mkdirSync(targetDir, { recursive: true })
-
-      // Перемещаем файл из tmp в uploads (используем копирование для Docker)
-      const targetPath = path.join(targetDir, zipFile.filename)
-      
-      // Проверяем существует ли исходный файл
-      if (!fs.existsSync(zipFile.path)) {
-        logger.error('❌ КРИТИЧЕСКАЯ ОШИБКА: Исходный файл не найден!', {
-          path: zipFile.path,
-          exists: false,
-        })
-        throw new Error(`Source file not found: ${zipFile.path}`)
-      }
-
-      fs.copyFileSync(zipFile.path, targetPath)
-      fs.unlinkSync(zipFile.path) // Удаляем оригинал после копирования
-
-      // Проверяем что файл скопировался
-      if (!fs.existsSync(targetPath)) {
-        logger.error('❌ КРИТИЧЕСКАЯ ОШИБКА: Файл не скопировался!', {
-          targetPath,
-          exists: false,
-        })
-        throw new Error(`File copy failed: ${targetPath}`)
-      }
-
-      logger.info('📁 Файл успешно перемещен:', {
-        from: zipFile.path,
-        to: targetPath,
-        filename: zipFile.filename,
-        targetExists: fs.existsSync(targetPath),
       })
 
       const zipUrl = `https://${req.headers.host}/uploads/${telegram_id}/${type}/${zipFile.filename}`
@@ -710,31 +655,8 @@ export class GenerationController {
         return
       }
 
-      // 🔧 FIX: Перемещаем файлы из tmp в uploads перед формированием URL
-      const fs = require('fs')
-      const path = require('path')
-
-      const uploadsBaseDir =
-        process.env.NODE_ENV === 'production'
-          ? '/app/dist/uploads' // Абсолютный путь в Docker контейнере
-          : path.join(process.cwd(), 'uploads')
-
-      const targetDir = path.join(
-        uploadsBaseDir,
-        req.body.telegram_id,
-        'lip-sync'
-      )
-      fs.mkdirSync(targetDir, { recursive: true })
-
-      // Перемещаем видео файл (используем копирование для Docker)
-      const videoTargetPath = path.join(targetDir, videoFile.filename)
-      fs.copyFileSync(videoFile.path, videoTargetPath)
-      fs.unlinkSync(videoFile.path)
-
-      // Перемещаем аудио файл (используем копирование для Docker)
-      const audioTargetPath = path.join(targetDir, audioFile.filename)
-      fs.copyFileSync(audioFile.path, audioTargetPath)
-      fs.unlinkSync(audioFile.path)
+            // ✅ RESTORED: Multer теперь сохраняет файлы сразу в правильное место
+      // Никакого перемещения больше не нужно!
 
       const video = `${API_URL}/uploads/${req.body.telegram_id}/lip-sync/${videoFile.filename}`
       console.log(video, 'video')
