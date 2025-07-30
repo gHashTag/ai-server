@@ -505,6 +505,32 @@ export class GenerationController {
         throw new Error("zipFile with fieldname 'zipUrl' is required")
       }
 
+      // 🔧 FIX: Перемещаем файл из tmp в uploads для корректного доступа
+      const fs = require('fs')
+      const path = require('path')
+
+      // Определяем правильную директорию в зависимости от окружения
+      // В Docker контейнере: /app/dist/uploads (монтируется из persistent_uploads)
+      // В локальной разработке: uploads
+      const uploadsBaseDir =
+        process.env.NODE_ENV === 'production'
+          ? path.join(__dirname, '..', 'uploads') // В Docker это /app/dist/uploads (монтируется!)
+          : path.join(process.cwd(), 'uploads') // В dev это ./uploads
+
+      // Создаем целевую директорию
+      const targetDir = path.join(uploadsBaseDir, telegram_id, type)
+      fs.mkdirSync(targetDir, { recursive: true })
+
+      // Перемещаем файл из tmp в uploads
+      const targetPath = path.join(targetDir, zipFile.filename)
+      fs.renameSync(zipFile.path, targetPath)
+
+      logger.info('📁 Файл перемещен:', {
+        from: zipFile.path,
+        to: targetPath,
+        filename: zipFile.filename,
+      })
+
       const zipUrl = `https://${req.headers.host}/uploads/${telegram_id}/${type}/${zipFile.filename}`
       console.log(zipUrl, 'zipUrl')
 
@@ -647,6 +673,30 @@ export class GenerationController {
         res.status(400).json({ message: 'audioFile is required' })
         return
       }
+
+      // 🔧 FIX: Перемещаем файлы из tmp в uploads перед формированием URL
+      const fs = require('fs')
+      const path = require('path')
+
+      const uploadsBaseDir =
+        process.env.NODE_ENV === 'production'
+          ? path.join(__dirname, '..', 'uploads')
+          : path.join(process.cwd(), 'uploads')
+
+      const targetDir = path.join(
+        uploadsBaseDir,
+        req.body.telegram_id,
+        'lip-sync'
+      )
+      fs.mkdirSync(targetDir, { recursive: true })
+
+      // Перемещаем видео файл
+      const videoTargetPath = path.join(targetDir, videoFile.filename)
+      fs.renameSync(videoFile.path, videoTargetPath)
+
+      // Перемещаем аудио файл
+      const audioTargetPath = path.join(targetDir, audioFile.filename)
+      fs.renameSync(audioFile.path, audioTargetPath)
 
       const video = `${API_URL}/uploads/${req.body.telegram_id}/lip-sync/${videoFile.filename}`
       console.log(video, 'video')
