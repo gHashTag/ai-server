@@ -259,12 +259,14 @@ export const healthCheck = inngest.createFunction(
     // Анализ результатов
     const unhealthyServices = results.filter(r => r.status !== 'healthy')
     
-    // Если есть проблемы, отправляем уведомление
+    // ВАЖНО: Отправляем уведомление ТОЛЬКО если есть проблемы
     if (unhealthyServices.length > 0) {
       await step.run('notify-unhealthy', async () => {
         const bot = new Bot(BOT_TOKEN)
         
-        let message = '⚠️ <b>Обнаружены проблемы с сервисами:</b>\n\n'
+        let message = '⚠️ <b>ПРОБЛЕМА С СЕРВИСАМИ</b>\n\n'
+        message += `🕐 Время: ${new Date().toLocaleString('ru-RU', { timeZone: 'Europe/Moscow' })}\n\n`
+        
         for (const service of unhealthyServices) {
           message += `❌ <b>${service.service}:</b> ${service.status}\n`
           if (service.error) {
@@ -272,7 +274,8 @@ export const healthCheck = inngest.createFunction(
           }
         }
         
-        message += '\n🔧 Требуется проверка!'
+        message += '\n🔧 Требуется немедленная проверка!\n'
+        message += '\n#monitoring #error #healthcheck'
         
         await bot.telegram.sendMessage(GROUP_CHAT_ID, message, {
           parse_mode: 'HTML'
@@ -280,11 +283,19 @@ export const healthCheck = inngest.createFunction(
       })
     }
     
+    // Логируем результат проверки (без отправки уведомления если все OK)
+    logger.info('Health check completed', {
+      healthy: results.filter(r => r.status === 'healthy').length,
+      unhealthy: unhealthyServices.length,
+      services: results.map(r => ({ name: r.service, status: r.status }))
+    })
+    
     return {
       success: true,
       healthyServices: results.filter(r => r.status === 'healthy').length,
       unhealthyServices: unhealthyServices.length,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
+      notificationSent: unhealthyServices.length > 0
     }
   }
 )
