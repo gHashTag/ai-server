@@ -221,7 +221,7 @@ export const healthCheck = inngest.createFunction(
     // Проверка основного API
     const apiHealth = await step.run('check-api-health', async () => {
       try {
-        const response = await fetch(`${process.env.WEBHOOK_URL || 'http://localhost:4000'}/health`)
+        const response = await fetch('http://localhost:4000/health')
         return {
           service: 'Main API',
           status: response.ok ? 'healthy' : 'unhealthy',

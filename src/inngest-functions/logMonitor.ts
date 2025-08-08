@@ -44,7 +44,7 @@ interface LogAnalysisResult {
 
 // Функция для чтения логов
 async function readLogs(): Promise<string> {
-  const logDir = process.env.LOG_DIR || '/tmp/logs'
+  const logDir = process.env.LOG_DIR || '../logs'  // На сервере обычно ../logs
   const logPath = join(logDir, 'combined.log')
   
   if (!existsSync(logPath)) {
@@ -86,13 +86,15 @@ function filterLast24Hours(logs: string): string {
 // Анализ логов с помощью AI
 async function analyzeLogs(logs: string): Promise<LogAnalysisResult> {
   if (!logs) {
+    const logDir = process.env.LOG_DIR || '../logs'  // На сервере обычно ../logs
+    const logPath = join(logDir, 'combined.log')
     return {
       status: 'warning',
-      summary: 'Нет логов за последние 24 часа',
+      summary: `Логи отсутствуют или пусты за последние 24 часа. Проверенный файл: ${logPath}`,
       errors: [],
       warnings: [],
       statistics: {},
-      recommendations: ['Проверить работоспособность системы логирования']
+      recommendations: [`Проверьте, что приложение пишет логи в ${logPath}`, 'Убедитесь, что сервис логирования работает корректно.']
     }
   }
 
