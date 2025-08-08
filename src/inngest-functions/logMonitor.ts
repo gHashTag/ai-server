@@ -44,7 +44,8 @@ interface LogAnalysisResult {
 
 // Функция для чтения логов
 async function readLogs(): Promise<string> {
-  const logDir = process.env.LOG_DIR || '../logs'  // На сервере обычно ../logs
+  // В Docker контейнере LOG_DIR=/app/logs, локально ../logs
+  const logDir = process.env.LOG_DIR || '../logs'
   const logPath = join(logDir, 'combined.log')
   
   if (!existsSync(logPath)) {
@@ -86,7 +87,8 @@ function filterLast24Hours(logs: string): string {
 // Анализ логов с помощью AI
 async function analyzeLogs(logs: string): Promise<LogAnalysisResult> {
   if (!logs) {
-    const logDir = process.env.LOG_DIR || '../logs'  // На сервере обычно ../logs
+    // В Docker контейнере LOG_DIR=/app/logs, локально ../logs
+    const logDir = process.env.LOG_DIR || '../logs'
     const logPath = join(logDir, 'combined.log')
     return {
       status: 'warning',
