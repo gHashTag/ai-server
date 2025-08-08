@@ -1,5 +1,5 @@
 import { Inngest } from 'inngest'
-import { INNGEST_WEBHOOK_URL } from '@/config'
+import { INNGEST_WEBHOOK_URL } from '../../config'
 
 console.log('🔄 Initializing Inngest client (v3 style)...')
 console.log(

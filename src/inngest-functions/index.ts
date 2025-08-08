@@ -13,6 +13,8 @@ import { neuroImageGeneration } from './neuroImageGeneration'
 import { broadcastMessage } from './broadcastMessage'
 import { processPayment } from './paymentProcessing'
 import { morphImages } from './morphImages'
+import { logMonitor, triggerLogMonitor } from './logMonitor'
+import { criticalErrorMonitor, healthCheck } from './criticalErrorMonitor'
 
 // Export all functions in array (for Inngest registration)
 export const functions = [
@@ -30,6 +32,10 @@ export const functions = [
   broadcastMessage,
   processPayment,
   morphImages, // 🧬 НОВАЯ функция для морфинга изображений
+  logMonitor, // 📊 Функция мониторинга логов (запускается по расписанию)
+  triggerLogMonitor, // 🔄 Функция ручного запуска мониторинга
+  criticalErrorMonitor, // 🚨 Мониторинг критических ошибок в реальном времени
+  healthCheck, // 💚 Проверка состояния сервисов каждые 30 минут
 ]
 
 // Individual exports for compatibility
@@ -47,6 +53,8 @@ export { neuroImageGeneration }
 export { broadcastMessage }
 export { processPayment }
 export { morphImages } // 🧬 НОВАЯ функция для морфинга изображений
+export { logMonitor, triggerLogMonitor } // 📊 Функции мониторинга логов
+export { criticalErrorMonitor, healthCheck } // 🚨💚 Функции критического мониторинга
 
 // Export everything
 export * from './helloworld'
@@ -62,5 +70,7 @@ export * from './neuroImageGeneration'
 export * from './broadcastMessage'
 export * from './paymentProcessing'
 export * from './morphImages' // 🧬 НОВАЯ функция для морфинга изображений
+export * from './logMonitor' // 📊 Функции мониторинга логов
+export * from './criticalErrorMonitor' // 🚨💚 Функции критического мониторинга
 
 export default functions

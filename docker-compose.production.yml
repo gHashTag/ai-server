@@ -1,0 +1,258 @@
+version: '3.8'
+
+services:
+  # Main Application with PM2
+  app:
+    container_name: ai-server-main
+    build:
+      context: ./
+      dockerfile: Dockerfile
+      args:
+        NODE_ENV: production
+    ports:
+      - '4000:4000'  # Main API
+      - '3000:3000'  # Legacy port
+    env_file:
+      - .env.production
+    environment:
+      - NODE_ENV=production
+      - PORT=4000
+      - LOG_DIR=/app/logs
+      - LOG_LEVEL=info
+      # Inngest Configuration
+      - INNGEST_SIGNING_KEY=${INNGEST_SIGNING_KEY}
+      - INNGEST_EVENT_KEY=${INNGEST_EVENT_KEY}
+      - INNGEST_APP_URL=${WEBHOOK_URL}/api/inngest
+      - INNGEST_DEV=0
+      # Database
+      - DATABASE_URL=${DATABASE_URL}
+      - NEON_DATABASE_URL=${NEON_DATABASE_URL}
+      # Redis for caching
+      - REDIS_URL=redis://redis:6379
+      # Monitoring Bot Token
+      - MONITORING_BOT_TOKEN=7667727700:AAEJIvtBWxgy_cj_Le_dGMpqA_dz7Pwhj0c
+      - ADMIN_TELEGRAM_ID=${ADMIN_TELEGRAM_ID}
+    volumes:
+      - ./logs:/app/logs
+      - ./uploads:/app/dist/uploads
+      - ./temp:/app/tmp
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:4000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    depends_on:
+      - redis
+      - inngest
+    networks:
+      - ai-network
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 2G
+        reservations:
+          cpus: '1'
+          memory: 1G
+
+  # Inngest Event Processor
+  inngest:
+    container_name: ai-server-inngest
+    image: inngest/inngest:v3
+    ports:
+      - '8288:8288'
+    environment:
+      - INNGEST_DEV=0
+      - INNGEST_SIGNING_KEY=${INNGEST_SIGNING_KEY}
+      - INNGEST_EVENT_KEY=${INNGEST_EVENT_KEY}
+      - INNGEST_LOG_LEVEL=info
+      - INNGEST_REDIS_URL=redis://redis:6379
+      - INNGEST_API_BASE_URL=http://app:4000
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8288/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    depends_on:
+      - redis
+    networks:
+      - ai-network
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 512M
+
+  # Redis for caching and queues
+  redis:
+    container_name: ai-server-redis
+    image: redis:7-alpine
+    ports:
+      - '6379:6379'
+    volumes:
+      - redis-data:/data
+    command: >
+      redis-server
+      --appendonly yes
+      --maxmemory 256mb
+      --maxmemory-policy allkeys-lru
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - ai-network
+
+  # Nginx Reverse Proxy with SSL
+  nginx:
+    container_name: ai-server-nginx
+    image: nginx:alpine
+    ports:
+      - '80:80'
+      - '443:443'
+      - '9090:9090'  # Prometheus metrics
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/sites-enabled:/etc/nginx/sites-enabled:ro
+      - ./certbot/conf:/etc/letsencrypt:ro
+      - ./certbot/www:/var/www/certbot:ro
+      - nginx-cache:/var/cache/nginx
+      - nginx-logs:/var/log/nginx
+    environment:
+      - DOMAIN=${DOMAIN:-ai-server.com}
+    restart: unless-stopped
+    depends_on:
+      - app
+      - inngest
+    networks:
+      - ai-network
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Certbot for SSL certificates
+  certbot:
+    container_name: ai-server-certbot
+    image: certbot/certbot
+    volumes:
+      - ./certbot/conf:/etc/letsencrypt
+      - ./certbot/www:/var/www/certbot
+    entrypoint: "/bin/sh -c 'trap exit TERM; while :; do certbot renew; sleep 12h & wait $${!}; done;'"
+    networks:
+      - ai-network
+
+  # Log aggregation with Loki (optional)
+  loki:
+    container_name: ai-server-loki
+    image: grafana/loki:latest
+    ports:
+      - '3100:3100'
+    volumes:
+      - ./monitoring/loki-config.yml:/etc/loki/local-config.yaml:ro
+      - loki-data:/loki
+    command: -config.file=/etc/loki/local-config.yaml
+    restart: unless-stopped
+    networks:
+      - ai-network
+    profiles:
+      - monitoring
+
+  # Promtail for log shipping (optional)
+  promtail:
+    container_name: ai-server-promtail
+    image: grafana/promtail:latest
+    volumes:
+      - ./logs:/app/logs:ro
+      - nginx-logs:/var/log/nginx:ro
+      - ./monitoring/promtail-config.yml:/etc/promtail/config.yml:ro
+      - /var/log:/var/log:ro
+    command: -config.file=/etc/promtail/config.yml
+    restart: unless-stopped
+    depends_on:
+      - loki
+    networks:
+      - ai-network
+    profiles:
+      - monitoring
+
+  # Prometheus for metrics (optional)
+  prometheus:
+    container_name: ai-server-prometheus
+    image: prom/prometheus:latest
+    ports:
+      - '9091:9090'
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/usr/share/prometheus/console_libraries'
+      - '--web.console.templates=/usr/share/prometheus/consoles'
+    restart: unless-stopped
+    networks:
+      - ai-network
+    profiles:
+      - monitoring
+
+  # Grafana for visualization (optional)
+  grafana:
+    container_name: ai-server-grafana
+    image: grafana/grafana:latest
+    ports:
+      - '3001:3000'
+    environment:
+      - GF_SECURITY_ADMIN_USER=${GRAFANA_USER:-admin}
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD:-admin}
+      - GF_INSTALL_PLUGINS=redis-datasource,grafana-piechart-panel
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+    restart: unless-stopped
+    depends_on:
+      - prometheus
+      - loki
+    networks:
+      - ai-network
+    profiles:
+      - monitoring
+
+  # Node Exporter for system metrics (optional)
+  node-exporter:
+    container_name: ai-server-node-exporter
+    image: prom/node-exporter:latest
+    ports:
+      - '9100:9100'
+    restart: unless-stopped
+    networks:
+      - ai-network
+    profiles:
+      - monitoring
+
+volumes:
+  redis-data:
+    driver: local
+  nginx-cache:
+    driver: local
+  nginx-logs:
+    driver: local
+  loki-data:
+    driver: local
+  prometheus-data:
+    driver: local
+  grafana-data:
+    driver: local
+
+networks:
+  ai-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16

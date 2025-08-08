@@ -505,7 +505,7 @@ export class GenerationController {
         throw new Error("zipFile with fieldname 'zipUrl' is required")
       }
 
-            // ✅ RESTORED: Multer теперь сохраняет файлы сразу в правильное место
+      // ✅ RESTORED: Multer теперь сохраняет файлы сразу в правильное место
       // Никакого перемещения больше не нужно!
       logger.info('📁 Файл сохранен multer напрямую в:', {
         path: zipFile.path,
@@ -655,7 +655,7 @@ export class GenerationController {
         return
       }
 
-            // ✅ RESTORED: Multer теперь сохраняет файлы сразу в правильное место
+      // ✅ RESTORED: Multer теперь сохраняет файлы сразу в правильное место
       // Никакого перемещения больше не нужно!
 
       const video = `${API_URL}/uploads/${req.body.telegram_id}/lip-sync/${videoFile.filename}`
