@@ -4,7 +4,10 @@ type VideoModelConfig = {
   title: string
   description: string
   inputType: ('text' | 'image')[]
-  basePrice: number // Base price in dollars
+  basePrice?: number // Base price in dollars (опционально для динамических моделей)
+  pricePerSecond?: number // Цена за секунду для динамического расчёта
+  supportedDurations?: number[] // Поддерживаемые длительности в секундах
+  defaultDuration?: number // Длительность по умолчанию
   api: {
     model: string
     input: Record<string, any>
@@ -126,5 +129,65 @@ export const VIDEO_MODELS_CONFIG: Record<string, VideoModelConfig> = {
         prompt_optimizer: true,
       },
     },
+  },
+  'veo-3': {
+    id: 'veo-3',
+    title: 'Google Veo 3',
+    inputType: ['text', 'image'],
+    description: '✅ Премиум качество через Vertex AI, 2-8 сек',
+    pricePerSecond: 0.40, // $0.40 за секунду
+    supportedDurations: [2, 4, 6, 8], // Поддерживаемые длительности
+    defaultDuration: 8, // По умолчанию 8 секунд
+    api: {
+      model: 'veo-3.0-generate-preview',
+      input: {
+        type: 'vertex-ai',
+        resolution: '720p',
+      },
+    },
+    requirements: {
+      maxDuration: 8,
+    },
+    imageKey: 'imageUrl',
+  },
+  'veo-3-fast': {
+    id: 'veo-3-fast',
+    title: 'Google Veo 3 Fast',
+    inputType: ['text', 'image'],
+    description: '⚡ Быстрая генерация Veo 3, 2-8 сек',
+    pricePerSecond: 0.30, // $0.30 за секунду (дешевле за скорость)
+    supportedDurations: [2, 4, 6, 8], // Поддерживаемые длительности
+    defaultDuration: 4, // По умолчанию 4 секунды
+    api: {
+      model: 'veo-3.0-generate-preview', // Используем ту же модель с fast параметрами
+      input: {
+        type: 'vertex-ai',
+        resolution: '720p',
+        fast_mode: true,
+      },
+    },
+    requirements: {
+      maxDuration: 8,
+    },
+    imageKey: 'imageUrl',
+  },
+  'veo-2': {
+    id: 'veo-2',
+    title: 'Google Veo 2',
+    inputType: ['text', 'image'],
+    description: 'Стабильная версия Veo, 4-10 сек',
+    pricePerSecond: 0.30, // $0.30 за секунду
+    supportedDurations: [4, 6, 8, 10], // Поддерживаемые длительности
+    defaultDuration: 8, // По умолчанию 8 секунд
+    api: {
+      model: 'veo-2.0-generate-001',
+      input: {
+        type: 'vertex-ai',
+      },
+    },
+    requirements: {
+      maxDuration: 10,
+    },
+    imageKey: 'imageUrl',
   },
 }
