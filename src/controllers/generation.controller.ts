@@ -18,6 +18,48 @@ import { inngest } from '@/core/inngest/clients'
 import { logger } from '@/utils/logger'
 
 export class GenerationController {
+  /**
+   * Эндпоинт для генерации видео через Google Veo 3 Fast
+   */
+  public veo3Video = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> => {
+    try {
+      const {
+        prompt,
+        duration = 5,
+        telegram_id,
+        username,
+        is_ru,
+        bot_name,
+        style,
+        cameraMovement,
+        imageUrl,
+      } = req.body
+
+      if (!prompt) {
+        res.status(400).json({ message: 'prompt is required' })
+        return
+      }
+
+      validateUserParams(req)
+      res.status(200).json({ message: 'Processing Veo 3 video generation' })
+
+      // Используем существующую функцию generateTextToVideo с моделью veo3-fast
+      await generateTextToVideo(
+        prompt,
+        'veo3-fast', // используем нашу новую модель
+        telegram_id,
+        username,
+        is_ru,
+        bot_name
+      )
+    } catch (error) {
+      next(error)
+    }
+  }
   public textToImage = async (
     req: Request,
     res: Response,

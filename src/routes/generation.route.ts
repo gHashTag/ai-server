@@ -27,6 +27,10 @@ export class GenerationRoute implements Routes {
       this.generationController.textToVideo
     )
     this.router.post(
+      `${this.path}/veo3-video`,
+      this.generationController.veo3Video
+    )
+    this.router.post(
       `${this.path}/image-to-video`,
       this.generationController.imageToVideo
     )
