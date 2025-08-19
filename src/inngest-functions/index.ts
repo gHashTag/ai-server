@@ -16,6 +16,8 @@ import { morphImages } from './morphImages'
 import { logMonitor, triggerLogMonitor } from './logMonitor'
 import { criticalErrorMonitor, healthCheck } from './criticalErrorMonitor'
 import { instagramApifyScraper } from './instagramApifyScraper'
+import { competitorAutoParser, triggerCompetitorAutoParser } from './competitorAutoParser'
+import { competitorDelivery } from './competitorDelivery'
 
 // Export all functions in array (for Inngest registration)
 export const functions = [
@@ -38,6 +40,9 @@ export const functions = [
   criticalErrorMonitor, // 🚨 Мониторинг критических ошибок в реальном времени
   healthCheck, // 💚 Проверка состояния сервисов каждые 30 минут
   instagramApifyScraper, // 📱 RILS парсер через Apify
+  competitorAutoParser, // ⏰ Автоматический парсинг конкурентов каждые 24 часа
+  triggerCompetitorAutoParser, // 🔄 Ручной запуск автопарсинга
+  competitorDelivery, // 📬 Доставка рилсов конкурентов подписчикам
 ]
 
 // Individual exports for compatibility
@@ -58,6 +63,8 @@ export { morphImages } // 🧬 НОВАЯ функция для морфинга
 export { logMonitor, triggerLogMonitor } // 📊 Функции мониторинга логов
 export { criticalErrorMonitor, healthCheck } // 🚨💚 Функции критического мониторинга
 export { instagramApifyScraper } // 📱 RILS парсер через Apify
+export { competitorAutoParser, triggerCompetitorAutoParser } // ⏰ Автоматический парсинг конкурентов
+export { competitorDelivery } // 📬 Доставка рилсов конкурентов
 
 // Export everything
 export * from './helloworld'
@@ -76,5 +83,7 @@ export * from './morphImages' // 🧬 НОВАЯ функция для морф�
 export * from './logMonitor' // 📊 Функции мониторинга логов
 export * from './criticalErrorMonitor' // 🚨💚 Функции критического мониторинга
 export * from './instagramApifyScraper' // 📱 RILS парсер через Apify
+export * from './competitorAutoParser' // ⏰ Автоматический парсинг конкурентов
+export * from './competitorDelivery' // 📬 Доставка рилсов конкурентов
 
 export default functions
