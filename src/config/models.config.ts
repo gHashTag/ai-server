@@ -134,15 +134,15 @@ export const VIDEO_MODELS_CONFIG: Record<string, VideoModelConfig> = {
     id: 'veo-3',
     title: 'Google Veo 3',
     inputType: ['text', 'image'],
-    description: '✅ Премиум качество через Vertex AI, 2-8 сек',
-    pricePerSecond: 0.40, // $0.40 за секунду
+    description: '✅ Премиум качество через Kie.ai (дешевле на 37%!), 2-8 сек',
+    pricePerSecond: 0.25, // $0.25 за секунду через Kie.ai (было $0.40)
     supportedDurations: [2, 4, 6, 8], // Поддерживаемые длительности
     defaultDuration: 8, // По умолчанию 8 секунд
     api: {
-      model: 'veo-3.0-generate-preview',
+      model: 'veo-3',
       input: {
-        type: 'vertex-ai',
-        resolution: '720p',
+        type: 'kie-ai',
+        resolution: '1080p', // Kie.ai поддерживает 1080p
       },
     },
     requirements: {
@@ -154,20 +154,41 @@ export const VIDEO_MODELS_CONFIG: Record<string, VideoModelConfig> = {
     id: 'veo-3-fast',
     title: 'Google Veo 3 Fast',
     inputType: ['text', 'image'],
-    description: '⚡ Быстрая генерация Veo 3, 2-8 сек',
-    pricePerSecond: 0.30, // $0.30 за секунду (дешевле за скорость)
+    description: '⚡ Супер быстрая генерация через Kie.ai (дешевле Synx!), 2-8 сек',
+    pricePerSecond: 5.0 / 85, // 40₽ за 8 сек = 5₽/сек = $0.059/сек (конкурентно с Synx)
     supportedDurations: [2, 4, 6, 8], // Поддерживаемые длительности
     defaultDuration: 4, // По умолчанию 4 секунды
     api: {
-      model: 'veo-3.0-generate-preview', // Используем ту же модель с fast параметрами
+      model: 'veo-3-fast',
       input: {
-        type: 'vertex-ai',
+        type: 'kie-ai',
         resolution: '720p',
         fast_mode: true,
       },
     },
     requirements: {
       maxDuration: 8,
+    },
+    imageKey: 'imageUrl',
+  },
+  'runway-aleph': {
+    id: 'runway-aleph',
+    title: 'Runway Aleph',
+    inputType: ['text', 'image'],
+    description: '🎬 Продвинутое редактирование: добавление/удаление объектов, релайтинг, смена ракурсов',
+    pricePerSecond: 0.30, // $0.30 за секунду через Kie.ai
+    supportedDurations: [2, 4, 6, 8, 10], // Поддерживаемые длительности
+    defaultDuration: 6, // По умолчанию 6 секунд
+    api: {
+      model: 'runway-aleph',
+      input: {
+        type: 'kie-ai',
+        resolution: '1080p',
+        features: ['object-manipulation', 'relighting', 'camera-control', 'style-transfer'],
+      },
+    },
+    requirements: {
+      maxDuration: 10,
     },
     imageKey: 'imageUrl',
   },
