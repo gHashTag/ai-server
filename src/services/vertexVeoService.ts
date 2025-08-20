@@ -48,6 +48,7 @@ interface VeoGenerationOptions {
   sampleCount?: number // number of videos to generate (1-4)
   seed?: number
   storageUri?: string // GCS bucket for output
+  duration?: number // duration in seconds (1-10 for Veo 3)
   image?: {
     bytesBase64Encoded?: string
     gcsUri?: string
@@ -88,7 +89,8 @@ export class VertexVeoService {
       sampleCount = 1,
       seed,
       storageUri,
-      image,
+      duration,
+      image
     } = options
 
     const endpoint = `https://${this.location}-aiplatform.googleapis.com/v1/projects/${this.projectId}/locations/${this.location}/publishers/google/models/${modelId}:predictLongRunning`
@@ -117,6 +119,11 @@ export class VertexVeoService {
 
     if (storageUri) {
       requestBody.parameters.storageUri = storageUri
+    }
+
+    // Добавляем duration для Veo 3 (поддерживает 1-10 секунд)
+    if (duration !== undefined && modelId.includes('veo-3')) {
+      requestBody.parameters.duration = Math.max(1, Math.min(10, duration)); // ограничиваем 1-10 секунд
     }
 
     // Добавляем изображение для image-to-video
