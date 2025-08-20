@@ -1,16 +1,16 @@
 import { Request, Response, NextFunction } from 'express'
-// План А - Inngest функции
-import { inngest } from '@/inngest/client'
-// План Б - Fallback функции  
-import {
-  generateImageFallback,
-  generateTextToVideoFallback,
-  generateImageToVideoFallback,
-  generateSpeechFallback,
-  createVoiceAvatarFallback,
-} from '@/services/fallback'
 
-// Существующие сервисы для других функций
+// План А - Inngest функции (асинхронные обертки)
+import { inngest } from '@/core/inngest-client/clients'
+
+// План Б - Оригинальные сервисы (синхронные)
+import { generateTextToImage } from '@/services/generateTextToImage'
+import { generateSpeech } from '@/services/generateSpeech'
+import { generateTextToVideo } from '@/services/generateTextToVideo'
+import { generateImageToVideo } from '@/services/generateImageToVideo'
+import { createVoiceAvatar } from '@/services/createVoiceAvatar'
+
+// Остальные сервисы (используются без Plan A/B)
 import { generateImageToPrompt } from '@/services/generateImageToPrompt'
 import { generateNeuroImage } from '@/services/generateNeuroImage'
 import { generateNeuroImageV2 } from '@/services/generateNeuroImageV2'
@@ -59,20 +59,20 @@ export class GenerationController {
 
       const { bot } = getBotByName(bot_name)
 
-      // Выбор между планом А (Inngest) и планом Б (Fallback)
+      // Выбор между планом А (Inngest) и планом Б (Оригинальный сервис)
       if (shouldUseInngest()) {
-        // План А - Inngest (асинхронная обработка)
+        // План А - Inngest (асинхронная обработка через очереди)
         logger.info({
-          message: 'Использование плана А (Inngest) для text-to-image',
+          message: 'План А - Inngest для text-to-image',
           telegram_id,
           model,
         })
 
         await inngest.send({
-          name: 'image/generate.start',
+          name: 'image/text-to-image.start',
           data: {
             prompt,
-            model_type: model,
+            model,
             num_images,
             telegram_id,
             username,
@@ -81,14 +81,14 @@ export class GenerationController {
           },
         })
       } else {
-        // План Б - Fallback (синхронная обработка)
+        // План Б - Оригинальный сервис (прямой вызов)
         logger.info({
-          message: 'Использование плана Б (Fallback) для text-to-image',
+          message: 'План Б - Оригинальный сервис для text-to-image',
           telegram_id,
           model,
         })
 
-        generateImageFallback(
+        generateTextToImage(
           prompt,
           model,
           num_images,
@@ -97,7 +97,7 @@ export class GenerationController {
           is_ru,
           bot
         ).catch(error => {
-          logger.error('Ошибка при fallback генерации изображения:', error)
+          logger.error('Ошибка при генерации изображения:', error)
         })
       }
     } catch (error) {
@@ -204,11 +204,11 @@ export class GenerationController {
 
       const { bot } = getBotByName(bot_name)
 
-      // Выбор между планом А (Inngest) и планом Б (Fallback)
+      // Выбор между планом А (Inngest) и планом Б (Оригинальный сервис)
       if (shouldUseInngest()) {
         // План А - Inngest
         logger.info({
-          message: 'Использование плана А (Inngest) для создания голосового аватара',
+          message: 'План А - Inngest для создания голосового аватара',
           telegram_id,
           fileUrl,
         })
@@ -224,15 +224,15 @@ export class GenerationController {
           },
         })
       } else {
-        // План Б - Fallback
+        // План Б - Оригинальный сервис
         logger.info({
-          message: 'Использование плана Б (Fallback) для создания голосового аватара',
+          message: 'План Б - Оригинальный сервис для создания голосового аватара',
           telegram_id,
           fileUrl,
         })
 
-        createVoiceAvatarFallback(fileUrl, telegram_id, username, is_ru, bot).catch(error => {
-          logger.error('Ошибка при fallback создании голосового аватара:', error)
+        createVoiceAvatar(fileUrl, telegram_id, username, is_ru, bot).catch(error => {
+          logger.error('Ошибка при создании голосового аватара:', error)
         })
       }
     } catch (error) {
@@ -268,11 +268,11 @@ export class GenerationController {
 
       const { bot } = getBotByName(bot_name)
 
-      // Выбор между планом А (Inngest) и планом Б (Fallback)
+      // Выбор между планом А (Inngest) и планом Б (Оригинальный сервис)
       if (shouldUseInngest()) {
         // План А - Inngest
         logger.info({
-          message: 'Использование плана А (Inngest) для text-to-speech',
+          message: 'План А - Inngest для text-to-speech',
           telegram_id,
           voice_id,
         })
@@ -288,15 +288,15 @@ export class GenerationController {
           },
         })
       } else {
-        // План Б - Fallback
+        // План Б - Оригинальный сервис
         logger.info({
-          message: 'Использование плана Б (Fallback) для text-to-speech',
+          message: 'План Б - Оригинальный сервис для text-to-speech',
           telegram_id,
           voice_id,
         })
 
-        generateSpeechFallback(text, voice_id, telegram_id, is_ru, bot).catch(error => {
-          logger.error('Ошибка при fallback генерации речи:', error)
+        generateSpeech({ text, voice_id, telegram_id, is_ru, bot }).catch(error => {
+          logger.error('Ошибка при генерации речи:', error)
         })
       }
     } catch (error) {
@@ -328,11 +328,11 @@ export class GenerationController {
 
       const { bot } = getBotByName(bot_name)
 
-      // Выбор между планом А (Inngest) и планом Б (Fallback)
+      // Выбор между планом А (Inngest) и планом Б (Оригинальный сервис)
       if (shouldUseInngest()) {
         // План А - Inngest
         logger.info({
-          message: 'Использование плана А (Inngest) для text-to-video',
+          message: 'План А - Inngest для text-to-video',
           telegram_id,
           videoModel,
         })
@@ -349,22 +349,23 @@ export class GenerationController {
           },
         })
       } else {
-        // План Б - Fallback
+        // План Б - Оригинальный сервис
         logger.info({
-          message: 'Использование плана Б (Fallback) для text-to-video',
+          message: 'План Б - Оригинальный сервис для text-to-video',
           telegram_id,
           videoModel,
         })
 
-        generateTextToVideoFallback(
+        generateTextToVideo(
           prompt,
           videoModel,
           telegram_id,
           username,
           is_ru,
-          bot
+          bot,
+          bot_name
         ).catch(error => {
-          logger.error('Ошибка при fallback генерации видео:', error)
+          logger.error('Ошибка при генерации видео:', error)
         })
       }
     } catch (error) {
@@ -405,11 +406,11 @@ export class GenerationController {
 
       const { bot } = getBotByName(bot_name)
 
-      // Выбор между планом А (Inngest) и планом Б (Fallback)
+      // Выбор между планом А (Inngest) и планом Б (Оригинальный сервис)
       if (shouldUseInngest()) {
         // План А - Inngest
         logger.info({
-          message: 'Использование плана А (Inngest) для image-to-video',
+          message: 'План А - Inngest для image-to-video',
           telegram_id,
           videoModel,
         })
@@ -427,14 +428,14 @@ export class GenerationController {
           },
         })
       } else {
-        // План Б - Fallback
+        // План Б - Оригинальный сервис
         logger.info({
-          message: 'Использование плана Б (Fallback) для image-to-video',
+          message: 'План Б - Оригинальный сервис для image-to-video',
           telegram_id,
           videoModel,
         })
 
-        generateImageToVideoFallback(
+        generateImageToVideo(
           imageUrl,
           prompt,
           videoModel,
@@ -443,7 +444,7 @@ export class GenerationController {
           is_ru,
           bot
         ).catch(error => {
-          logger.error('Ошибка при fallback генерации image-to-video:', error)
+          logger.error('Ошибка при генерации image-to-video:', error)
         })
       }
     } catch (error) {
