@@ -25,7 +25,7 @@ healthcheckPath = "/health"
 
 # Переменные для тестового окружения (main branch)
 [environments.testing.variables]
-NODE_ENV = "production"
+NODE_ENV = "testing"
 APP_ENV = "testing"
 PORT = "${{ PORT }}"
 
