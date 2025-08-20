@@ -34,3 +34,16 @@ PORT = "${{ PORT }}"
 NODE_ENV = "production"
 APP_ENV = "production" 
 PORT = "${{ PORT }}"
+
+# Переменные для ветки production-redeploy
+[environments.production-redeploy]
+[environments.production-redeploy.build]
+watchPatterns = ["src/**/*", "package.json", "tsconfig.json"]
+
+[environments.production-redeploy.deploy]
+healthcheckPath = "/health"
+
+[environments.production-redeploy.variables]
+NODE_ENV = "production"
+APP_ENV = "production" 
+PORT = "${{ PORT }}"
