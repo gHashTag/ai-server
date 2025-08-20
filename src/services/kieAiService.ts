@@ -7,35 +7,54 @@ import { errorMessage, errorMessageAdmin } from '@/helpers';
  * Экономия по сравнению с Vertex AI: до 87%
  */
 
-// Конфигурация моделей Kie.ai (из KIE_AI_API_GUIDE.md)
-export const KIE_AI_MODELS = {
+// Конфигурация моделей Kie.ai (проверенные работающие названия)
+interface KieModelConfig {
+  name: string;
+  description: string;
+  pricePerSecond: number;
+  maxDuration: number;
+  supportedFormats: string[];
+  kieModelName: string;
+  endpoint: string;
+  supportedDurations?: number[];
+}
+
+export const KIE_AI_MODELS: Record<string, KieModelConfig> = {
   'veo-3-fast': {
     name: 'Veo 3 Fast',
-    description: 'Быстрая генерация',
+    description: 'Быстрая генерация ТОЛЬКО 8 секунд',
     pricePerSecond: 0.05, // $0.05/сек (87% экономия против $0.40 Vertex AI)
-    maxDuration: 10,
-    supportedFormats: ['16:9', '9:16', '1:1']
+    maxDuration: 8, // ТОЛЬКО 8 СЕКУНД!
+    supportedFormats: ['16:9', '9:16', '1:1'],
+    kieModelName: 'veo3', // Реальное название в Kie.ai API
+    endpoint: '/veo/generate',
+    supportedDurations: [8] // VEO 3 FAST = ТОЛЬКО 8 СЕКУНД!
   },
   'veo-3': {
     name: 'Veo 3 Quality', 
     description: 'Премиум качество',
     pricePerSecond: 0.25, // $0.25/сек (37% экономия против $0.40 Vertex AI)
     maxDuration: 10,
-    supportedFormats: ['16:9', '9:16', '1:1']
+    supportedFormats: ['16:9', '9:16', '1:1'],
+    kieModelName: 'veo3', // Реальное название в Kie.ai API
+    endpoint: '/veo/generate'
   },
-  'runway-aleph': {
-    name: 'Runway Aleph',
-    description: 'Продвинутое редактирование',
+  'runway-gen3': {
+    name: 'Runway Gen3',
+    description: 'Продвинутая генерация',
     pricePerSecond: 0.30, // $0.30/сек
-    maxDuration: 10,
-    supportedFormats: ['16:9', '9:16', '1:1']
+    maxDuration: 8, // Runway поддерживает только 5 или 8 секунд
+    supportedFormats: ['16:9', '9:16', '1:1'],
+    kieModelName: 'gen3', // Реальное название в Kie.ai API  
+    endpoint: '/runway/generate',
+    supportedDurations: [5, 8] // Только эти значения
   }
 };
 
 interface KieAiGenerationOptions {
-  model: 'veo-3-fast' | 'veo-3' | 'runway-aleph';
+  model: 'veo-3-fast' | 'veo-3' | 'runway-gen3';
   prompt: string;
-  duration: number; // 2-10 секунд
+  duration: number; // 2-10 секунд для Veo, 5 или 8 для Runway
   aspectRatio?: '16:9' | '9:16' | '1:1';
   imageUrl?: string; // для image-to-video
   userId?: string;
@@ -79,7 +98,15 @@ export class KieAiService {
     }
     
     try {
-      const response = await axios.get(`${this.baseUrl}/chat/credit`, {
+      // Простая проверка доступности API
+      const testPayload = {
+        model: 'veo3',
+        prompt: 'health check test',
+        duration: 2,
+        aspect_ratio: '16:9'
+      };
+
+      const response = await axios.post(`${this.baseUrl}/veo/generate`, testPayload, {
         headers: {
           'Authorization': `Bearer ${this.apiKey}`,
           'Content-Type': 'application/json'
@@ -87,10 +114,25 @@ export class KieAiService {
         timeout: 10000
       });
       
-      console.log('✅ Kie.ai API доступен. Кредиты:', response.data.credits);
+      // Если код 402 (недостаточно кредитов) - API работает, но нет денег
+      if (response.data.code === 402) {
+        console.log('⚠️ Kie.ai API работает, но недостаточно кредитов');
+        return false; // Возвращаем false чтобы сработал fallback
+      }
+      
+      console.log('✅ Kie.ai API доступен и имеет кредиты');
       return true;
-    } catch (error) {
+    } catch (error: any) {
+      if (error.response?.data?.code === 402) {
+        console.log('⚠️ Kie.ai API работает, но недостаточно кредитов');
+        // КРИТИЧЕСКОЕ УВЕДОМЛЕНИЕ АДМИНАМ О НЕДОСТАТКЕ БАЛАНСА
+        console.error('🚨 CRITICAL: Kie.ai balance insufficient during health check!');
+        errorMessageAdmin(new Error(`🚨 CRITICAL KIE.AI BALANCE ERROR: Health check failed due to insufficient credits. System will fallback to expensive Vertex AI (87% cost increase). IMMEDIATE ACTION REQUIRED: Top up Kie.ai balance!`));
+        return false; // Возвращаем false чтобы сработал fallback
+      }
       console.error('❌ Kie.ai API недоступен:', error.message);
+      // Уведомляем админов о недоступности API
+      errorMessageAdmin(new Error(`🚨 KIE.AI API UNAVAILABLE: Health check failed - ${error.message}. Fallback to Vertex AI will be used.`));
       return false;
     }
   }
@@ -147,10 +189,23 @@ export class KieAiService {
       throw new Error(`Unsupported model: ${model}`);
     }
 
-    // Валидация длительности
-    const clampedDuration = Math.max(2, Math.min(modelConfig.maxDuration, duration));
-    if (clampedDuration !== duration) {
-      console.log(`⚠️ Duration adjusted from ${duration}s to ${clampedDuration}s for ${model}`);
+    // Валидация длительности для разных моделей
+    let clampedDuration: number;
+    
+    if (modelConfig.supportedDurations) {
+      // Для Runway - только поддерживаемые значения
+      clampedDuration = modelConfig.supportedDurations.reduce((prev, curr) =>
+        Math.abs(curr - duration) < Math.abs(prev - duration) ? curr : prev
+      );
+      if (clampedDuration !== duration) {
+        console.log(`⚠️ Duration adjusted from ${duration}s to ${clampedDuration}s for ${model} (supported: ${modelConfig.supportedDurations.join(', ')})`);
+      }
+    } else {
+      // Для Veo - обычная валидация
+      clampedDuration = Math.max(2, Math.min(modelConfig.maxDuration, duration));
+      if (clampedDuration !== duration) {
+        console.log(`⚠️ Duration adjusted from ${duration}s to ${clampedDuration}s for ${model}`);
+      }
     }
 
     // Расчет стоимости
@@ -165,9 +220,13 @@ export class KieAiService {
       console.log(`   • Aspect Ratio: ${aspectRatio}`);
       console.log(`   • Estimated cost: $${costUSD.toFixed(3)}`);
 
+      // Используем правильное название модели и endpoint из конфигурации
+      const kieModelName = modelConfig.kieModelName;
+      const endpoint = `${this.baseUrl}${modelConfig.endpoint}`;
+      
       // Формируем запрос к Kie.ai API
-      const requestBody = {
-        model: model,
+      const requestBody: any = {
+        model: kieModelName,
         prompt: prompt,
         duration: clampedDuration,
         aspectRatio: aspectRatio,
@@ -176,7 +235,14 @@ export class KieAiService {
         ...(projectId && { projectId })
       };
 
-      const response = await axios.post(`${this.baseUrl}/video/generate`, requestBody, {
+      // Добавляем специфичные параметры для Runway
+      if (modelConfig.endpoint === '/runway/generate') {
+        requestBody.videoQuality = 'high'; // Обязательный параметр для Runway
+      }
+
+      console.log(`🎯 Using model: ${kieModelName} at endpoint: ${endpoint}`);
+
+      const response = await axios.post(endpoint, requestBody, {
         headers: {
           'Authorization': `Bearer ${this.apiKey}`,
           'Content-Type': 'application/json'
@@ -206,14 +272,29 @@ export class KieAiService {
       
       // Проверяем специфичные ошибки Kie.ai
       if (error.response?.status === 401) {
-        throw new Error('Invalid Kie.ai API key. Please check KIE_AI_API_KEY environment variable.');
+        const errorMsg = 'Invalid Kie.ai API key. Please check KIE_AI_API_KEY environment variable.';
+        // Критическое уведомление админам
+        console.error('🚨 CRITICAL: Kie.ai API key is invalid!');
+        errorMessageAdmin(new Error(`🚨 CRITICAL KIE.AI ERROR: Invalid API key - ${errorMsg}`));
+        throw new Error(errorMsg);
       } else if (error.response?.status === 402) {
-        throw new Error('Insufficient credits in Kie.ai account. Please top up your balance.');
+        const errorMsg = 'Insufficient credits in Kie.ai account. Please top up your balance.';
+        // КРИТИЧЕСКОЕ УВЕДОМЛЕНИЕ АДМИНАМ О НЕДОСТАТКЕ БАЛАНСА
+        console.error('🚨 CRITICAL: Kie.ai balance is insufficient! Fallback to expensive Vertex AI!');
+        errorMessageAdmin(new Error(`🚨 CRITICAL KIE.AI BALANCE ERROR: Insufficient credits - falling back to expensive Vertex AI. Current balance may be exhausted. IMMEDIATE ACTION REQUIRED: Top up Kie.ai balance to restore 87% cost savings!`));
+        throw new Error(errorMsg);
       } else if (error.response?.status === 429) {
-        throw new Error('Rate limit exceeded. Please wait before making another request.');
+        const errorMsg = 'Rate limit exceeded. Please wait before making another request.';
+        console.warn('⚠️ WARNING: Kie.ai rate limit exceeded');
+        errorMessageAdmin(new Error(`⚠️ WARNING KIE.AI RATE LIMIT: ${errorMsg} - May affect video generation performance`));
+        throw new Error(errorMsg);
       }
       
-      throw new Error(`Kie.ai video generation failed: ${error.message}`);
+      // Общая ошибка тоже критична - может быть проблема с API
+      const errorMsg = `Kie.ai video generation failed: ${error.message}`;
+      console.error('🚨 CRITICAL: Kie.ai service failure!');
+      errorMessageAdmin(new Error(`🚨 CRITICAL KIE.AI SERVICE ERROR: ${errorMsg} - Fallback to Vertex AI may be triggered`));
+      throw new Error(errorMsg);
     }
   }
 

@@ -109,6 +109,9 @@ export const processVideoGeneration = async (
     const isHealthy = await kieAiService.checkHealth()
     if (!isHealthy) {
       console.warn(`⚠️ Kie.ai API не доступен для ${videoModel}, используем резервный Vertex AI`)
+      // КРИТИЧЕСКОЕ УВЕДОМЛЕНИЕ АДМИНАМ О FALLBACK
+      console.error('🚨 FALLBACK ACTIVATED: Switching from cheap Kie.ai to expensive Vertex AI!')
+      errorMessageAdmin(new Error(`🚨 CRITICAL FALLBACK ACTIVATED: ${videoModel} switched from Kie.ai to Vertex AI due to health check failure. Cost increased by 87%! Reason: Kie.ai API unavailable or insufficient balance. IMMEDIATE ATTENTION REQUIRED!`))
       // Fallback к Vertex AI если Kie.ai недоступен
       return await processVertexAI(videoModel, aspect_ratio, prompt, imageUrl, duration)
     }
@@ -123,16 +126,29 @@ export const processVideoGeneration = async (
       kieAspectRatio = '16:9'
     }
     
-    // Генерируем через Kie.ai
-    const result = await kieAiService.generateVideo({
-      model: videoModel as 'veo-3-fast' | 'veo-3' | 'runway-aleph',
-      prompt,
-      duration,
-      aspectRatio: kieAspectRatio,
-      imageUrl
-    })
-    
-    return result.videoUrl
+    // Генерируем через Kie.ai с fallback обработкой
+    try {
+      const result = await kieAiService.generateVideo({
+        model: videoModel as 'veo-3-fast' | 'veo-3' | 'runway-aleph',
+        prompt,
+        duration,
+        aspectRatio: kieAspectRatio,
+        imageUrl
+      })
+      
+      return result.videoUrl
+    } catch (kieError: any) {
+      // Если произошла ошибка генерации в Kie.ai - делаем fallback
+      console.error(`❌ Kie.ai generation failed for ${videoModel}: ${kieError.message}`)
+      console.warn(`🔄 Falling back to Vertex AI for ${videoModel}`)
+      
+      // КРИТИЧЕСКОЕ УВЕДОМЛЕНИЕ АДМИНАМ О FALLBACK ВО ВРЕМЯ ГЕНЕРАЦИИ
+      console.error('🚨 GENERATION FALLBACK: Kie.ai failed during video generation!')
+      errorMessageAdmin(new Error(`🚨 CRITICAL GENERATION FALLBACK: ${videoModel} failed in Kie.ai during generation and switched to expensive Vertex AI. Error: ${kieError.message}. Cost increased by 87%! IMMEDIATE ATTENTION REQUIRED!`))
+      
+      // Fallback к Vertex AI
+      return await processVertexAI(videoModel, aspect_ratio, prompt, imageUrl, duration)
+    }
   }
   
   // СТАРАЯ ЛОГИКА: Vertex AI для обратной совместимости
