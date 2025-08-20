@@ -3,7 +3,14 @@ import winston from 'winston'
 import morgan from 'morgan'
 import { isDev } from '@/config'
 
-const logDir = process.env.LOG_DIR || '/tmp/logs'
+// Force use of /app/logs in production to avoid permission issues
+const logDir = process.env.NODE_ENV === 'production' 
+  ? (process.env.LOG_DIR || '/app/logs')
+  : (process.env.LOG_DIR || '/tmp/logs')
+
+console.log(`LOG_DIR environment variable: ${process.env.LOG_DIR}`)
+console.log(`Using log directory: ${logDir}`)
+console.log(`NODE_ENV: ${process.env.NODE_ENV}`)
 
 if (!existsSync(logDir)) {
   try {
