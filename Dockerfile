@@ -43,10 +43,11 @@ RUN mkdir -p /app/logs && \
 # Switch to non-root user
 USER node
 
-EXPOSE 3000
+# Use Railway's PORT or default to 3000
+EXPOSE ${PORT:-3000}
 
-# Add healthcheck
-HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \
+# Add healthcheck with longer start period for Railway
+HEALTHCHECK --interval=30s --timeout=30s --start-period=60s --retries=3 \
     CMD node -e "const port = process.env.PORT || 3000; require('http').get(\`http://localhost:\${port}/health\`, (r) => r.statusCode === 200 ? process.exit(0) : process.exit(1))"
 
 CMD ["node", "dist/server.js"]

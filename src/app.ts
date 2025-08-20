@@ -44,7 +44,7 @@ export class App {
   constructor(routes: Routes[]) {
     this.app = express()
     this.env = NODE_ENV || 'development'
-    this.port = PORT || 4000
+    this.port = PORT || 3000
 
     this.initializeMiddlewares()
     this.initializeRoutes(routes)
@@ -153,10 +153,22 @@ export class App {
     })
 
     this.app.get('/health', (_req, res) => {
-      res.json({
-        status: 'OK',
-        timestamp: new Date().toISOString(),
-      })
+      try {
+        res.status(200).json({
+          status: 'OK',
+          timestamp: new Date().toISOString(),
+          env: this.env,
+          port: this.port,
+          uptime: process.uptime(),
+        })
+      } catch (error) {
+        logger.error('Health check error:', error)
+        res.status(500).json({
+          status: 'ERROR',
+          timestamp: new Date().toISOString(),
+          error: error.message,
+        })
+      }
     })
 
     this.app.get('/api/test', (_req, res) => {
