@@ -287,21 +287,19 @@ export function validateImageSequence(images: ExtractedImage[]): {
 
   // Проверяем, что все изображения доступны и имеют валидные размеры на диске
   const minFileSize = 1024 // 1KB
-  
+
   for (const image of images) {
     try {
       const fs = require('fs')
       const stats = fs.statSync(image.path)
-      
+
       if (stats.size === 0) {
         errors.push(`Empty image file: ${image.filename}`)
         continue
       }
 
       if (stats.size < minFileSize) {
-        errors.push(
-          `Image too small: ${image.filename} (${stats.size} bytes)`
-        )
+        errors.push(`Image too small: ${image.filename} (${stats.size} bytes)`)
       }
     } catch (error) {
       errors.push(`Cannot access image file: ${image.filename}`)

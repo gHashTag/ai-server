@@ -7,6 +7,8 @@ import { inngest } from '@/core/inngest/clients'
 import { ApifyClient } from 'apify-client'
 import { Pool } from 'pg'
 import { z } from 'zod'
+import { instagramScrapingRates } from '@/price/helpers/modelsCost'
+import { updateUserBalance } from '@/core/supabase/updateUserBalance'
 
 // Схема валидации входных данных
 const ApifyScraperEventSchema = z.object({
@@ -49,7 +51,7 @@ interface ApifyReelItem {
 // База данных
 const dbPool = new Pool({
   connectionString: process.env.NEON_DATABASE_URL || '',
-  ssl: { rejectUnauthorized: false }
+  ssl: { rejectUnauthorized: false },
 })
 
 // Логгер
@@ -81,7 +83,7 @@ export const instagramApifyScraper = inngest.createFunction(
     // Step 1: Валидация входных данных
     const validatedData = await step.run('validate-input', async () => {
       const result = ApifyScraperEventSchema.safeParse(event.data)
-      
+
       if (!result.success) {
         throw new Error(`Invalid input: ${result.error.message}`)
       }
@@ -100,21 +102,25 @@ export const instagramApifyScraper = inngest.createFunction(
       log.info('🔍 Отладка ApifyClient импорта:', {
         ApifyClient: typeof ApifyClient,
         ApifyClientPrototype: ApifyClient?.prototype?.constructor?.name,
-        ApifyClientKeys: ApifyClient ? Object.getOwnPropertyNames(ApifyClient.prototype) : 'undefined'
+        ApifyClientKeys: ApifyClient
+          ? Object.getOwnPropertyNames(ApifyClient.prototype)
+          : 'undefined',
       })
-      
+
       const client = new ApifyClient({
         token: process.env.APIFY_TOKEN!,
       })
-      
+
       // Отладочная информация о созданном клиенте
       log.info('🔍 Отладка созданного клиента:', {
         clientType: typeof client,
         clientConstructor: client?.constructor?.name,
         hasActorMethod: typeof client?.actor,
-        clientKeys: client ? Object.getOwnPropertyNames(Object.getPrototypeOf(client)) : 'undefined'
+        clientKeys: client
+          ? Object.getOwnPropertyNames(Object.getPrototypeOf(client))
+          : 'undefined',
       })
-      
+
       log.info('✅ Apify клиент инициализирован')
       return client
     })
@@ -122,9 +128,9 @@ export const instagramApifyScraper = inngest.createFunction(
     // Step 3: Подготовка параметров для Apify
     const apifyInput = await step.run('prepare-apify-input', async () => {
       const { username_or_hashtag, source_type, max_reels } = validatedData
-      
+
       let input: any
-      
+
       if (source_type === 'hashtag') {
         // Для хештегов
         const hashtag = username_or_hashtag.replace('#', '').trim()
@@ -141,11 +147,12 @@ export const instagramApifyScraper = inngest.createFunction(
         }
         log.info(`📌 Параметры для хештега #${hashtag}`, input)
       } else {
-        // Для пользователей
+        // Для пользователей - ИСПРАВЛЕННЫЙ ФОРМАТ
         const username = username_or_hashtag.replace('@', '').trim()
         input = {
-          username: [username],
-          resultsLimit: max_reels,
+          directUrls: [`https://www.instagram.com/${username}/`], // Правильный формат!
+          resultsType: 'posts',
+          resultsLimit: Math.max(max_reels * 5, 20), // Парсим больше постов чтобы найти видео
           proxy: {
             useApifyProxy: true,
             apifyProxyGroups: ['RESIDENTIAL'],
@@ -153,41 +160,52 @@ export const instagramApifyScraper = inngest.createFunction(
         }
         log.info(`👤 Параметры для пользователя @${username}`, input)
       }
-      
+
       return input
     })
 
     // Step 4: Запуск Apify актора
     const apifyResults = await step.run('run-apify-actor', async () => {
       log.info('🎬 Запуск Apify актора instagram-scraper...')
-      
+
       try {
         // Создаем новый клиент в каждом step для избежания проблем с сериализацией
         const freshClient = new ApifyClient({
           token: process.env.APIFY_TOKEN!,
         })
-        
+
         // Отладочная информация о свежесозданном клиенте
         log.info('🔍 Проверка свежего клиента в step:', {
           clientType: typeof freshClient,
           hasActorMethod: typeof freshClient?.actor,
-          actorType: typeof freshClient.actor
+          actorType: typeof freshClient.actor,
         })
-        
+
         // Запускаем актор через свежий клиент
-        const run = await freshClient.actor('apify/instagram-scraper').call(apifyInput)
-        
+        const run = await freshClient
+          .actor('apify/instagram-scraper')
+          .call(apifyInput)
+
         log.info('✅ Apify актор завершён', {
           runId: run.id,
           status: run.status,
         })
-        
+
         // Получаем результаты через тот же свежий клиент
         const { items } = await freshClient
           .dataset(run.defaultDatasetId)
           .listItems()
-        
+
         log.info(`📦 Получено ${items.length} элементов от Apify`)
+
+        // Полный лог первого элемента для отладки
+        if (items.length > 0) {
+          log.info(
+            '🔍 Полные данные первого элемента:',
+            JSON.stringify(items[0], null, 2)
+          )
+        }
+
         return items
       } catch (error: any) {
         log.error('❌ Ошибка Apify', error)
@@ -198,9 +216,9 @@ export const instagramApifyScraper = inngest.createFunction(
     // Step 5: Обработка и фильтрация результатов
     const processedReels = await step.run('process-reels', async () => {
       const { source_type, min_views, max_age_days } = validatedData
-      
+
       let allPosts: ApifyReelItem[] = []
-      
+
       // Извлекаем посты в зависимости от типа источника
       if (source_type === 'hashtag') {
         log.info('📝 Извлекаем посты из хештегов...')
@@ -215,9 +233,9 @@ export const instagramApifyScraper = inngest.createFunction(
       } else {
         allPosts = apifyResults as ApifyReelItem[]
       }
-      
+
       log.info(`📊 Всего постов для обработки: ${allPosts.length}`)
-      
+
       // Фильтрация по дате
       let maxAgeDate: Date | null = null
       if (max_age_days) {
@@ -225,37 +243,67 @@ export const instagramApifyScraper = inngest.createFunction(
         maxAgeDate.setDate(maxAgeDate.getDate() - max_age_days)
         log.info(`📅 Фильтр по дате: не старше ${max_age_days} дней`)
       }
-      
+
+      // Отладочная информация о постах
+      log.info('🔍 Анализируем посты:', {
+        posts_sample: allPosts.slice(0, 3).map(post => ({
+          type: post.type,
+          productType: post.productType,
+          isVideo: post.isVideo,
+          videoUrl: !!post.videoUrl,
+          shortCode: post.shortCode,
+        })),
+      })
+
       // Фильтрация рилсов
-      const filteredReels = allPosts.filter((item) => {
-        // Проверяем, что это видео/рилс
-        const isReel = 
-          item.type === 'Video' ||
-          item.productType === 'clips' ||
-          item.isVideo === true
-        
-        if (!isReel) return false
-        
+      const filteredReels = allPosts.filter(item => {
+        // РАСШИРЕННАЯ ЛОГИКА - парсим ВСЕ что может быть видео
+        const isReel =
+          item.type === 'Video' || // Прямое видео
+          item.productType === 'clips' || // Рилсы
+          item.isVideo === true || // Флаг видео
+          !!item.videoUrl || // Есть URL видео
+          !!item.videoPlayUrl || // Альтернативный URL видео
+          (item.videoViewCount && item.videoViewCount > 0) || // Есть просмотры
+          (item.videoPlayCount && item.videoPlayCount > 0) || // Альтернативные просмотры
+          item.type === 'GraphVideo' || // Другой тип видео
+          item.typename === 'GraphVideo' || // Через typename
+          (item.displayUrl && item.displayUrl.includes('video')) || // URL содержит video
+          item.isVideo === 'true' || // Строковое значение
+          (item.media_type && item.media_type === 2) // Instagram media_type для видео
+
+        if (!isReel) {
+          log.info('⏭️ Пропущен не-рилс:', {
+            type: item.type,
+            productType: item.productType,
+            isVideo: item.isVideo,
+            shortCode: item.shortCode,
+          })
+          return false
+        }
+
         // Проверка даты
         if (maxAgeDate && item.timestamp) {
           const pubDate = new Date(item.timestamp)
           if (pubDate < maxAgeDate) return false
         }
-        
+
         // Проверка просмотров
         if (min_views !== undefined) {
           const views = item.videoViewCount || item.videoPlayCount || 0
           if (views < min_views) {
-            log.info(`⏭️ Пропущен рилс с ${views} просмотрами (мин: ${min_views})`)
+            log.info(
+              `⏭️ Пропущен рилс с ${views} просмотрами (мин: ${min_views})`
+            )
             return false
           }
         }
-        
+
         return true
       })
-      
+
       log.info(`✅ После фильтрации: ${filteredReels.length} рилсов`)
-      
+
       // Форматируем для сохранения
       return filteredReels.map(reel => ({
         reel_id: reel.id || reel.shortCode || '',
@@ -281,7 +329,7 @@ export const instagramApifyScraper = inngest.createFunction(
       const client = await dbPool.connect()
       let saved = 0
       let duplicates = 0
-      
+
       try {
         // Создаём таблицу если её нет
         await client.query(`
@@ -307,7 +355,7 @@ export const instagramApifyScraper = inngest.createFunction(
             created_at TIMESTAMP DEFAULT NOW()
           )
         `)
-        
+
         // Сохраняем рилсы
         for (const reel of processedReels) {
           try {
@@ -347,7 +395,7 @@ export const instagramApifyScraper = inngest.createFunction(
             }
           }
         }
-        
+
         log.info(`💾 Сохранено в БД: ${saved} новых, ${duplicates} дубликатов`)
         return { saved, duplicates, total: saved + duplicates }
       } finally {
@@ -355,13 +403,57 @@ export const instagramApifyScraper = inngest.createFunction(
       }
     })
 
-    // Step 7: Отправка уведомления в Telegram (если указан)
-    if (validatedData.requester_telegram_id && validatedData.bot_name) {
+    // Step 7: Монетизация - списание за рилсы
+    if (
+      processedReels.length > 0 &&
+      validatedData.requester_telegram_id !== 'auto-system'
+    ) {
+      await step.run('charge-for-reels', async () => {
+        try {
+          const totalCostStars =
+            processedReels.length * instagramScrapingRates.costPerReelInStars
+
+          log.info('💰 Списание за рилсы:', {
+            reelsCount: processedReels.length,
+            costPerReel: instagramScrapingRates.costPerReelInStars,
+            totalCost: totalCostStars,
+            userId: validatedData.requester_telegram_id,
+          })
+
+          await updateUserBalance({
+            telegram_id: validatedData.requester_telegram_id,
+            bot_name: validatedData.bot_name || 'neuro_blogger_bot',
+            amount: totalCostStars, // Положительное значение
+            operation_type: 'money_out_com', // Списание со счета
+            description: `Instagram парсинг: ${processedReels.length} рилсов @${validatedData.username_or_hashtag}`,
+          })
+
+          log.info('✅ Списание за рилсы выполнено успешно')
+        } catch (error: any) {
+          log.error('❌ Ошибка списания за рилсы:', error.message)
+          // Не прерываем выполнение, но логируем
+        }
+      })
+    }
+
+    // Step 8: (Старый триггер удален - теперь используется прямой триггер в конце)
+
+    // Step 9: Отправка уведомления в Telegram (если указан И это НЕ auto-system)
+    if (
+      validatedData.requester_telegram_id &&
+      validatedData.bot_name &&
+      validatedData.requester_telegram_id !== 'auto-system'
+    ) {
       await step.run('send-telegram-notification', async () => {
         try {
           const { getBotByName } = await import('@/core/bot')
           const { bot } = getBotByName(validatedData.bot_name!)
-          
+
+          const totalCostStars =
+            processedReels.length * instagramScrapingRates.costPerReelInStars
+          const totalCostRubles =
+            processedReels.length * instagramScrapingRates.costPerReelInRubles
+
           const message = `
 🎬 Парсинг Instagram через Apify завершён!
 
@@ -371,21 +463,40 @@ export const instagramApifyScraper = inngest.createFunction(
 💾 Сохранено новых: ${saveResult.saved}
 🔄 Пропущено дубликатов: ${saveResult.duplicates}
 
-${processedReels.length > 0 ? `
+${
+  processedReels.length > 0 &&
+  validatedData.requester_telegram_id !== 'auto-system'
+    ? `
+💰 Стоимость: ${totalCostStars.toFixed(2)} ⭐ (${totalCostRubles.toFixed(2)} ₽)
+💳 Списано с баланса
+`
+    : ''
+}
+
+${
+  processedReels.length > 0
+    ? `
 🏆 Топ рилс по просмотрам:
 ${processedReels
   .sort((a, b) => b.views_count - a.views_count)
   .slice(0, 3)
-  .map((r, i) => `${i + 1}. @${r.owner_username}: ${r.views_count.toLocaleString()} просмотров`)
+  .map(
+    (r, i) =>
+      `${i + 1}. @${
+        r.owner_username
+      }: ${r.views_count.toLocaleString()} просмотров`
+  )
   .join('\n')}
-` : ''}
+`
+    : ''
+}
 ✅ Данные сохранены в базу данных`
-          
+
           await bot.telegram.sendMessage(
             validatedData.requester_telegram_id,
             message
           )
-          
+
           log.info('✅ Уведомление отправлено в Telegram')
         } catch (error) {
           log.error('❌ Ошибка отправки в Telegram:', error)
@@ -413,8 +524,81 @@ ${processedReels
         })),
       scrapedAt: new Date(),
     }
-    
+
     log.info('🎉 Instagram Apify Scraper завершён успешно', result)
+
+    // КРИТИЧЕСКИЙ ТРИГГЕР ДОСТАВКИ - ПОСЛЕ ВСЕХ ОПЕРАЦИЙ, НО ПЕРЕД RETURN!
+    if (
+      processedReels.length > 0 &&
+      validatedData.requester_telegram_id === 'auto-system'
+    ) {
+      try {
+        log.info('🚨 КРИТИЧЕСКИЙ ТРИГГЕР: Запускаем доставку после парсинга!', {
+          reelsCount: processedReels.length,
+          competitor: validatedData.username_or_hashtag,
+          projectId: validatedData.project_id,
+        })
+
+        // Запускаем доставку БЕЗ step.run - напрямую!
+        const deliveryResult = await inngest.send({
+          name: 'competitor/delivery-reels',
+          data: {
+            competitor_username: validatedData.username_or_hashtag,
+            project_id: validatedData.project_id,
+            triggered_by: 'auto-parser',
+          },
+        })
+
+        log.info('🎉 УСПЕХ: Доставка запущена!', {
+          eventId: deliveryResult.ids[0],
+          competitor: validatedData.username_or_hashtag,
+        })
+      } catch (error: any) {
+        log.error('💀 КРИТИЧЕСКАЯ ОШИБКА ТРИГГЕРА:', {
+          error: error.message,
+          stack: error.stack,
+          competitor: validatedData.username_or_hashtag,
+        })
+      }
+    }
+
+    // Уведомление админа о завершении работы
+    if (process.env.ADMIN_CHAT_ID && validatedData.bot_name) {
+      try {
+        const { getBotByName } = await import('@/core/bot')
+        const { bot } = getBotByName(validatedData.bot_name)
+
+        const adminMessage = `
+🔧 Instagram Apify Scraper завершён
+
+📊 Результат:
+• Источник: @${validatedData.username_or_hashtag}
+• Найдено рилсов: ${processedReels.length}
+• Сохранено: ${saveResult.saved}
+• Пользователь: ${validatedData.requester_telegram_id}
+• Project ID: ${validatedData.project_id}
+
+${
+  processedReels.length > 0
+    ? '✅ Монетизация: списание выполнено'
+    : '💰 Монетизация: списание не требуется'
+}
+${
+  processedReels.length > 0 &&
+  validatedData.requester_telegram_id === 'auto-system'
+    ? '📬 Доставка автоматически запущена'
+    : ''
+}
+🎯 Функция выполнена полностью
+        `
+
+        await bot.telegram.sendMessage(process.env.ADMIN_CHAT_ID, adminMessage)
+        log.info('📤 Уведомление админу отправлено')
+      } catch (error: any) {
+        log.error('❌ Ошибка уведомления админу:', error.message)
+      }
+    }
+
     return result
   }
 )
@@ -425,7 +609,7 @@ export async function triggerApifyInstagramScraping(data: any) {
     name: 'instagram/apify-scrape',
     data,
   })
-  
+
   return {
     eventId: result.ids[0],
   }

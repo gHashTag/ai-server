@@ -105,7 +105,7 @@ export class App {
     this.app.use(express.urlencoded({ limit: '10mb', extended: true }))
     this.app.use(cookieParser())
     this.app.use(morgan('combined'))
-    // ✅ RESTORED: Простая статическая папка как было раньше 
+    // ✅ RESTORED: Простая статическая папка как было раньше
     this.app.use(
       '/uploads',
       express.static(path.join(__dirname, '..', 'uploads'))
