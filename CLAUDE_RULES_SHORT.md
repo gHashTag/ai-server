@@ -15,7 +15,7 @@
 ### Алгоритм завершения:
 1. **Проверить готовность задачи**
 2. **Сгенерировать commit message** (формат ниже)  
-3. **Выполнить:** `/Users/playra/ai-server/worktrees/parsing-2/scripts/auto-finish-task.sh "commit_message"`
+3. **Выполнить:** `/scripts/auto-finish-task.sh "commit_message"`
 4. **Подтвердить успех**
 
 ### Шаблон commit message:
