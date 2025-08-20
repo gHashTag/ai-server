@@ -24,60 +24,68 @@ export const processVideoGeneration = async (
   imageUrl?: string
 ) => {
   // Обработка для Google Veo через Vertex AI
-  if (videoModel === 'veo-3' || videoModel === 'veo-3-fast' || videoModel === 'veo-2') {
-    const { VertexVeoService } = await import('./vertexVeoService');
-    const projectId = process.env.GOOGLE_CLOUD_PROJECT || 'neuroblogger';
-    
-    const veoService = new VertexVeoService(projectId);
-    
+  if (
+    videoModel === 'veo-3' ||
+    videoModel === 'veo-3-fast' ||
+    videoModel === 'veo-2'
+  ) {
+    const { VertexVeoService } = await import('./vertexVeoService')
+    const projectId = process.env.GOOGLE_CLOUD_PROJECT || 'neuroblogger'
+
+    const veoService = new VertexVeoService(projectId)
+
     // Veo 3 поддерживает только 16:9, поэтому всегда используем его
     // TODO: В будущем можно будет добавить поддержку других соотношений
-    let veoAspectRatio: '16:9' | '9:16' | '1:1' = '16:9';
-    console.log('Using aspect ratio 16:9 for Veo (other ratios not supported yet)');
-    
+    const veoAspectRatio: '16:9' | '9:16' | '1:1' = '16:9'
+    console.log(
+      'Using aspect ratio 16:9 for Veo (other ratios not supported yet)'
+    )
+
     // Определяем модель
-    let modelId: string;
+    let modelId: string
     if (videoModel === 'veo-3') {
-      modelId = 'veo-3.0-generate-preview';
+      modelId = 'veo-3.0-generate-preview'
     } else if (videoModel === 'veo-3-fast') {
-      modelId = 'veo-3.0-generate-fast';
-      console.log('⚡ Using Veo 3 Fast mode for quicker generation');
+      modelId = 'veo-3.0-generate-fast'
+      console.log('⚡ Using Veo 3 Fast mode for quicker generation')
     } else {
-      modelId = 'veo-2.0-generate-001';
+      modelId = 'veo-2.0-generate-001'
     }
-    
+
     // Не используем GCS, получаем видео в base64
     // const storageUri = `gs://veo-videos-${projectId}/`;
-    
+
     const result = await veoService.generateAndWaitForVideo({
       prompt,
       modelId,
       aspectRatio: veoAspectRatio,
       // storageUri, // Закомментировано - получаем base64 вместо GCS
-      image: imageUrl ? {
-        gcsUri: imageUrl,
-        mimeType: 'image/jpeg'
-      } : undefined
-    });
-    
+      image: imageUrl
+        ? {
+            gcsUri: imageUrl,
+            mimeType: 'image/jpeg',
+          }
+        : undefined,
+    })
+
     // Возвращаем URL видео или base64
     if (result.videos && result.videos[0]) {
-      const video = result.videos[0];
-      
+      const video = result.videos[0]
+
       // Если есть GCS URL, возвращаем его
       if (video.gcsUri) {
-        return video.gcsUri;
+        return video.gcsUri
       }
-      
+
       // Если есть base64, формируем data URL
       if (video.bytesBase64Encoded) {
         // Возвращаем base64 с префиксом data URL
-        return `data:video/mp4;base64,${video.bytesBase64Encoded}`;
+        return `data:video/mp4;base64,${video.bytesBase64Encoded}`
       }
     }
-    throw new Error('No video generated');
+    throw new Error('No video generated')
   }
-  
+
   // Стандартная обработка через Replicate для остальных моделей
   const modelConfig = VIDEO_MODELS_CONFIG[videoModel]
 

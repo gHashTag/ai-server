@@ -46,7 +46,7 @@ export interface ExpenseStats {
 
 /**
  * Получает все расходы фермы ботов из БД
- * 
+ *
  * @param dateFrom - Дата начала периода (YYYY-MM-DD)
  * @param dateTo - Дата окончания периода (YYYY-MM-DD)
  * @param category - Фильтр по категории (опционально)
@@ -62,7 +62,7 @@ export const getBotFarmExpenses = async (
       description: 'Getting bot farm expenses',
       dateFrom,
       dateTo,
-      category
+      category,
     })
 
     let query = supabase
@@ -95,7 +95,7 @@ export const getBotFarmExpenses = async (
         description: 'No bot farm expenses found',
         dateFrom,
         dateTo,
-        category
+        category,
       })
       return []
     }
@@ -112,14 +112,15 @@ export const getBotFarmExpenses = async (
       .map(expense => ({
         id: expense.id,
         date: expense.payment_date || expense.created_at,
-        name: expense.metadata?.original_name || expense.description.split(':')[0],
+        name:
+          expense.metadata?.original_name || expense.description.split(':')[0],
         amount: expense.amount,
         currency: expense.currency,
         description: expense.description,
         category: expense.metadata?.expense_category || ExpenseCategory.OTHER,
         expenseType: expense.metadata?.expense_type || ExpenseType.OTHER,
         purpose: expense.metadata?.purpose || '',
-        url: expense.metadata?.url
+        url: expense.metadata?.url,
       }))
 
     logger.info('✅ Успешно получены расходы фермы ботов:', {
@@ -127,11 +128,10 @@ export const getBotFarmExpenses = async (
       count: expenses.length,
       dateFrom,
       dateTo,
-      category
+      category,
     })
 
     return expenses
-
   } catch (error) {
     logger.error('❌ Ошибка в getBotFarmExpenses:', {
       description: 'Error in getBotFarmExpenses function',
@@ -143,7 +143,7 @@ export const getBotFarmExpenses = async (
 
 /**
  * Получает сводную статистику по расходам фермы ботов
- * 
+ *
  * @param dateFrom - Дата начала периода (YYYY-MM-DD)
  * @param dateTo - Дата окончания периода (YYYY-MM-DD)
  * @returns Promise<ExpenseStats>
@@ -164,13 +164,16 @@ export const getBotFarmExpenseStats = async (
         topExpenses: [],
         dateRange: {
           from: dateFrom || '',
-          to: dateTo || ''
-        }
+          to: dateTo || '',
+        },
       }
     }
 
     // Общая сумма и количество
-    const totalAmount = expenses.reduce((sum, expense) => sum + expense.amount, 0)
+    const totalAmount = expenses.reduce(
+      (sum, expense) => sum + expense.amount,
+      0
+    )
     const totalCount = expenses.length
 
     // Группировка по категориям
@@ -184,12 +187,17 @@ export const getBotFarmExpenseStats = async (
     }, {} as Record<ExpenseCategory, ExpenseReport[]>)
 
     // Создание сводок по категориям
-    const categorySummaries: ExpenseSummary[] = Object.entries(categoryGroups).map(([category, categoryExpenses]) => ({
+    const categorySummaries: ExpenseSummary[] = Object.entries(
+      categoryGroups
+    ).map(([category, categoryExpenses]) => ({
       category: category as ExpenseCategory,
-      totalAmount: categoryExpenses.reduce((sum, expense) => sum + expense.amount, 0),
+      totalAmount: categoryExpenses.reduce(
+        (sum, expense) => sum + expense.amount,
+        0
+      ),
       currency: categoryExpenses[0]?.currency || 'THB',
       count: categoryExpenses.length,
-      expenses: categoryExpenses.sort((a, b) => b.amount - a.amount)
+      expenses: categoryExpenses.sort((a, b) => b.amount - a.amount),
     }))
 
     // Сортировка по сумме
@@ -208,8 +216,8 @@ export const getBotFarmExpenseStats = async (
       topExpenses,
       dateRange: {
         from: dateFrom || '',
-        to: dateTo || ''
-      }
+        to: dateTo || '',
+      },
     }
 
     logger.info('📈 Сформирована статистика расходов фермы ботов:', {
@@ -218,11 +226,10 @@ export const getBotFarmExpenseStats = async (
       totalCount,
       categoriesCount: categorySummaries.length,
       dateFrom,
-      dateTo
+      dateTo,
     })
 
     return stats
-
   } catch (error) {
     logger.error('❌ Ошибка в getBotFarmExpenseStats:', {
       description: 'Error in getBotFarmExpenseStats function',
@@ -237,15 +244,15 @@ export const getBotFarmExpenseStats = async (
       topExpenses: [],
       dateRange: {
         from: dateFrom || '',
-        to: dateTo || ''
-      }
+        to: dateTo || '',
+      },
     }
   }
 }
 
 /**
  * Получает расходы по конкретной категории
- * 
+ *
  * @param category - Категория расходов
  * @param dateFrom - Дата начала периода (YYYY-MM-DD)
  * @param dateTo - Дата окончания периода (YYYY-MM-DD)
@@ -261,16 +268,20 @@ export const getBotFarmExpensesByCategory = async (
 
 /**
  * Получает ежемесячную статистику расходов
- * 
+ *
  * @param year - Год (например, 2024)
  * @returns Promise<Array<{ month: string, totalAmount: number, count: number }>>
  */
-export const getMonthlyExpenseStats = async (year: number): Promise<Array<{
-  month: string
-  totalAmount: number
-  count: number
-  currency: string
-}>> => {
+export const getMonthlyExpenseStats = async (
+  year: number
+): Promise<
+  Array<{
+    month: string
+    totalAmount: number
+    count: number
+    currency: string
+  }>
+> => {
   try {
     const { data, error } = await supabase
       .from('payments_v2')
@@ -296,37 +307,38 @@ export const getMonthlyExpenseStats = async (year: number): Promise<Array<{
     const monthlyGroups = data.reduce((acc, expense) => {
       const date = new Date(expense.payment_date)
       const monthKey = `${year}-${String(date.getMonth() + 1).padStart(2, '0')}`
-      
+
       if (!acc[monthKey]) {
         acc[monthKey] = {
           totalAmount: 0,
           count: 0,
-          currency: expense.currency || 'THB'
+          currency: expense.currency || 'THB',
         }
       }
-      
+
       acc[monthKey].totalAmount += expense.amount
       acc[monthKey].count += 1
-      
+
       return acc
-    }, {} as Record<string, { totalAmount: number, count: number, currency: string }>)
+    }, {} as Record<string, { totalAmount: number; count: number; currency: string }>)
 
     // Преобразование в массив
-    const monthlyStats = Object.entries(monthlyGroups).map(([month, stats]) => ({
-      month,
-      ...stats
-    }))
+    const monthlyStats = Object.entries(monthlyGroups).map(
+      ([month, stats]) => ({
+        month,
+        ...stats,
+      })
+    )
 
     monthlyStats.sort((a, b) => a.month.localeCompare(b.month))
 
     logger.info('📅 Сформирована месячная статистика:', {
       description: 'Monthly expense statistics generated',
       year,
-      monthsCount: monthlyStats.length
+      monthsCount: monthlyStats.length,
     })
 
     return monthlyStats
-
   } catch (error) {
     logger.error('❌ Ошибка в getMonthlyExpenseStats:', {
       description: 'Error in getMonthlyExpenseStats function',
