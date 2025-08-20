@@ -54,7 +54,8 @@ export class GenerationController {
         telegram_id,
         username,
         is_ru,
-        bot_name
+        bot_name,
+        duration // передаем duration из запроса
       )
     } catch (error) {
       next(error)
@@ -305,7 +306,7 @@ export class GenerationController {
     next: NextFunction
   ): Promise<void> => {
     try {
-      const { prompt, videoModel, telegram_id, username, is_ru, bot_name } =
+      const { prompt, videoModel, telegram_id, username, is_ru, bot_name, duration = 5 } =
         req.body
 
       console.log('videoModel', videoModel)
@@ -327,7 +328,8 @@ export class GenerationController {
         telegram_id,
         username,
         is_ru,
-        bot_name
+        bot_name,
+        duration
       )
     } catch (error) {
       next(error)

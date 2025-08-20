@@ -21,7 +21,8 @@ export const processVideoGeneration = async (
   videoModel: string,
   aspect_ratio: string,
   prompt: string,
-  imageUrl?: string
+  imageUrl?: string,
+  duration?: number
 ) => {
   // Обработка для Google Veo через Vertex AI
   if (videoModel === 'veo-3' || videoModel === 'veo-3-fast' || videoModel === 'veo-2') {
@@ -53,6 +54,7 @@ export const processVideoGeneration = async (
       prompt,
       modelId,
       aspectRatio: veoAspectRatio,
+      duration: duration, // Передаем duration в API
       // storageUri, // Закомментировано - получаем base64 вместо GCS
       image: imageUrl ? {
         gcsUri: imageUrl,
@@ -105,7 +107,8 @@ export const generateTextToVideo = async (
   telegram_id: string,
   username: string,
   is_ru: boolean,
-  bot_name: string
+  bot_name: string,
+  duration: number = 5
 ): Promise<{ videoLocalPath: string }> => {
   try {
     console.log('videoModel', videoModel)
@@ -165,7 +168,8 @@ export const generateTextToVideo = async (
       videoModel,
       userExists.aspect_ratio,
       prompt,
-      undefined // imageUrl для text-to-video пока не используется
+      undefined, // imageUrl для text-to-video пока не используется
+      duration // передаем duration
     )
     //const videoUrl = 'https://yuukfqcsdhkyxegfwlcb.supabase.co/storage/v1/object/public/dev/2025-01-15T06%2011%2018.236Z.mp4';
     let videoUrl: string
