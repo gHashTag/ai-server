@@ -3,7 +3,7 @@ import dotenv from 'dotenv'
 // Загружаем переменные окружения из .env файла
 dotenv.config()
 import 'reflect-metadata'
-import { App } from '@/app'
+import { App } from './app'
 
 import { ValidateEnv } from '@utils/validateEnv'
 
