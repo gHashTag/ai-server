@@ -7,35 +7,53 @@ import { errorMessage, errorMessageAdmin } from '@/helpers';
  * Экономия по сравнению с Vertex AI: до 87%
  */
 
-// Конфигурация моделей Kie.ai (из KIE_AI_API_GUIDE.md)
-export const KIE_AI_MODELS = {
+// Конфигурация моделей Kie.ai (проверенные работающие названия)
+interface KieModelConfig {
+  name: string;
+  description: string;
+  pricePerSecond: number;
+  maxDuration: number;
+  supportedFormats: string[];
+  kieModelName: string;
+  endpoint: string;
+  supportedDurations?: number[];
+}
+
+export const KIE_AI_MODELS: Record<string, KieModelConfig> = {
   'veo-3-fast': {
     name: 'Veo 3 Fast',
     description: 'Быстрая генерация',
     pricePerSecond: 0.05, // $0.05/сек (87% экономия против $0.40 Vertex AI)
     maxDuration: 10,
-    supportedFormats: ['16:9', '9:16', '1:1']
+    supportedFormats: ['16:9', '9:16', '1:1'],
+    kieModelName: 'veo3', // Реальное название в Kie.ai API
+    endpoint: '/veo/generate'
   },
   'veo-3': {
     name: 'Veo 3 Quality', 
     description: 'Премиум качество',
     pricePerSecond: 0.25, // $0.25/сек (37% экономия против $0.40 Vertex AI)
     maxDuration: 10,
-    supportedFormats: ['16:9', '9:16', '1:1']
+    supportedFormats: ['16:9', '9:16', '1:1'],
+    kieModelName: 'veo3', // Реальное название в Kie.ai API
+    endpoint: '/veo/generate'
   },
-  'runway-aleph': {
-    name: 'Runway Aleph',
-    description: 'Продвинутое редактирование',
+  'runway-gen3': {
+    name: 'Runway Gen3',
+    description: 'Продвинутая генерация',
     pricePerSecond: 0.30, // $0.30/сек
-    maxDuration: 10,
-    supportedFormats: ['16:9', '9:16', '1:1']
+    maxDuration: 8, // Runway поддерживает только 5 или 8 секунд
+    supportedFormats: ['16:9', '9:16', '1:1'],
+    kieModelName: 'gen3', // Реальное название в Kie.ai API  
+    endpoint: '/runway/generate',
+    supportedDurations: [5, 8] // Только эти значения
   }
 };
 
 interface KieAiGenerationOptions {
-  model: 'veo-3-fast' | 'veo-3' | 'runway-aleph';
+  model: 'veo-3-fast' | 'veo-3' | 'runway-gen3';
   prompt: string;
-  duration: number; // 2-10 секунд
+  duration: number; // 2-10 секунд для Veo, 5 или 8 для Runway
   aspectRatio?: '16:9' | '9:16' | '1:1';
   imageUrl?: string; // для image-to-video
   userId?: string;
@@ -147,10 +165,23 @@ export class KieAiService {
       throw new Error(`Unsupported model: ${model}`);
     }
 
-    // Валидация длительности
-    const clampedDuration = Math.max(2, Math.min(modelConfig.maxDuration, duration));
-    if (clampedDuration !== duration) {
-      console.log(`⚠️ Duration adjusted from ${duration}s to ${clampedDuration}s for ${model}`);
+    // Валидация длительности для разных моделей
+    let clampedDuration: number;
+    
+    if (modelConfig.supportedDurations) {
+      // Для Runway - только поддерживаемые значения
+      clampedDuration = modelConfig.supportedDurations.reduce((prev, curr) =>
+        Math.abs(curr - duration) < Math.abs(prev - duration) ? curr : prev
+      );
+      if (clampedDuration !== duration) {
+        console.log(`⚠️ Duration adjusted from ${duration}s to ${clampedDuration}s for ${model} (supported: ${modelConfig.supportedDurations.join(', ')})`);
+      }
+    } else {
+      // Для Veo - обычная валидация
+      clampedDuration = Math.max(2, Math.min(modelConfig.maxDuration, duration));
+      if (clampedDuration !== duration) {
+        console.log(`⚠️ Duration adjusted from ${duration}s to ${clampedDuration}s for ${model}`);
+      }
     }
 
     // Расчет стоимости
@@ -165,9 +196,13 @@ export class KieAiService {
       console.log(`   • Aspect Ratio: ${aspectRatio}`);
       console.log(`   • Estimated cost: $${costUSD.toFixed(3)}`);
 
+      // Используем правильное название модели и endpoint из конфигурации
+      const kieModelName = modelConfig.kieModelName;
+      const endpoint = `${this.baseUrl}${modelConfig.endpoint}`;
+      
       // Формируем запрос к Kie.ai API
-      const requestBody = {
-        model: model,
+      const requestBody: any = {
+        model: kieModelName,
         prompt: prompt,
         duration: clampedDuration,
         aspectRatio: aspectRatio,
@@ -176,7 +211,14 @@ export class KieAiService {
         ...(projectId && { projectId })
       };
 
-      const response = await axios.post(`${this.baseUrl}/video/generate`, requestBody, {
+      // Добавляем специфичные параметры для Runway
+      if (modelConfig.endpoint === '/runway/generate') {
+        requestBody.videoQuality = 'high'; // Обязательный параметр для Runway
+      }
+
+      console.log(`🎯 Using model: ${kieModelName} at endpoint: ${endpoint}`);
+
+      const response = await axios.post(endpoint, requestBody, {
         headers: {
           'Authorization': `Bearer ${this.apiKey}`,
           'Content-Type': 'application/json'
