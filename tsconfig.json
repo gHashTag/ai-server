@@ -3,6 +3,7 @@
   "compilerOptions": {
     "target": "es2017",
     "lib": ["DOM", "es2017", "esnext.asynciterable"],
+    "types": ["jest", "node"],
     "typeRoots": ["node_modules/@types"],
     "allowSyntheticDefaultImports": true,
     "experimentalDecorators": true,
@@ -20,7 +21,6 @@
     "resolveJsonModule": true,
     "importHelpers": true,
     "baseUrl": "src",
-    
     "paths": {
       "@/*": ["*"],
       "@config": ["config"],
@@ -34,8 +34,7 @@
       "@utils/*": ["utils/*"],
       "@core/*": ["core/*"],
       "@price/*": ["price/*"],
-      "@config/*": ["config/*"],
-      "@supabase/*": ["supabase/*"],
+      "@config/*": ["config/*"]
     }
   },
   "include": ["src/**/*.ts", "src/**/*.json", ".env"],
