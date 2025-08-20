@@ -124,9 +124,14 @@ export class KieAiService {
     } catch (error: any) {
       if (error.response?.data?.code === 402) {
         console.log('⚠️ Kie.ai API работает, но недостаточно кредитов');
+        // КРИТИЧЕСКОЕ УВЕДОМЛЕНИЕ АДМИНАМ О НЕДОСТАТКЕ БАЛАНСА
+        console.error('🚨 CRITICAL: Kie.ai balance insufficient during health check!');
+        errorMessageAdmin(new Error(`🚨 CRITICAL KIE.AI BALANCE ERROR: Health check failed due to insufficient credits. System will fallback to expensive Vertex AI (87% cost increase). IMMEDIATE ACTION REQUIRED: Top up Kie.ai balance!`));
         return false; // Возвращаем false чтобы сработал fallback
       }
       console.error('❌ Kie.ai API недоступен:', error.message);
+      // Уведомляем админов о недоступности API
+      errorMessageAdmin(new Error(`🚨 KIE.AI API UNAVAILABLE: Health check failed - ${error.message}. Fallback to Vertex AI will be used.`));
       return false;
     }
   }
@@ -266,14 +271,29 @@ export class KieAiService {
       
       // Проверяем специфичные ошибки Kie.ai
       if (error.response?.status === 401) {
-        throw new Error('Invalid Kie.ai API key. Please check KIE_AI_API_KEY environment variable.');
+        const errorMsg = 'Invalid Kie.ai API key. Please check KIE_AI_API_KEY environment variable.';
+        // Критическое уведомление админам
+        console.error('🚨 CRITICAL: Kie.ai API key is invalid!');
+        errorMessageAdmin(new Error(`🚨 CRITICAL KIE.AI ERROR: Invalid API key - ${errorMsg}`));
+        throw new Error(errorMsg);
       } else if (error.response?.status === 402) {
-        throw new Error('Insufficient credits in Kie.ai account. Please top up your balance.');
+        const errorMsg = 'Insufficient credits in Kie.ai account. Please top up your balance.';
+        // КРИТИЧЕСКОЕ УВЕДОМЛЕНИЕ АДМИНАМ О НЕДОСТАТКЕ БАЛАНСА
+        console.error('🚨 CRITICAL: Kie.ai balance is insufficient! Fallback to expensive Vertex AI!');
+        errorMessageAdmin(new Error(`🚨 CRITICAL KIE.AI BALANCE ERROR: Insufficient credits - falling back to expensive Vertex AI. Current balance may be exhausted. IMMEDIATE ACTION REQUIRED: Top up Kie.ai balance to restore 87% cost savings!`));
+        throw new Error(errorMsg);
       } else if (error.response?.status === 429) {
-        throw new Error('Rate limit exceeded. Please wait before making another request.');
+        const errorMsg = 'Rate limit exceeded. Please wait before making another request.';
+        console.warn('⚠️ WARNING: Kie.ai rate limit exceeded');
+        errorMessageAdmin(new Error(`⚠️ WARNING KIE.AI RATE LIMIT: ${errorMsg} - May affect video generation performance`));
+        throw new Error(errorMsg);
       }
       
-      throw new Error(`Kie.ai video generation failed: ${error.message}`);
+      // Общая ошибка тоже критична - может быть проблема с API
+      const errorMsg = `Kie.ai video generation failed: ${error.message}`;
+      console.error('🚨 CRITICAL: Kie.ai service failure!');
+      errorMessageAdmin(new Error(`🚨 CRITICAL KIE.AI SERVICE ERROR: ${errorMsg} - Fallback to Vertex AI may be triggered`));
+      throw new Error(errorMsg);
     }
   }
 
