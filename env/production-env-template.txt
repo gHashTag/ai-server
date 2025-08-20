@@ -62,8 +62,11 @@ RAPIDAPI_INSTAGRAM_KEY=your_rapidapi_instagram_key
 RAPIDAPI_INSTAGRAM_HOST=real-time-instagram-scraper-api1.p.rapidapi.com
 
 # =======================================
-# 🎨 AI SERVICES
+# 🎨 AI SERVICES  
 # =======================================
+
+# Kie.ai - дешевая генерация видео (экономия 87% против Vertex AI!)
+KIE_AI_API_KEY=your_kie_ai_api_key
 
 SYNC_LABS_API_KEY=your_sync_labs_key
 OPENAI_API_KEY=sk-your_openai_api_key
