@@ -19,6 +19,26 @@ export const promises = {
   rename: (jest.fn() as any).mockResolvedValue(undefined)
 }
 
+export const stat = (jest.fn() as any).mockImplementation((path, callback) => {
+  if (callback) {
+    callback(null, {
+      isFile: () => true,
+      isDirectory: () => false,
+      size: 1024,
+      mtime: new Date(),
+      ctime: new Date()
+    })
+  }
+})
+
+export const mkdir = (jest.fn() as any).mockImplementation((path, callback) => {
+  if (callback) callback(null)
+})
+
+export const writeFile = (jest.fn() as any).mockImplementation((path, data, callback) => {
+  if (callback) callback(null)
+})
+
 export const readFileSync = jest.fn().mockReturnValue('file content')
 export const writeFileSync = jest.fn().mockReturnValue(undefined)
 export const existsSync = jest.fn().mockReturnValue(true)
@@ -48,12 +68,21 @@ export const createReadStream = jest.fn().mockReturnValue({
 export const createWriteStream = jest.fn().mockReturnValue({
   write: jest.fn(),
   end: jest.fn(),
-  on: jest.fn(),
+  on: jest.fn().mockImplementation((event, callback) => {
+    if (event === 'open' && typeof callback === 'function') {
+      // Симулируем открытие файла
+      setTimeout(() => (callback as Function)(), 0)
+    }
+    return {}
+  }),
   destroy: jest.fn()
 })
 
 export default {
   promises,
+  stat,
+  mkdir,
+  writeFile,
   readFileSync,
   writeFileSync,
   existsSync,

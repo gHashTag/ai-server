@@ -22,12 +22,12 @@ describe('POST /image-to-prompt', () => {
   })
 
   it('should return 200 and start processing when valid data is provided', async () => {
-    const requestBody = {
+    const testRequestPayload = {
       image: 'https://dmrooqbmxdhdyblqzswu.supabase.co/storage/v1/object/public/neuro_coder/cover01.png',
       telegram_id: 123456789,
       username: 'testuser',
       is_ru: true,
-    }
+    };
 
     // @ts-ignore
     (generateImageToPrompt as Mock).mockResolvedValue(
@@ -36,27 +36,27 @@ describe('POST /image-to-prompt', () => {
 
     const response = await request(app.getServer())
       .post('/generate/image-to-prompt')
-      .send(requestBody)
+      .send(testRequestPayload)
 
     expect(response.status).toBe(200)
     expect(response.body).toHaveProperty('message', 'Processing started')
 
     expect(generateImageToPrompt).toHaveBeenCalledWith(
-      requestBody.image,
-      requestBody.telegram_id,
-      requestBody.username,
-      requestBody.is_ru
+      testRequestPayload.image,
+      testRequestPayload.telegram_id,
+      testRequestPayload.username,
+      testRequestPayload.is_ru
     )
   })
 
   it('should return 400 when required fields are missing', async () => {
-    const requestBody = {
+    const testRequestPayload = {
       // Оставьте поля пустыми, чтобы вызвать ошибку
     }
 
     const response = await request(app.getServer())
       .post('/generate/image-to-prompt')
-      .send(requestBody)
+      .send(testRequestPayload)
 
     expect(response.status).toBe(400)
     expect(response.body).toHaveProperty('message', 'Image is required')

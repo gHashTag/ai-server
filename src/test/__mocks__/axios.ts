@@ -1,56 +1,56 @@
 import { jest } from "@jest/globals"
 
 export const mockAxios = {
-  get: jest.fn().mockResolvedValue({
+  get: (jest.fn() as any).mockResolvedValue({
     data: {},
     status: 200,
     statusText: 'OK',
     headers: {},
     config: {}
   }),
-  post: jest.fn().mockResolvedValue({
+  post: (jest.fn() as any).mockResolvedValue({
     data: {},
     status: 200,
     statusText: 'OK',
     headers: {},
     config: {}
   }),
-  put: jest.fn().mockResolvedValue({
+  put: (jest.fn() as any).mockResolvedValue({
     data: {},
     status: 200,
     statusText: 'OK',
     headers: {},
     config: {}
   }),
-  patch: jest.fn().mockResolvedValue({
+  patch: (jest.fn() as any).mockResolvedValue({
     data: {},
     status: 200,
     statusText: 'OK',
     headers: {},
     config: {}
   }),
-  delete: jest.fn().mockResolvedValue({
+  delete: (jest.fn() as any).mockResolvedValue({
     data: {},
     status: 200,
     statusText: 'OK',
     headers: {},
     config: {}
   }),
-  request: jest.fn().mockResolvedValue({
+  request: (jest.fn() as any).mockResolvedValue({
     data: {},
     status: 200,
     statusText: 'OK',
     headers: {},
     config: {}
   }),
-  head: jest.fn().mockResolvedValue({
+  head: (jest.fn() as any).mockResolvedValue({
     data: {},
     status: 200,
     statusText: 'OK',
     headers: {},
     config: {}
   }),
-  options: jest.fn().mockResolvedValue({
+  options: (jest.fn() as any).mockResolvedValue({
     data: {},
     status: 200,
     statusText: 'OK',
@@ -58,35 +58,35 @@ export const mockAxios = {
     config: {}
   }),
   create: jest.fn().mockReturnValue({
-    get: jest.fn().mockResolvedValue({
+    get: (jest.fn() as any).mockResolvedValue({
       data: {},
       status: 200,
       statusText: 'OK',
       headers: {},
       config: {}
     }),
-    post: jest.fn().mockResolvedValue({
+    post: (jest.fn() as any).mockResolvedValue({
       data: {},
       status: 200,
       statusText: 'OK',
       headers: {},
       config: {}
     }),
-    put: jest.fn().mockResolvedValue({
+    put: (jest.fn() as any).mockResolvedValue({
       data: {},
       status: 200,
       statusText: 'OK',
       headers: {},
       config: {}
     }),
-    patch: jest.fn().mockResolvedValue({
+    patch: (jest.fn() as any).mockResolvedValue({
       data: {},
       status: 200,
       statusText: 'OK',
       headers: {},
       config: {}
     }),
-    delete: jest.fn().mockResolvedValue({
+    delete: (jest.fn() as any).mockResolvedValue({
       data: {},
       status: 200,
       statusText: 'OK',
