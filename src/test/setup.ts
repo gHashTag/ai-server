@@ -37,6 +37,80 @@ jest.mock('inngest')
 jest.mock('axios')
 jest.mock('fs', () => require('./__mocks__/fs'))
 
+// Mock core modules
+jest.mock('@/core/supabase', () => ({
+  incrementBalance: (jest.fn() as any).mockResolvedValue(true),
+  setPayments: (jest.fn() as any).mockResolvedValue(true),
+  getTelegramIdFromInvId: (jest.fn() as any).mockResolvedValue({
+    telegram_id: '123456',
+    language: 'en',
+    username: 'testuser',
+    bot_name: 'test_bot'
+  }),
+  updateUserSubscription: (jest.fn() as any).mockResolvedValue(true),
+  createUser: (jest.fn() as any).mockResolvedValue({ user_id: 'test-user-id' }),
+  getUser: (jest.fn() as any).mockResolvedValue({ telegram_id: '123456', balance: 1000 }),
+  getUserByTelegramId: (jest.fn() as any).mockResolvedValue({
+    telegram_id: '123456',
+    balance: 1000,
+    level: 5,
+    username: 'testuser'
+  }),
+  getAspectRatio: (jest.fn() as any).mockResolvedValue('1:1'),
+  savePrompt: (jest.fn() as any).mockResolvedValue('test-prompt-id'),
+  updateUserLevelPlusOne: (jest.fn() as any).mockResolvedValue(true),
+  supabase: {
+    from: (jest.fn() as any).mockReturnValue({
+      select: (jest.fn() as any).mockImplementation((columns) => {
+        // For broadcast service (no chaining)
+        if (columns === 'telegram_id, bot_name') {
+          return Promise.resolve({
+            data: [
+              { telegram_id: 123456, bot_name: 'test_bot' },
+              { telegram_id: 789012, bot_name: 'another_bot' }
+            ],
+            error: null
+          })
+        }
+        // For other services that need chaining (like getAspectRatio)
+        return {
+          eq: (jest.fn() as any).mockReturnValue({
+            single: (jest.fn() as any).mockResolvedValue({
+              data: { aspect_ratio: '1:1' },
+              error: null
+            })
+          })
+        }
+      })
+    })
+  }
+}))
+
+// Mock helpers
+jest.mock('@/price/helpers', () => ({
+  sendPaymentNotification: (jest.fn() as any).mockResolvedValue(true),
+  processBalanceOperation: (jest.fn() as any).mockResolvedValue({
+    success: true,
+    newBalance: 1000
+  }),
+  processBalanceVideoOperation: (jest.fn() as any).mockResolvedValue({
+    newBalance: 1000,
+    paymentAmount: 50
+  })
+}))
+
+jest.mock('@/helpers/errorMessageAdmin', () => ({
+  errorMessageAdmin: jest.fn()
+}))
+
+jest.mock('@/helpers', () => ({
+  errorMessage: jest.fn(),
+  downloadFile: (jest.fn() as any).mockResolvedValue(Buffer.from('fake image data')),
+  processApiResponse: (jest.fn() as any).mockResolvedValue('https://fake-image-url.jpg'),
+  pulse: (jest.fn() as any).mockResolvedValue(true),
+  saveFileLocally: (jest.fn() as any).mockResolvedValue('/fake/local/path/image.jpg')
+}))
+
 // Глобальные моки для console
 const originalConsoleError = console.error
 const originalConsoleWarn = console.warn

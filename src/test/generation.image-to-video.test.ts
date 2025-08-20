@@ -32,8 +32,7 @@ describe('POST /image-to-video', () => {
       is_ru: true,
     };
 
-    // @ts-ignore
-    (generateImageToVideo as Mock).mockResolvedValue(
+    (generateImageToVideo as any).mockResolvedValue(
       '/path/to/generated/video.mp4'
     )
 

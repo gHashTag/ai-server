@@ -49,15 +49,18 @@ export const generateImageToVideoInngest = inngest.createFunction(
         bot
       )
 
+      // Handle different return types from generateImageToVideo
+      const videoPath = typeof result === 'string' ? result : (result as any).videoUrl || 'unknown'
+
       logger.info({
         message: 'План А - генерация видео из изображения завершена успешно',
         telegram_id: eventData.telegram_id,
-        videoPath: result.videoLocalPath,
+        videoPath,
       })
 
       return {
         success: true,
-        videoPath: result.videoLocalPath,
+        videoPath,
         message: 'Image-to-video generation completed via Inngest',
       }
     })

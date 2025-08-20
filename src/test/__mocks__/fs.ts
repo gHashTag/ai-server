@@ -65,18 +65,33 @@ export const createReadStream = jest.fn().mockReturnValue({
   destroy: jest.fn()
 })
 
-export const createWriteStream = jest.fn().mockReturnValue({
-  write: jest.fn(),
-  end: jest.fn(),
-  on: jest.fn().mockImplementation((event, callback) => {
-    if (event === 'open' && typeof callback === 'function') {
-      // Симулируем открытие файла
-      setTimeout(() => (callback as Function)(), 0)
-    }
-    return {}
-  }),
-  destroy: jest.fn()
-})
+const createMockStream = () => {
+  const mockStream = {
+    write: jest.fn(),
+    end: jest.fn(),
+    on: jest.fn().mockImplementation((event, callback) => {
+      if (event === 'open' && typeof callback === 'function') {
+        // Симулируем открытие файла
+        setTimeout(() => (callback as Function)(), 0)
+      }
+      return mockStream  // Return self for chaining
+    }),
+    once: jest.fn().mockImplementation((event, callback) => {
+      // Mock once method
+      return mockStream
+    }),
+    emit: jest.fn(),
+    pipe: jest.fn().mockImplementation((dest) => {
+      return dest
+    }),
+    destroy: jest.fn(),
+    writable: true,
+    readable: false
+  }
+  return mockStream
+}
+
+export const createWriteStream = jest.fn().mockImplementation(() => createMockStream())
 
 export default {
   promises,

@@ -29,8 +29,7 @@ describe('POST /image-to-prompt', () => {
       is_ru: true,
     };
 
-    // @ts-ignore
-    (generateImageToPrompt as Mock).mockResolvedValue(
+    (generateImageToPrompt as any).mockResolvedValue(
       'This is a generated caption.'
     )
 

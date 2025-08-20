@@ -8,15 +8,15 @@ export class Inngest {
       config,
       trigger,
       handler,
-      run: jest.fn().mockResolvedValue({ success: true })
+      run: (jest.fn() as any).mockResolvedValue({ success: true })
     }
   })
 
-  send = jest.fn().mockResolvedValue({
+  send = (jest.fn() as any).mockResolvedValue({
     ids: ['test-event-id']
   })
 
-  sendAndWait = jest.fn().mockResolvedValue({
+  sendAndWait = (jest.fn() as any).mockResolvedValue({
     data: { success: true },
     event: { id: 'test-event-id' }
   })
@@ -47,12 +47,12 @@ export const RetryAfterError = class RetryAfterError extends Error {
 }
 
 export const GetStepTools = jest.fn(() => ({
-  run: jest.fn().mockResolvedValue({ success: true }),
-  sleep: jest.fn().mockResolvedValue(undefined),
-  sleepUntil: jest.fn().mockResolvedValue(undefined),
-  waitForEvent: jest.fn().mockResolvedValue({ data: {} }),
-  sendEvent: jest.fn().mockResolvedValue({ ids: ['test-event-id'] }),
-  invoke: jest.fn().mockResolvedValue({ data: {} })
+  run: (jest.fn() as any).mockResolvedValue({ success: true }),
+  sleep: (jest.fn() as any).mockResolvedValue(undefined),
+  sleepUntil: (jest.fn() as any).mockResolvedValue(undefined),
+  waitForEvent: (jest.fn() as any).mockResolvedValue({ data: {} }),
+  sendEvent: (jest.fn() as any).mockResolvedValue({ ids: ['test-event-id'] }),
+  invoke: (jest.fn() as any).mockResolvedValue({ data: {} })
 }))
 
 export default {
