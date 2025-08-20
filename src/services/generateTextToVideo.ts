@@ -90,37 +90,37 @@ export const processVideoGeneration = async (
   duration: number = 5
 ) => {
   // Получаем конфигурацию модели
-  const modelConfig = VIDEO_MODELS_CONFIG[videoModel];
+  const modelConfig = VIDEO_MODELS_CONFIG[videoModel]
   
   if (!modelConfig) {
-    throw new Error(`Unknown video model: ${videoModel}`);
+    throw new Error(`Unknown video model: ${videoModel}`)
   }
 
   // Проверяем, какой провайдер должен использоваться
-  const providerType = modelConfig.api?.input?.type;
+  const providerType = modelConfig.api?.input?.type
   
   // НОВАЯ ЛОГИКА: Используем Kie.ai для дешевых моделей
   if (providerType === 'kie-ai') {
-    console.log(`🎯 Using Kie.ai for ${videoModel} (87% cheaper than Vertex AI!)`);
+    console.log(`🎯 Using Kie.ai for ${videoModel} (87% cheaper than Vertex AI!)`)
     
-    const kieAiService = new KieAiService();
+    const kieAiService = new KieAiService()
     
     // Проверяем доступность API
-    const isHealthy = await kieAiService.checkHealth();
+    const isHealthy = await kieAiService.checkHealth()
     if (!isHealthy) {
-      console.warn(`⚠️ Kie.ai API не доступен для ${videoModel}, используем резервный Vertex AI`);
+      console.warn(`⚠️ Kie.ai API не доступен для ${videoModel}, используем резервный Vertex AI`)
       // Fallback к Vertex AI если Kie.ai недоступен
-      return await processVertexAI(videoModel, aspect_ratio, prompt, imageUrl, duration);
+      return await processVertexAI(videoModel, aspect_ratio, prompt, imageUrl, duration)
     }
     
     // Маппинг aspect ratio
-    let kieAspectRatio: '16:9' | '9:16' | '1:1';
+    let kieAspectRatio: '16:9' | '9:16' | '1:1'
     if (aspect_ratio === '9:16') {
-      kieAspectRatio = '9:16';
+      kieAspectRatio = '9:16'
     } else if (aspect_ratio === '1:1') {
-      kieAspectRatio = '1:1';
+      kieAspectRatio = '1:1'
     } else {
-      kieAspectRatio = '16:9';
+      kieAspectRatio = '16:9'
     }
     
     // Генерируем через Kie.ai
@@ -130,17 +130,17 @@ export const processVideoGeneration = async (
       duration,
       aspectRatio: kieAspectRatio,
       imageUrl
-    });
+    })
     
-    return result.videoUrl;
+    return result.videoUrl
   }
   
   // СТАРАЯ ЛОГИКА: Vertex AI для обратной совместимости
   if (videoModel === 'veo-3' || videoModel === 'veo-3-fast' || videoModel === 'veo-2') {
-    console.log(`⚠️ Using expensive Vertex AI for ${videoModel} (fallback mode)`);
-    return await processVertexAI(videoModel, aspect_ratio, prompt, imageUrl, duration);
+    console.log(`⚠️ Using expensive Vertex AI for ${videoModel} (fallback mode)`)
+    return await processVertexAI(videoModel, aspect_ratio, prompt, imageUrl, duration)
   }
-  
+
   // Стандартная обработка через Replicate для остальных моделей
   if (!modelConfig) {
     throw new Error('Invalid video model')

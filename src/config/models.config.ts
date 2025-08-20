@@ -134,8 +134,9 @@ export const VIDEO_MODELS_CONFIG: Record<string, VideoModelConfig> = {
     id: 'veo-3',
     title: 'Google Veo 3',
     inputType: ['text', 'image'],
-    description: '✅ Премиум качество через Kie.ai (дешевле на 37%!), 2-8 сек',
-    pricePerSecond: 0.25, // $0.25 за секунду через Kie.ai (было $0.40)
+    description:
+      '✅ Премиум качество через Kie.ai (конкурентная цена!), 2-8 сек',
+    pricePerSecond: 0.404, // 202⭐ за 8 сек = $3.232 за 8 сек = $0.404/сек (конкурентно с +8.1% наценкой)
     supportedDurations: [2, 4, 6, 8], // Поддерживаемые длительности
     defaultDuration: 8, // По умолчанию 8 секунд
     api: {
@@ -154,12 +155,13 @@ export const VIDEO_MODELS_CONFIG: Record<string, VideoModelConfig> = {
     id: 'veo-3-fast',
     title: 'Google Veo 3 Fast',
     inputType: ['text', 'image'],
-    description: '⚡ Супер быстрая генерация через Kie.ai (дешевле Synx!), 2-8 сек',
-    pricePerSecond: 5.0 / 85, // 40₽ за 8 сек = 5₽/сек = $0.059/сек (конкурентно с Synx)
-    supportedDurations: [2, 4, 6, 8], // Поддерживаемые длительности
-    defaultDuration: 4, // По умолчанию 4 секунды
+    description:
+      '⚡ Супер быстрая генерация через Kie.ai (конкурентная цена!), 2-8 сек',
+    pricePerSecond: 0.08, // 40⭐ за 8 сек = $0.64 за 8 сек = $0.08/сек (конкурентно с +8.1% наценкой)
+    supportedDurations: [2, 4, 6, 8, 10], // Поддерживаемые длительности
+    defaultDuration: 8, // По умолчанию 8 секунд
     api: {
-      model: 'veo-3-fast',
+      model: 'kie-veo-3-fast',
       input: {
         type: 'kie-ai',
         resolution: '720p',
@@ -167,7 +169,7 @@ export const VIDEO_MODELS_CONFIG: Record<string, VideoModelConfig> = {
       },
     },
     requirements: {
-      maxDuration: 8,
+      maxDuration: 10,
     },
     imageKey: 'imageUrl',
   },
@@ -175,8 +177,9 @@ export const VIDEO_MODELS_CONFIG: Record<string, VideoModelConfig> = {
     id: 'runway-aleph',
     title: 'Runway Aleph',
     inputType: ['text', 'image'],
-    description: '🎬 Продвинутое редактирование: добавление/удаление объектов, релайтинг, смена ракурсов',
-    pricePerSecond: 0.30, // $0.30 за секунду через Kie.ai
+    description:
+      '🎬 Продвинутое редактирование через Kie.ai (конкурентная цена!)',
+    pricePerSecond: 0.485, // 182⭐ за 6 сек = $2.912 за 6 сек = $0.485/сек (конкурентно с +8.1% наценкой)
     supportedDurations: [2, 4, 6, 8, 10], // Поддерживаемые длительности
     defaultDuration: 6, // По умолчанию 6 секунд
     api: {
@@ -184,7 +187,12 @@ export const VIDEO_MODELS_CONFIG: Record<string, VideoModelConfig> = {
       input: {
         type: 'kie-ai',
         resolution: '1080p',
-        features: ['object-manipulation', 'relighting', 'camera-control', 'style-transfer'],
+        features: [
+          'object-manipulation',
+          'relighting',
+          'camera-control',
+          'style-transfer',
+        ],
       },
     },
     requirements: {
@@ -197,7 +205,7 @@ export const VIDEO_MODELS_CONFIG: Record<string, VideoModelConfig> = {
     title: 'Google Veo 2',
     inputType: ['text', 'image'],
     description: 'Стабильная версия Veo, 4-10 сек',
-    pricePerSecond: 0.30, // $0.30 за секунду
+    pricePerSecond: 0.3, // $0.30 за секунду
     supportedDurations: [4, 6, 8, 10], // Поддерживаемые длительности
     defaultDuration: 8, // По умолчанию 8 секунд
     api: {
