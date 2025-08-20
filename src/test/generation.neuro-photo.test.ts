@@ -2,6 +2,8 @@ import request from 'supertest'
 import { App } from '@/app'
 import { GenerationRoute } from '@routes/generation.route'
 import { generateNeuroImage } from '@/services/generateNeuroImage'
+import { jest, describe, it, beforeAll, afterAll, expect } from '@jest/globals'
+import type { Mock } from 'jest-mock'
 
 jest.mock('@/services/generateNeuroImage', () => ({
   generateNeuroImage: jest.fn(),
@@ -30,7 +32,8 @@ describe('POST /neuro-photo', () => {
       is_ru: true,
     }
 
-    ;(generateNeuroImage as jest.Mock).mockResolvedValue({
+    // @ts-ignore
+    ;(generateNeuroImage as Mock).mockResolvedValue({
       prompt_id: 'prompt123',
       image: '/path/to/generated/image.jpg',
     })

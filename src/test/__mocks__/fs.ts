@@ -1,24 +1,22 @@
-import { jest } from "@jest/globals"
-
 import { jest } from '@jest/globals'
 
 export const promises = {
-  readFile: jest.fn().mockResolvedValue('file content'),
-  writeFile: jest.fn().mockResolvedValue(undefined),
-  unlink: jest.fn().mockResolvedValue(undefined),
-  mkdir: jest.fn().mockResolvedValue(undefined),
-  rmdir: jest.fn().mockResolvedValue(undefined),
-  readdir: jest.fn().mockResolvedValue(['file1.txt', 'file2.txt']),
-  stat: jest.fn().mockResolvedValue({
+  readFile: (jest.fn() as any).mockResolvedValue('file content'),
+  writeFile: (jest.fn() as any).mockResolvedValue(undefined),
+  unlink: (jest.fn() as any).mockResolvedValue(undefined),
+  mkdir: (jest.fn() as any).mockResolvedValue(undefined),
+  rmdir: (jest.fn() as any).mockResolvedValue(undefined),
+  readdir: (jest.fn() as any).mockResolvedValue(['file1.txt', 'file2.txt']),
+  stat: (jest.fn() as any).mockResolvedValue({
     isFile: () => true,
     isDirectory: () => false,
     size: 1024,
     mtime: new Date(),
     ctime: new Date()
   }),
-  access: jest.fn().mockResolvedValue(undefined),
-  copyFile: jest.fn().mockResolvedValue(undefined),
-  rename: jest.fn().mockResolvedValue(undefined)
+  access: (jest.fn() as any).mockResolvedValue(undefined),
+  copyFile: (jest.fn() as any).mockResolvedValue(undefined),
+  rename: (jest.fn() as any).mockResolvedValue(undefined)
 }
 
 export const readFileSync = jest.fn().mockReturnValue('file content')

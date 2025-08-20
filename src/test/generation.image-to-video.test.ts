@@ -2,6 +2,8 @@ import request from 'supertest'
 import { App } from '@/app'
 import { GenerationRoute } from '@routes/generation.route'
 import { generateImageToVideo } from '@/services/generateImageToVideo'
+import { jest, describe, it, beforeAll, afterAll, expect } from '@jest/globals'
+import type { Mock } from 'jest-mock'
 
 jest.mock('@/services/generateImageToVideo', () => ({
   generateImageToVideo: jest.fn(),
@@ -21,8 +23,7 @@ describe('POST /image-to-video', () => {
 
   it('should return 200 and start processing when valid data is provided', async () => {
     const requestBody = {
-      imageUrl:
-        'https://www.investopedia.com/thmb/YJBXk5A8fN78NMdeCk0IJKGNRuw=/750x0/filters:no_upscale():max_bytes(150000):strip_icc():format(webp)/GettyImages-453930217-42848c04ff58410d952e1a5b65a00929.jpg',
+      imageUrl: 'https://www.investopedia.com/thmb/YJBXk5A8fN78NMdeCk0IJKGNRuw=/750x0/filters:no_upscale():max_bytes(150000):strip_icc():format(webp)/GettyImages-453930217-42848c04ff58410d952e1a5b65a00929.jpg',
       prompt: 'Create a video of a dance',
       videoModel: 'haiper',
       paymentAmount: 1,
@@ -31,7 +32,8 @@ describe('POST /image-to-video', () => {
       is_ru: true,
     }
 
-    ;(generateImageToVideo as jest.Mock).mockResolvedValue(
+    // @ts-ignore
+    (generateImageToVideo as Mock).mockResolvedValue(
       '/path/to/generated/video.mp4'
     )
 

@@ -1,6 +1,7 @@
 import { PaymentService } from '@/services/payment.service'
 import { incrementBalance } from '@/core/supabase'
 import { sendPaymentNotification } from '@/price/helpers'
+import { jest, describe, it, beforeEach, expect } from '@jest/globals'
 
 jest.mock('@/price/helpers', () => ({
   sendPaymentNotification: jest.fn(),
@@ -12,7 +13,7 @@ jest.mock('@/core/supabase', () => ({
     from: jest.fn().mockReturnThis(),
     select: jest.fn().mockReturnThis(),
     eq: jest.fn().mockReturnThis(),
-    single: jest.fn().mockResolvedValue({
+    single: (jest.fn() as any).mockResolvedValue({
       data: {
         telegram_id: '123456',
         username: 'testuser',
@@ -32,7 +33,7 @@ describe('PaymentService', () => {
   })
 
   it('should process payment and increment balance for 1999', async () => {
-    const OutSum = '1999'
+    const OutSum = 1999
     const Email = 'test@example.com'
 
     await paymentService.processPayment(OutSum, Email)
@@ -52,7 +53,7 @@ describe('PaymentService', () => {
   })
 
   it('should process payment and increment balance for 5000', async () => {
-    const OutSum = '5000'
+    const OutSum = 5000
     const Email = 'test@example.com'
 
     await paymentService.processPayment(OutSum, Email)
@@ -72,7 +73,7 @@ describe('PaymentService', () => {
   })
 
   it('should process payment and increment balance for 10000', async () => {
-    const OutSum = '10000'
+    const OutSum = 10000
     const Email = 'test@example.com'
 
     await paymentService.processPayment(OutSum, Email)
@@ -92,7 +93,7 @@ describe('PaymentService', () => {
   })
 
   it('should process payment and increment balance for 10', async () => {
-    const OutSum = '10'
+    const OutSum = 10
     const Email = 'test@example.com'
 
     await paymentService.processPayment(OutSum, Email)
@@ -112,7 +113,7 @@ describe('PaymentService', () => {
   })
 
   it('should not process payment if OutSum is not valid', async () => {
-    const OutSum = '3000' // Некорректное значение
+    const OutSum = 3000 // Некорректное значение
     const Email = 'test@example.com'
 
     await paymentService.processPayment(OutSum, Email)

@@ -3,9 +3,10 @@ import { App } from '@/app'
 import { GenerationRoute } from '@routes/generation.route'
 import { createVoiceAvatar } from '@/services/createVoiceAvatar'
 import { BOT_TOKENS } from '@/config'
+import { jest, describe, it, beforeAll, afterAll, expect } from '@jest/globals'
 
 jest.mock('../services/createVoiceAvatar', () => ({
-  createVoiceAvatar: jest.fn().mockResolvedValue({
+  createVoiceAvatar: (jest.fn() as any).mockResolvedValue({
     voiceId: 'voiceId',
   }),
 }))
@@ -24,7 +25,7 @@ describe('POST /create-avatar-voice', () => {
 
   const fileUrl = `https://api.telegram.org/file/bot${BOT_TOKENS[0]}/voice/file_74.oga`
 
-  test('should return 200 and start voice creation when valid data is provided', async () => {
+  it('should return 200 and start voice creation when valid data is provided', async () => {
     const requestBody = {
       fileUrl: fileUrl,
       telegram_id: 123456789,

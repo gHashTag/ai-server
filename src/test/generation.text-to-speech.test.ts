@@ -3,6 +3,7 @@ import { App } from '@/app'
 import { GenerationRoute } from '@routes/generation.route'
 import { generateSpeech } from '@/services/generateSpeech'
 import { BOT_TOKENS } from '@/config'
+import { jest, describe, it, beforeAll, afterAll, expect } from '@jest/globals'
 
 jest.mock('@/services/generateSpeech', () => ({
   generateSpeech: jest.fn(),
@@ -29,7 +30,8 @@ describe('POST /text-to-speech', () => {
       is_ru: true,
     }
 
-    ;(generateSpeech as jest.Mock).mockResolvedValue({
+    // @ts-ignore
+    ;(generateSpeech as Mock).mockResolvedValue({
       audioUrl: `https://api.telegram.org/file/bot${BOT_TOKENS[0]}/voice/file_74.oga`,
     })
 

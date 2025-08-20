@@ -2,6 +2,8 @@ import request from 'supertest'
 import { App } from '@/app'
 import { GenerationRoute } from '@routes/generation.route'
 import { generateImageToPrompt } from '@/services/generateImageToPrompt'
+import { jest, describe, it, beforeAll, afterAll, expect } from '@jest/globals'
+import type { Mock } from 'jest-mock'
 
 jest.mock('@/services/generateImageToPrompt', () => ({
   generateImageToPrompt: jest.fn(),
@@ -21,14 +23,14 @@ describe('POST /image-to-prompt', () => {
 
   it('should return 200 and start processing when valid data is provided', async () => {
     const requestBody = {
-      image:
-        'https://dmrooqbmxdhdyblqzswu.supabase.co/storage/v1/object/public/neuro_coder/cover01.png',
+      image: 'https://dmrooqbmxdhdyblqzswu.supabase.co/storage/v1/object/public/neuro_coder/cover01.png',
       telegram_id: 123456789,
       username: 'testuser',
       is_ru: true,
     }
 
-    ;(generateImageToPrompt as jest.Mock).mockResolvedValue(
+    // @ts-ignore
+    (generateImageToPrompt as Mock).mockResolvedValue(
       'This is a generated caption.'
     )
 

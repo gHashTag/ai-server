@@ -2,6 +2,7 @@ import request from 'supertest'
 import { App } from '@/app'
 import { GenerationRoute } from '@routes/generation.route'
 import { generateTextToVideo } from '@/services/generateTextToVideo'
+import { jest, describe, it, beforeAll, afterAll, expect } from '@jest/globals'
 
 jest.mock('@/services/generateTextToVideo', () => ({
   generateTextToVideo: jest.fn(),
@@ -28,7 +29,8 @@ describe('POST /text-to-video', () => {
       is_ru: true,
     }
 
-    ;(generateTextToVideo as jest.Mock).mockResolvedValue('/path/to/video.mp4')
+    // @ts-ignore
+    ;(generateTextToVideo as Mock).mockResolvedValue('/path/to/video.mp4')
 
     const response = await request(app.getServer())
       .post('/generate/text-to-video')

@@ -33,36 +33,36 @@ export const createClient = jest.fn(() => ({
     limit: jest.fn().mockReturnThis(),
     range: jest.fn().mockReturnThis(),
     abortSignal: jest.fn().mockReturnThis(),
-    single: jest.fn().mockResolvedValue({ data: {}, error: null }),
-    maybeSingle: jest.fn().mockResolvedValue({ data: {}, error: null }),
-    csv: jest.fn().mockResolvedValue({ data: '', error: null }),
-    geojson: jest.fn().mockResolvedValue({ data: {}, error: null }),
+    single: (jest.fn() as any).mockResolvedValue({ data: {}, error: null }),
+    maybeSingle: (jest.fn() as any).mockResolvedValue({ data: {}, error: null }),
+    csv: (jest.fn() as any).mockResolvedValue({ data: '', error: null }),
+    geojson: (jest.fn() as any).mockResolvedValue({ data: {}, error: null }),
     explain: jest.fn().mockReturnThis(),
     rollback: jest.fn().mockReturnThis(),
     returns: jest.fn().mockReturnThis(),
-    then: jest.fn().mockResolvedValue({ data: [], error: null })
+    then: (jest.fn() as any).mockResolvedValue({ data: [], error: null })
   })),
   storage: {
     from: jest.fn(() => ({
-      upload: jest.fn().mockResolvedValue({ data: { path: 'test-path' }, error: null }),
-      download: jest.fn().mockResolvedValue({ data: new Blob(), error: null }),
-      list: jest.fn().mockResolvedValue({ data: [], error: null }),
-      update: jest.fn().mockResolvedValue({ data: { path: 'test-path' }, error: null }),
-      move: jest.fn().mockResolvedValue({ data: { message: 'Successfully moved' }, error: null }),
-      copy: jest.fn().mockResolvedValue({ data: { path: 'test-path' }, error: null }),
-      remove: jest.fn().mockResolvedValue({ data: [], error: null }),
-      createSignedUrl: jest.fn().mockResolvedValue({ data: { signedUrl: 'http://test-url' }, error: null }),
-      createSignedUrls: jest.fn().mockResolvedValue({ data: [], error: null }),
+      upload: (jest.fn() as any).mockResolvedValue({ data: { path: 'test-path' }, error: null }),
+      download: (jest.fn() as any).mockResolvedValue({ data: new Blob(), error: null }),
+      list: (jest.fn() as any).mockResolvedValue({ data: [], error: null }),
+      update: (jest.fn() as any).mockResolvedValue({ data: { path: 'test-path' }, error: null }),
+      move: (jest.fn() as any).mockResolvedValue({ data: { message: 'Successfully moved' }, error: null }),
+      copy: (jest.fn() as any).mockResolvedValue({ data: { path: 'test-path' }, error: null }),
+      remove: (jest.fn() as any).mockResolvedValue({ data: [], error: null }),
+      createSignedUrl: (jest.fn() as any).mockResolvedValue({ data: { signedUrl: 'http://test-url' }, error: null }),
+      createSignedUrls: (jest.fn() as any).mockResolvedValue({ data: [], error: null }),
       getPublicUrl: jest.fn().mockReturnValue({ data: { publicUrl: 'http://test-url' } })
     }))
   },
   auth: {
-    signUp: jest.fn().mockResolvedValue({ data: { user: null }, error: null }),
-    signInWithPassword: jest.fn().mockResolvedValue({ data: { user: null }, error: null }),
-    signOut: jest.fn().mockResolvedValue({ error: null }),
-    getUser: jest.fn().mockResolvedValue({ data: { user: null }, error: null }),
-    getSession: jest.fn().mockResolvedValue({ data: { session: null }, error: null }),
-    refreshSession: jest.fn().mockResolvedValue({ data: { session: null }, error: null }),
+    signUp: (jest.fn() as any).mockResolvedValue({ data: { user: null }, error: null }),
+    signInWithPassword: (jest.fn() as any).mockResolvedValue({ data: { user: null }, error: null }),
+    signOut: (jest.fn() as any).mockResolvedValue({ error: null }),
+    getUser: (jest.fn() as any).mockResolvedValue({ data: { user: null }, error: null }),
+    getSession: (jest.fn() as any).mockResolvedValue({ data: { session: null }, error: null }),
+    refreshSession: (jest.fn() as any).mockResolvedValue({ data: { session: null }, error: null }),
     onAuthStateChange: jest.fn().mockReturnValue({ data: { subscription: { unsubscribe: jest.fn() } } })
   }
 }))

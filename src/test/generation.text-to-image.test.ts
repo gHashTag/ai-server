@@ -2,11 +2,11 @@ import { App } from '@/app'
 import { GenerationRoute } from '@routes/generation.route'
 import { generateTextToImage } from '@/services/generateTextToImage'
 import request from 'supertest'
+import { jest, describe, it, beforeAll, afterAll, expect } from '@jest/globals'
+import type { Mock } from 'jest-mock'
 
 jest.mock('@/services/generateTextToImage', () => ({
-  generateTextToImage: jest
-    .fn()
-    .mockResolvedValue({ image: 'mockedImageBuffer' }),
+  generateTextToImage: (jest.fn() as any).mockResolvedValue({ image: 'mockedImageBuffer' }),
 }))
 
 jest.mock('@/services/generateSpeech', () => ({
@@ -31,15 +31,19 @@ describe('GenerationController', () => {
     it('should be called with correct arguments and return expected result', async () => {
       const prompt = 'Create a beautiful landscape'
       const model_type = 'flux'
-      const telegramId = 123456789
+      const telegramId = '123456789'
       const username = 'testuser'
       const is_ru = true
       const num_images = 1
 
       // Замокайте возвращаемое значение функции generateImage
-      ;(generateTextToImage as jest.Mock).mockResolvedValue({
+      // @ts-ignore
+      ;(generateTextToImage as Mock).mockResolvedValue({
         image: 'mockedImageBuffer',
       })
+
+      // Создаем мок бота
+      const mockBot = {} as any
 
       // Вызовите функцию generateImage
       const result = await generateTextToImage(
@@ -48,7 +52,8 @@ describe('GenerationController', () => {
         num_images,
         telegramId,
         username,
-        is_ru
+        is_ru,
+        mockBot
       )
 
       // Проверка, что generateImage была вызвана с правильными аргументами
@@ -58,7 +63,8 @@ describe('GenerationController', () => {
         num_images,
         telegramId,
         username,
-        is_ru
+        is_ru,
+        mockBot
       )
 
       // Проверка, что результат соответствует ожидаемому
