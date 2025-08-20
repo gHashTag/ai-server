@@ -1,13 +1,9 @@
 import { Request, Response } from 'express'
 import { supabase } from '@/core/supabase'
-import { BOT_TOKENS } from '@/config'
 import { errorMessageAdmin } from '@/helpers'
 import { LipSyncResponse } from '@/services/generateLipSync'
 import { updateResult } from '@/core/supabase'
-import { Telegraf } from 'telegraf'
-import { MyContext } from '@/interfaces'
-
-const bots = BOT_TOKENS.map(token => new Telegraf<MyContext>(token))
+import { bots } from '@/core/bot'
 
 export class WebhookController {
   public async handleSyncLabsWebhook(
