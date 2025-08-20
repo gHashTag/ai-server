@@ -96,8 +96,23 @@ export const instagramApifyScraper = inngest.createFunction(
 
     // Step 2: Инициализация Apify клиента
     const apifyClient = await step.run('init-apify-client', async () => {
+      // Отладочная информация
+      log.info('🔍 Отладка ApifyClient импорта:', {
+        ApifyClient: typeof ApifyClient,
+        ApifyClientPrototype: ApifyClient?.prototype?.constructor?.name,
+        ApifyClientKeys: ApifyClient ? Object.getOwnPropertyNames(ApifyClient.prototype) : 'undefined'
+      })
+      
       const client = new ApifyClient({
         token: process.env.APIFY_TOKEN!,
+      })
+      
+      // Отладочная информация о созданном клиенте
+      log.info('🔍 Отладка созданного клиента:', {
+        clientType: typeof client,
+        clientConstructor: client?.constructor?.name,
+        hasActorMethod: typeof client?.actor,
+        clientKeys: client ? Object.getOwnPropertyNames(Object.getPrototypeOf(client)) : 'undefined'
       })
       
       log.info('✅ Apify клиент инициализирован')
@@ -147,16 +162,28 @@ export const instagramApifyScraper = inngest.createFunction(
       log.info('🎬 Запуск Apify актора instagram-scraper...')
       
       try {
-        // Запускаем актор через правильный API
-        const run = await apifyClient.actor('apify/instagram-scraper').call(apifyInput)
+        // Создаем новый клиент в каждом step для избежания проблем с сериализацией
+        const freshClient = new ApifyClient({
+          token: process.env.APIFY_TOKEN!,
+        })
+        
+        // Отладочная информация о свежесозданном клиенте
+        log.info('🔍 Проверка свежего клиента в step:', {
+          clientType: typeof freshClient,
+          hasActorMethod: typeof freshClient?.actor,
+          actorType: typeof freshClient.actor
+        })
+        
+        // Запускаем актор через свежий клиент
+        const run = await freshClient.actor('apify/instagram-scraper').call(apifyInput)
         
         log.info('✅ Apify актор завершён', {
           runId: run.id,
           status: run.status,
         })
         
-        // Получаем результаты
-        const { items } = await apifyClient
+        // Получаем результаты через тот же свежий клиент
+        const { items } = await freshClient
           .dataset(run.defaultDatasetId)
           .listItems()
         
