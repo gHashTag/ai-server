@@ -15,7 +15,7 @@ import { processPayment } from './paymentProcessing'
 import { morphImages } from './morphImages'
 import { logMonitor, triggerLogMonitor } from './logMonitor'
 import { criticalErrorMonitor, healthCheck } from './criticalErrorMonitor'
-// import { instagramApifyScraper } from './instagramApifyScraper' // REMOVED: causing build issues
+import { instagramApifyScraper } from './instagramApifyScraper'
 import { competitorAutoParser, triggerCompetitorAutoParser } from './competitorAutoParser'
 import { competitorDelivery } from './competitorDelivery'
 
@@ -39,7 +39,7 @@ export const functions = [
   triggerLogMonitor, // 🔄 Функция ручного запуска мониторинга
   criticalErrorMonitor, // 🚨 Мониторинг критических ошибок в реальном времени
   healthCheck, // 💚 Проверка состояния сервисов каждые 30 минут
-  // instagramApifyScraper, // 📱 RILS парсер через Apify - REMOVED
+  instagramApifyScraper, // 📱 RILS парсер через Apify
   competitorAutoParser, // ⏰ Автоматический парсинг конкурентов каждые 24 часа
   triggerCompetitorAutoParser, // 🔄 Ручной запуск автопарсинга
   competitorDelivery, // 📬 Доставка рилсов конкурентов подписчикам
@@ -62,7 +62,7 @@ export { processPayment }
 export { morphImages } // 🧬 НОВАЯ функция для морфинга изображений
 export { logMonitor, triggerLogMonitor } // 📊 Функции мониторинга логов
 export { criticalErrorMonitor, healthCheck } // 🚨💚 Функции критического мониторинга
-// export { instagramApifyScraper } // 📱 RILS парсер через Apify - REMOVED
+export { instagramApifyScraper } // 📱 RILS парсер через Apify
 export { competitorAutoParser, triggerCompetitorAutoParser } // ⏰ Автоматический парсинг конкурентов
 export { competitorDelivery } // 📬 Доставка рилсов конкурентов
 
@@ -82,7 +82,7 @@ export * from './paymentProcessing'
 export * from './morphImages' // 🧬 НОВАЯ функция для морфинга изображений
 export * from './logMonitor' // 📊 Функции мониторинга логов
 export * from './criticalErrorMonitor' // 🚨💚 Функции критического мониторинга
-// export * from './instagramApifyScraper' // 📱 RILS парсер через Apify - REMOVED
+export * from './instagramApifyScraper' // 📱 RILS парсер через Apify
 export * from './competitorAutoParser' // ⏰ Автоматический парсинг конкурентов
 export * from './competitorDelivery' // 📬 Доставка рилсов конкурентов
 
