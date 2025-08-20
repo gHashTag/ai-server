@@ -109,6 +109,7 @@ function calculateFinalStarCostFromDollars(baseDollarCost: number): number {
 }
 
 export const BASE_COSTS: Partial<Record<ModeEnum, CostValue>> = {
+  [ModeEnum.Subscribe]: 0,
   [ModeEnum.DigitalAvatarBody]: (steps: number) => {
     const cost = calculateCost(steps, 'v1')
     return cost.stars
@@ -125,6 +126,7 @@ export const BASE_COSTS: Partial<Record<ModeEnum, CostValue>> = {
   [ModeEnum.ChatWithAvatar]: 0,
   [ModeEnum.SelectModel]: 0,
   [ModeEnum.SelectAiTextModel]: 0,
+  [ModeEnum.SelectModelWizard]: 0,
   [ModeEnum.Voice]: calculateFinalStarCostFromDollars(0.9),
   [ModeEnum.TextToSpeech]: calculateFinalStarCostFromDollars(0.12),
   [ModeEnum.ImageToVideo]: 0,
@@ -144,6 +146,18 @@ export const BASE_COSTS: Partial<Record<ModeEnum, CostValue>> = {
     const totalCost = baseCostPerImage * totalImages
     return calculateFinalStarCostFromDollars(totalCost)
   },
+  [ModeEnum.SelectNeuroPhoto]: 0,
+  [ModeEnum.ChangeSize]: 0,
+  [ModeEnum.Invite]: 0,
+  [ModeEnum.Help]: 0,
+  [ModeEnum.MainMenu]: 0,
+  [ModeEnum.Balance]: 0,
+  [ModeEnum.ImprovePrompt]: 0,
+  [ModeEnum.TopUpBalance]: 0,
+  [ModeEnum.VideoInUrl]: 0,
+  [ModeEnum.Support]: 0,
+  [ModeEnum.Stats]: 0,
+  [ModeEnum.BroadcastWizard]: 0,
 }
 export interface CostCalculationParams {
   mode: ModeEnum | string
