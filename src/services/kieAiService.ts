@@ -97,7 +97,15 @@ export class KieAiService {
     }
     
     try {
-      const response = await axios.get(`${this.baseUrl}/chat/credit`, {
+      // Простая проверка доступности API
+      const testPayload = {
+        model: 'veo3',
+        prompt: 'health check test',
+        duration: 2,
+        aspect_ratio: '16:9'
+      };
+
+      const response = await axios.post(`${this.baseUrl}/veo/generate`, testPayload, {
         headers: {
           'Authorization': `Bearer ${this.apiKey}`,
           'Content-Type': 'application/json'
@@ -105,9 +113,19 @@ export class KieAiService {
         timeout: 10000
       });
       
-      console.log('✅ Kie.ai API доступен. Кредиты:', response.data.credits);
+      // Если код 402 (недостаточно кредитов) - API работает, но нет денег
+      if (response.data.code === 402) {
+        console.log('⚠️ Kie.ai API работает, но недостаточно кредитов');
+        return false; // Возвращаем false чтобы сработал fallback
+      }
+      
+      console.log('✅ Kie.ai API доступен и имеет кредиты');
       return true;
-    } catch (error) {
+    } catch (error: any) {
+      if (error.response?.data?.code === 402) {
+        console.log('⚠️ Kie.ai API работает, но недостаточно кредитов');
+        return false; // Возвращаем false чтобы сработал fallback
+      }
       console.error('❌ Kie.ai API недоступен:', error.message);
       return false;
     }
