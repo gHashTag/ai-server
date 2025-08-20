@@ -1,22 +1,28 @@
 import { Request, Response, NextFunction } from 'express'
-import { generateTextToImage } from '@/services/generateTextToImage'
-import { generateSpeech } from '@/services/generateSpeech'
-import { generateTextToVideo } from '@/services/generateTextToVideo'
-import { generateImageToVideo } from '@/services/generateImageToVideo'
+// План А - Inngest функции
+import { inngest } from '@/inngest/client'
+// План Б - Fallback функции  
+import {
+  generateImageFallback,
+  generateTextToVideoFallback,
+  generateImageToVideoFallback,
+  generateSpeechFallback,
+  createVoiceAvatarFallback,
+} from '@/services/fallback'
+
+// Существующие сервисы для других функций
 import { generateImageToPrompt } from '@/services/generateImageToPrompt'
 import { generateNeuroImage } from '@/services/generateNeuroImage'
-import { createVoiceAvatar } from '@/services/createVoiceAvatar'
-
-import { validateUserParams } from '@/middlewares/validateUserParams'
 import { generateNeuroImageV2 } from '@/services/generateNeuroImageV2'
 import { generateLipSync } from '@/services/generateLipSync'
 import { generateModelTrainingV2 } from '@/services/generateModelTrainingV2'
 
-import { API_URL } from '@/config'
+import { validateUserParams } from '@/middlewares/validateUserParams'
+import { shouldUseInngest, API_URL } from '@/config'
 import { deleteFile } from '@/helpers'
 import path from 'path'
 import { getBotByName } from '@/core/bot'
-import { inngest } from '@/core/inngest-client/clients'
+import { logger } from '@/utils/logger'
 export class GenerationController {
   public textToImage = async (
     req: Request,
@@ -53,15 +59,47 @@ export class GenerationController {
 
       const { bot } = getBotByName(bot_name)
 
-      generateTextToImage(
-        prompt,
-        model,
-        num_images,
-        telegram_id,
-        username,
-        is_ru,
-        bot
-      )
+      // Выбор между планом А (Inngest) и планом Б (Fallback)
+      if (shouldUseInngest()) {
+        // План А - Inngest (асинхронная обработка)
+        logger.info({
+          message: 'Использование плана А (Inngest) для text-to-image',
+          telegram_id,
+          model,
+        })
+
+        await inngest.send({
+          name: 'image/generate.start',
+          data: {
+            prompt,
+            model_type: model,
+            num_images,
+            telegram_id,
+            username,
+            is_ru,
+            bot_name,
+          },
+        })
+      } else {
+        // План Б - Fallback (синхронная обработка)
+        logger.info({
+          message: 'Использование плана Б (Fallback) для text-to-image',
+          telegram_id,
+          model,
+        })
+
+        generateImageFallback(
+          prompt,
+          model,
+          num_images,
+          telegram_id,
+          username,
+          is_ru,
+          bot
+        ).catch(error => {
+          logger.error('Ошибка при fallback генерации изображения:', error)
+        })
+      }
     } catch (error) {
       next(error)
     }
@@ -165,7 +203,38 @@ export class GenerationController {
       res.status(200).json({ message: 'Voice creation started' })
 
       const { bot } = getBotByName(bot_name)
-      createVoiceAvatar(fileUrl, telegram_id, username, is_ru, bot)
+
+      // Выбор между планом А (Inngest) и планом Б (Fallback)
+      if (shouldUseInngest()) {
+        // План А - Inngest
+        logger.info({
+          message: 'Использование плана А (Inngest) для создания голосового аватара',
+          telegram_id,
+          fileUrl,
+        })
+
+        await inngest.send({
+          name: 'speech/voice-avatar.start',
+          data: {
+            fileUrl,
+            telegram_id,
+            username,
+            is_ru,
+            bot_name,
+          },
+        })
+      } else {
+        // План Б - Fallback
+        logger.info({
+          message: 'Использование плана Б (Fallback) для создания голосового аватара',
+          telegram_id,
+          fileUrl,
+        })
+
+        createVoiceAvatarFallback(fileUrl, telegram_id, username, is_ru, bot).catch(error => {
+          logger.error('Ошибка при fallback создании голосового аватара:', error)
+        })
+      }
     } catch (error) {
       next(error)
     }
@@ -198,7 +267,38 @@ export class GenerationController {
       res.status(200).json({ message: 'Processing started' })
 
       const { bot } = getBotByName(bot_name)
-      generateSpeech({ text, voice_id, telegram_id, is_ru, bot })
+
+      // Выбор между планом А (Inngest) и планом Б (Fallback)
+      if (shouldUseInngest()) {
+        // План А - Inngest
+        logger.info({
+          message: 'Использование плана А (Inngest) для text-to-speech',
+          telegram_id,
+          voice_id,
+        })
+
+        await inngest.send({
+          name: 'speech/text-to-speech.start',
+          data: {
+            text,
+            voice_id,
+            telegram_id,
+            is_ru,
+            bot_name,
+          },
+        })
+      } else {
+        // План Б - Fallback
+        logger.info({
+          message: 'Использование плана Б (Fallback) для text-to-speech',
+          telegram_id,
+          voice_id,
+        })
+
+        generateSpeechFallback(text, voice_id, telegram_id, is_ru, bot).catch(error => {
+          logger.error('Ошибка при fallback генерации речи:', error)
+        })
+      }
     } catch (error) {
       next(error)
     }
@@ -227,15 +327,46 @@ export class GenerationController {
       res.status(200).json({ message: 'Processing started' })
 
       const { bot } = getBotByName(bot_name)
-      generateTextToVideo(
-        prompt,
-        videoModel,
-        telegram_id,
-        username,
-        is_ru,
-        bot,
-        bot_name
-      )
+
+      // Выбор между планом А (Inngest) и планом Б (Fallback)
+      if (shouldUseInngest()) {
+        // План А - Inngest
+        logger.info({
+          message: 'Использование плана А (Inngest) для text-to-video',
+          telegram_id,
+          videoModel,
+        })
+
+        await inngest.send({
+          name: 'video/text-to-video.start',
+          data: {
+            prompt,
+            videoModel,
+            telegram_id,
+            username,
+            is_ru,
+            bot_name,
+          },
+        })
+      } else {
+        // План Б - Fallback
+        logger.info({
+          message: 'Использование плана Б (Fallback) для text-to-video',
+          telegram_id,
+          videoModel,
+        })
+
+        generateTextToVideoFallback(
+          prompt,
+          videoModel,
+          telegram_id,
+          username,
+          is_ru,
+          bot
+        ).catch(error => {
+          logger.error('Ошибка при fallback генерации видео:', error)
+        })
+      }
     } catch (error) {
       next(error)
     }
@@ -273,15 +404,48 @@ export class GenerationController {
       res.status(200).json({ message: 'Processing started' })
 
       const { bot } = getBotByName(bot_name)
-      generateImageToVideo(
-        imageUrl,
-        prompt,
-        videoModel,
-        telegram_id,
-        username,
-        is_ru,
-        bot
-      )
+
+      // Выбор между планом А (Inngest) и планом Б (Fallback)
+      if (shouldUseInngest()) {
+        // План А - Inngest
+        logger.info({
+          message: 'Использование плана А (Inngest) для image-to-video',
+          telegram_id,
+          videoModel,
+        })
+
+        await inngest.send({
+          name: 'video/image-to-video.start',
+          data: {
+            imageUrl,
+            prompt,
+            videoModel,
+            telegram_id,
+            username,
+            is_ru,
+            bot_name,
+          },
+        })
+      } else {
+        // План Б - Fallback
+        logger.info({
+          message: 'Использование плана Б (Fallback) для image-to-video',
+          telegram_id,
+          videoModel,
+        })
+
+        generateImageToVideoFallback(
+          imageUrl,
+          prompt,
+          videoModel,
+          telegram_id,
+          username,
+          is_ru,
+          bot
+        ).catch(error => {
+          logger.error('Ошибка при fallback генерации image-to-video:', error)
+        })
+      }
     } catch (error) {
       next(error)
     }

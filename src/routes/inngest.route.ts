@@ -1,10 +1,25 @@
 import { serve } from 'inngest/express'
-import { inngest } from '@/core/inngest-client/clients'
-import { generateModelTraining } from '@/core/inngest-client/helpers'
+import { inngest } from '@/inngest/client'
+import {
+  generateImageInngest,
+  generateTextToVideoInngest,
+  generateImageToVideoInngest,
+  generateSpeechInngest,
+  createVoiceAvatarInngest,
+  generateModelTraining,
+} from '@/inngest/functions'
 
-// Регистрация ВСЕХ функций в одном месте
+// Регистрация ВСЕХ Inngest функций в одном месте
 export const inngestRouter = serve({
   client: inngest,
-  functions: [generateModelTraining],
+  functions: [
+    // План А - Основные функции генерации
+    generateImageInngest,
+    generateTextToVideoInngest,
+    generateImageToVideoInngest,
+    generateSpeechInngest,
+    createVoiceAvatarInngest,
+    generateModelTraining,
+  ],
   signingKey: process.env.INNGEST_SIGNING_KEY,
 })

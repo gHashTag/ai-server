@@ -179,3 +179,13 @@ if (!process.env.AERENDER_PATH) {
 export const AERENDER_PATH = process.env.AERENDER_PATH
 
 export const INNGEST_WEBHOOK_URL = process.env.INNGEST_WEBHOOK_URL
+
+// Конфигурация планов A/B
+export const EXECUTION_PLAN = {
+  USE_INNGEST: process.env.USE_INNGEST !== 'false', // План А (по умолчанию)
+  FALLBACK_MODE: process.env.FALLBACK_MODE === 'true', // Принудительный план Б
+}
+
+export function shouldUseInngest(): boolean {
+  return EXECUTION_PLAN.USE_INNGEST && !EXECUTION_PLAN.FALLBACK_MODE
+}
