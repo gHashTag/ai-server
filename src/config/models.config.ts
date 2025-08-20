@@ -156,10 +156,10 @@ export const VIDEO_MODELS_CONFIG: Record<string, VideoModelConfig> = {
     title: 'Google Veo 3 Fast',
     inputType: ['text', 'image'],
     description:
-      '⚡ Супер быстрая генерация через Kie.ai (конкурентная цена!), 2-8 сек',
+      '⚡ Супер быстрая генерация через Kie.ai (конкурентная цена!), ТОЛЬКО 8 сек',
     pricePerSecond: 0.08, // 40⭐ за 8 сек = $0.64 за 8 сек = $0.08/сек (конкурентно с +8.1% наценкой)
-    supportedDurations: [2, 4, 6, 8, 10], // Поддерживаемые длительности
-    defaultDuration: 8, // По умолчанию 8 секунд
+    supportedDurations: [8], // VEO 3 FAST ПОДДЕРЖИВАЕТ ТОЛЬКО 8 СЕКУНД!
+    defaultDuration: 8, // Всегда 8 секунд
     api: {
       model: 'kie-veo-3-fast',
       input: {
@@ -169,7 +169,7 @@ export const VIDEO_MODELS_CONFIG: Record<string, VideoModelConfig> = {
       },
     },
     requirements: {
-      maxDuration: 10,
+      maxDuration: 8, // Максимум тоже 8
     },
     imageKey: 'imageUrl',
   },

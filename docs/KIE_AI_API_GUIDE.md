@@ -26,7 +26,7 @@ KIE_AI_API_KEY=your_kie_ai_api_key_here
 
 | Модель | ID | Описание | Цена/сек | Экономия vs Google |
 |--------|----|---------|---------:|-------------------:|
-| Veo 3 Fast | `veo-3-fast` | Быстрая генерация | $0.05 | 83% |
+| Veo 3 Fast | `veo-3-fast` | Быстрая генерация ТОЛЬКО 8 сек | $0.05 | 83% |
 | Veo 3 Quality | `veo-3` | Премиум качество | $0.25 | 37% |
 | Runway Aleph | `runway-aleph` | Продвинутое редактирование | $0.30 | 25% |
 
@@ -42,7 +42,7 @@ POST /api/video/generate
 interface VideoGenerationRequest {
   model: 'veo-3-fast' | 'veo-3' | 'runway-aleph'
   prompt: string
-  duration: number // 2-10 секунд
+  duration: number // 8 секунд для veo-3-fast, 2-10 для остальных
   aspectRatio?: '16:9' | '9:16' | '1:1'
   imageUrl?: string // для image-to-video
   userId?: string
@@ -52,6 +52,8 @@ interface VideoGenerationRequest {
 
 ### Пример запроса
 
+⚠️ **ВАЖНО: Veo 3 Fast поддерживает ТОЛЬКО 8-секундные видео!** Любой другой duration будет автоматически изменен на 8.
+
 ```bash
 curl -X POST http://localhost:4000/api/video/generate \
   -H "Content-Type: application/json" \
@@ -59,7 +61,7 @@ curl -X POST http://localhost:4000/api/video/generate \
   -d '{
     "model": "veo-3-fast",
     "prompt": "Beautiful sunset over mountains, cinematic",
-    "duration": 5,
+    "duration": 8,
     "aspectRatio": "16:9"
   }'
 ```

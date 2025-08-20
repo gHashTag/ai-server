@@ -19,10 +19,10 @@ const VIDEO_MODELS_CONFIG = {
   'veo-3-fast': {
     id: 'veo-3-fast',
     title: 'Google Veo 3 Fast',
-    description: '⚡ Супер быстрая генерация через Kie.ai (дешевле Synx!), 2-8 сек',
+    description: '⚡ Супер быстрая генерация через Kie.ai (дешевле Synx!), ТОЛЬКО 8 сек',
     pricePerSecond: 5.0 / 85, // 40₽ за 8 сек = 5₽/сек = $0.059/сек
-    supportedDurations: [2, 4, 6, 8],
-    defaultDuration: 4,
+    supportedDurations: [8], // VEO 3 FAST ПОДДЕРЖИВАЕТ ТОЛЬКО 8 СЕКУНД!
+    defaultDuration: 8, // Всегда 8 секунд
     api: {
       model: 'veo-3-fast',
       input: {

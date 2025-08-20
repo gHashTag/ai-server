@@ -22,12 +22,13 @@ interface KieModelConfig {
 export const KIE_AI_MODELS: Record<string, KieModelConfig> = {
   'veo-3-fast': {
     name: 'Veo 3 Fast',
-    description: 'Быстрая генерация',
+    description: 'Быстрая генерация ТОЛЬКО 8 секунд',
     pricePerSecond: 0.05, // $0.05/сек (87% экономия против $0.40 Vertex AI)
-    maxDuration: 10,
+    maxDuration: 8, // ТОЛЬКО 8 СЕКУНД!
     supportedFormats: ['16:9', '9:16', '1:1'],
     kieModelName: 'veo3', // Реальное название в Kie.ai API
-    endpoint: '/veo/generate'
+    endpoint: '/veo/generate',
+    supportedDurations: [8] // VEO 3 FAST = ТОЛЬКО 8 СЕКУНД!
   },
   'veo-3': {
     name: 'Veo 3 Quality', 
