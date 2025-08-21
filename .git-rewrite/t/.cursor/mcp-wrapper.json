@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "ai-server-neurophoto-wrapper": {
+      "command": "/bin/bash",
+      "args": ["/Users/playra/ai-server/scripts/mcp-wrapper.sh"],
+      "cwd": "/Users/playra/ai-server"
+    }
+  }
+} 
