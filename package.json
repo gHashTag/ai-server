@@ -5,7 +5,8 @@
   "author": "",
   "license": "ISC",
   "scripts": {
-    "start": "npm run build && cross-env NODE_ENV=production node dist/server.js",
+    "start": "cross-env NODE_ENV=production node dist/server.js",
+    "start:build": "npm run build && cross-env NODE_ENV=production node dist/server.js",
     "start:all": "npm run build && pm2 start ecosystem.mcp.config.js",
     "stop:all": "pm2 stop ecosystem.mcp.config.js",
     "restart:all": "pm2 restart ecosystem.mcp.config.js",
@@ -13,7 +14,7 @@
     "status": "pm2 status",
     "dev": "npm run build && pm2 start ecosystem.mcp.config.js",
     "dev:simple": "nodemon --config nodemon.json",
-    "build": "swc src -d dist --source-maps --copy-files",
+    "build": "npx swc src -d dist --source-maps --copy-files",
     "build:tsc": "tsc && tsc-alias",
     "test": "jest --forceExit --detectOpenHandles",
     "lint": "eslint --ignore-path .gitignore --ext .ts src",
@@ -76,7 +77,8 @@
     "winston": "^3.8.1",
     "winston-daily-rotate-file": "^4.7.1",
     "xlsx": "^0.18.5",
-    "zod": "^3.25.67"
+    "zod": "^3.25.67",
+    "cross-env": "^7.0.3"
   },
   "devDependencies": {
     "@inngest/test": "^0.1.6",
@@ -99,7 +101,6 @@
     "@types/uuid": "^10.0.0",
     "@typescript-eslint/eslint-plugin": "^5.29.0",
     "@typescript-eslint/parser": "^5.29.0",
-    "cross-env": "^7.0.3",
     "eslint": "^8.20.0",
     "eslint-config-prettier": "^8.10.0",
     "eslint-plugin-prettier": "^4.2.1",

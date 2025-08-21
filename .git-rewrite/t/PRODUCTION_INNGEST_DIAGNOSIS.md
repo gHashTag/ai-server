@@ -67,11 +67,11 @@ services:
 # Inngest Production Keys
 INNGEST_SIGNING_KEY=signkey_prod_xxxxxxxxxxxxx
 INNGEST_EVENT_KEY=eventkey_prod_xxxxxxxxxxxxx
-INNGEST_APP_URL=https://ai-server-u14194.vm.elestio.app
+INNGEST_APP_URL=https://ai-server-production-production-8e2d.up.railway.app
 
 # Existing variables...
 NODE_ENV=production
-ORIGIN=https://ai-server-u14194.vm.elestio.app
+ORIGIN=https://ai-server-production-production-8e2d.up.railway.app
 # ... остальные переменные
 ```
 
@@ -118,7 +118,7 @@ echo "ORIGIN: $ORIGIN"
 
 ```bash
 # Проверить GET запрос к serve endpoint:
-curl https://ai-server-u14194.vm.elestio.app/api/inngest
+curl https://ai-server-production-production-8e2d.up.railway.app/api/inngest
 
 # Должен вернуть информацию о функциях:
 # {"message": "Inngest endpoint configured correctly.", "functionsFound": 14}
@@ -152,7 +152,7 @@ read -p "Введите INNGEST_EVENT_KEY: " EVENT_KEY
 # Обновить .env файл
 echo "INNGEST_SIGNING_KEY=$SIGNING_KEY" >> .env
 echo "INNGEST_EVENT_KEY=$EVENT_KEY" >> .env
-echo "INNGEST_APP_URL=https://ai-server-u14194.vm.elestio.app" >> .env
+echo "INNGEST_APP_URL=https://ai-server-production-production-8e2d.up.railway.app" >> .env
 
 # Перезапустить Docker
 docker-compose down
@@ -188,10 +188,10 @@ chmod +x fix-production-inngest.sh
 
 ```bash
 # Тест регистрации функций:
-curl -X PUT https://ai-server-u14194.vm.elestio.app/api/inngest
+curl -X PUT https://ai-server-production-production-8e2d.up.railway.app/api/inngest
 
 # Тест отправки события:
-curl -X POST https://ai-server-u14194.vm.elestio.app/api/inngest \
+curl -X POST https://ai-server-production-production-8e2d.up.railway.app/api/inngest \
   -H 'Content-Type: application/json' \
   -d '{
     "name": "instagram/scraper-v2",

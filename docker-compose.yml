@@ -14,12 +14,12 @@ services:
       - LOG_DIR=/app/logs
       - SECRET_KEY=${SECRET_KEY}
       - CREDENTIALS=true
-      - ORIGIN=https://ai-server-u14194.vm.elestio.app
+      - ORIGIN=https://ai-server-production-production-8e2d.up.railway.app
       - LOG_FORMAT=combined
       # ✅ INNGEST VARIABLES FOR PRODUCTION:
       - INNGEST_SIGNING_KEY=${INNGEST_SIGNING_KEY}
       - INNGEST_EVENT_KEY=${INNGEST_EVENT_KEY}
-      - INNGEST_APP_URL=https://ai-server-u14194.vm.elestio.app
+      - INNGEST_APP_URL=https://ai-server-production-production-8e2d.up.railway.app
     volumes:
       - ./persistent_uploads:/app/dist/uploads
       - ./logs:/app/logs
