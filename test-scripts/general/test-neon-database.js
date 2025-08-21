@@ -8,10 +8,10 @@ const { Pool } = require('pg')
 async function testNeonConnection() {
   console.log('🚀 Тестирование подключения к Neon Database...')
   
-  const NEON_DATABASE_URL = 'postgresql://neondb_owner:npg_5RWzh7CwrXxE@ep-delicate-block-a1l1lt0p-pooler.ap-southeast-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require'
+  const NEON_DATABASE_URL = process.env.NEON_DATABASE_URL || 'postgresql://user:password@host/database?sslmode=require'
   
   console.log('📡 Подключение к Neon PostgreSQL...')
-  console.log('🔗 URL: ep-delicate-block-a1l1lt0p-pooler.ap-southeast-1.aws.neon.tech')
+  console.log('🔗 URL:', NEON_DATABASE_URL ? 'Configured via environment' : 'Not configured')
   
   const dbPool = new Pool({
     connectionString: NEON_DATABASE_URL,
