@@ -32,7 +32,19 @@ process.env.BFL_WEBHOOK_URL = 'https://test.webhook.url'
 // Mock внешние модули
 jest.mock('@supabase/supabase-js')
 jest.mock('telegraf')
-jest.mock('replicate')
+jest.mock('replicate', () => ({
+  __esModule: true,
+  default: jest.fn().mockImplementation(() => ({
+    run: (jest.fn() as any).mockResolvedValue(['https://fake-image-url.jpg', 'https://fake-image-url2.jpg']),
+    predictions: {
+      create: (jest.fn() as any).mockResolvedValue({
+        id: 'test-prediction-id',
+        status: 'succeeded',
+        output: ['https://fake-image-url.jpg']
+      })
+    }
+  }))
+}))
 jest.mock('elevenlabs', () => ({
   ElevenLabs: jest.fn().mockImplementation(() => ({
     generate: (jest.fn() as any).mockResolvedValue({
@@ -45,8 +57,8 @@ jest.mock('elevenlabs', () => ({
 }))
 jest.mock('openai')
 jest.mock('inngest')
-jest.mock('axios', () => ({
-  default: {
+jest.mock('axios', () => {
+  const mockAxios = {
     get: (jest.fn() as any).mockResolvedValue({
       data: Buffer.from('fake image data'),
       headers: { 'content-type': 'image/jpeg' }
@@ -54,10 +66,19 @@ jest.mock('axios', () => ({
     post: (jest.fn() as any).mockResolvedValue({
       data: { success: true },
       status: 200
+    }),
+    put: (jest.fn() as any).mockResolvedValue({
+      data: { success: true },
+      status: 200
     })
-  },
-  isAxiosError: jest.fn().mockReturnValue(false)
-}))
+  }
+  
+  return {
+    __esModule: true,
+    default: mockAxios,
+    isAxiosError: jest.fn().mockReturnValue(false)
+  }
+})
 jest.mock('fs', () => require('./__mocks__/fs'))
 
 // Mock core modules
@@ -160,10 +181,17 @@ jest.mock('@/helpers', () => ({
   errorMessage: jest.fn(),
   errorMessageAdmin: jest.fn(),
   downloadFile: (jest.fn() as any).mockResolvedValue(Buffer.from('fake image data')),
-  processApiResponse: (jest.fn() as any).mockResolvedValue('https://fake-image-url.jpg'),
+  processApiResponse: (jest.fn() as any).mockResolvedValue(['https://fake-image-url.jpg']),
   pulse: (jest.fn() as any).mockResolvedValue(true),
+  pulseNeuroImageV2: (jest.fn() as any).mockResolvedValue(true),
   saveFileLocally: (jest.fn() as any).mockResolvedValue('/fake/local/path/image.jpg'),
-  sendBalanceMessage: jest.fn()
+  sendBalanceMessage: jest.fn(),
+  fetchImage: (jest.fn() as any).mockResolvedValue(Buffer.from('fake image data')),
+  deleteFile: (jest.fn() as any).mockResolvedValue(true),
+  retry: (jest.fn() as any).mockImplementation(async (fn) => await fn()),
+  transliterate: (jest.fn() as any).mockImplementation((text) => text),
+  getVideoMetadata: (jest.fn() as any).mockResolvedValue({ duration: 10, fps: 30 }),
+  optimizeForTelegram: (jest.fn() as any).mockResolvedValue('/fake/optimized/path.mp4')
 }))
 
 // Глобальные моки для console
