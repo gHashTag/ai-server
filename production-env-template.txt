@@ -7,7 +7,7 @@
 
 INNGEST_SIGNING_KEY=signkey_prod_xxxxxxxxxxxxxxxxxxxxxxxxx
 INNGEST_EVENT_KEY=eventkey_prod_xxxxxxxxxxxxxxxxxxxxxxxxx
-INNGEST_APP_URL=https://ai-server-u14194.vm.elestio.app
+INNGEST_APP_URL=https://ai-server-production-production-8e2d.up.railway.app
 
 # =======================================
 # 🌐 SERVER CONFIGURATION
@@ -15,7 +15,7 @@ INNGEST_APP_URL=https://ai-server-u14194.vm.elestio.app
 
 NODE_ENV=production
 PORT=3000
-ORIGIN=https://ai-server-u14194.vm.elestio.app
+ORIGIN=https://ai-server-production-production-8e2d.up.railway.app
 LOG_FORMAT=combined
 LOG_DIR=/app/logs
 CREDENTIALS=true
@@ -86,22 +86,22 @@ AERENDER_PATH=/Applications/Adobe\ After\ Effects\ 2025/aerender
 
 MERCHANT_LOGIN=your_merchant_login
 PASSWORD2=your_payment_password
-RESULT_URL2=https://ai-server-u14194.vm.elestio.app/api/payment/success
+RESULT_URL2=https://ai-server-production-production-8e2d.up.railway.app/api/payment/success
 
 # =======================================
 # 🔗 WEBHOOKS
 # =======================================
 
 NGROK_URL=https://your-tunnel-url.ngrok.io
-WEBHOOK_URL=https://ai-server-u14194.vm.elestio.app/webhook
-INNGEST_WEBHOOK_URL=https://ai-server-u14194.vm.elestio.app/api/inngest
+WEBHOOK_URL=https://ai-server-production-production-8e2d.up.railway.app/webhook
+INNGEST_WEBHOOK_URL=https://ai-server-production-production-8e2d.up.railway.app/api/inngest
 
 # =======================================
 # 🎯 EXTERNAL SERVICES
 # =======================================
 
 BFL_API_KEY=your_bfl_api_key  
-BFL_WEBHOOK_URL=https://ai-server-u14194.vm.elestio.app/api/webhook/bfl-neurophoto
+BFL_WEBHOOK_URL=https://ai-server-production-production-8e2d.up.railway.app/api/webhook/bfl-neurophoto
 REPLICATE_USERNAME=your_replicate_username
 
 # =======================================

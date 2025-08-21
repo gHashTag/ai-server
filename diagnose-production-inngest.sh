@@ -10,7 +10,7 @@ YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
-PRODUCTION_URL="https://ai-server-u14194.vm.elestio.app"
+PRODUCTION_URL="https://ai-server-production-production-8e2d.up.railway.app"
 API_ENDPOINT="$PRODUCTION_URL/api/inngest"
 
 echo ""
