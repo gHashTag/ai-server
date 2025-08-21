@@ -1,6 +1,6 @@
 {
-  "timestamp": "2025-08-21T06:42:58.714Z",
-  "totalTime": 4085,
+  "timestamp": "2025-08-21T07:29:59.506Z",
+  "totalTime": 4104,
   "successCount": 1,
   "totalTests": 2,
   "criticalFailures": 0,
@@ -11,9 +11,9 @@
       "priority": "CRITICAL",
       "success": true,
       "error": null,
-      "videoUrl": "http://localhost:4000/temp/video_9:16_1755758574683.mp4",
-      "duration": 10,
-      "responseTime": 3,
+      "videoUrl": "http://localhost:4000/temp/video_9:16_1755761395477.mp4",
+      "duration": 28,
+      "responseTime": 8,
       "videoDownloaded": false,
       "videoPath": null
     },
