@@ -140,7 +140,7 @@ export const VIDEO_MODELS_CONFIG: Record<string, VideoModelConfig> = {
     supportedDurations: [2, 4, 6, 8], // Поддерживаемые длительности
     defaultDuration: 8, // По умолчанию 8 секунд
     api: {
-      model: 'veo-3',
+      model: 'veo3',
       input: {
         type: 'kie-ai',
         resolution: '1080p', // Kie.ai поддерживает 1080p
@@ -161,7 +161,7 @@ export const VIDEO_MODELS_CONFIG: Record<string, VideoModelConfig> = {
     supportedDurations: [2, 4, 6, 8, 10], // Поддерживаемые длительности
     defaultDuration: 8, // По умолчанию 8 секунд
     api: {
-      model: 'kie-veo-3-fast',
+      model: 'veo3_fast',
       input: {
         type: 'kie-ai',
         resolution: '720p',
