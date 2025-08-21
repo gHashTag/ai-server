@@ -136,7 +136,6 @@ export const competitorAutoParser = inngest.createFunction(
 
           // Небольшая задержка между запросами
           await new Promise(resolve => setTimeout(resolve, 2000))
-<<<<<<< HEAD
           
           // Запускаем доставку результатов подписчикам
           setTimeout(async () => {
@@ -153,9 +152,6 @@ export const competitorAutoParser = inngest.createFunction(
               log.error(`❌ Ошибка запуска доставки @${group.competitor_username}:`, deliveryError.message)
             }
           }, 30000) // Ждем 30 секунд чтобы парсинг успел завершиться
-
-=======
->>>>>>> origin/main
         } catch (error: any) {
           log.error(
             `❌ Ошибка парсинга @${group.competitor_username}:`,
