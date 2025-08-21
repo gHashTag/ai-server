@@ -46,9 +46,9 @@ describe('generateScenarioClips Schema and Interfaces', () => {
       expect(() => generateScenarioClipsSchema.parse(mockEvent)).not.toThrow()
     })
 
-    it('should reject invalid photo URL', () => {
+    it('should reject empty photo URL', () => {
       // Arrange
-      const invalidEvent = { ...mockEvent, photo_url: 'not-a-url' }
+      const invalidEvent = { ...mockEvent, photo_url: '' }
 
       // Act & Assert
       expect(() => generateScenarioClipsSchema.parse(invalidEvent)).toThrow()

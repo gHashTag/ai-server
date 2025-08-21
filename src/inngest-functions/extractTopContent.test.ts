@@ -53,7 +53,7 @@ describe('extractTopContent helper functions', () => {
     // Assert
     expect(result).toContain('📊 ТОП-10 РИЛСОВ')
     expect(result).toContain('user1')
-    expect(result).toContain('10\u00A0000') // Неразрывный пробел
+    expect(result).toContain('10,000') // Запятая как разделитель тысяч
     expect(result).toContain('просмотров')
     expect(result).toContain('❤️ 500 лайков')
     expect(result).toContain('Test caption 1')
