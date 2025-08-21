@@ -8,7 +8,7 @@ import axios from 'axios'
 async function debugInstagramAPI() {
   console.log('🔍 === ДИАГНОСТИКА INSTAGRAM API ===\n')
 
-  const apiKey = process.env.RAPIDAPI_INSTAGRAM_KEY || 'da6f54ca68mshc06984da37c569bp1743f1jsne4c79beeb969'
+  const apiKey = process.env.RAPIDAPI_INSTAGRAM_KEY || 'your-rapidapi-key-here'
   const host = process.env.RAPIDAPI_INSTAGRAM_HOST || 'real-time-instagram-scraper-api1.p.rapidapi.com'
   const baseUrl = 'https://real-time-instagram-scraper-api1.p.rapidapi.com'
 
@@ -162,7 +162,7 @@ async function debugInstagramAPI() {
 }
 
 // Экспортируем переменные и запускаем
-process.env.RAPIDAPI_INSTAGRAM_KEY = 'da6f54ca68mshc06984da37c569bp1743f1jsne4c79beeb969'
+process.env.RAPIDAPI_INSTAGRAM_KEY = process.env.RAPIDAPI_INSTAGRAM_KEY || 'your-rapidapi-key-here'
 process.env.RAPIDAPI_INSTAGRAM_HOST = 'real-time-instagram-scraper-api1.p.rapidapi.com'
 
 debugInstagramAPI()

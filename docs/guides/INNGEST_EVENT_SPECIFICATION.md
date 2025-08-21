@@ -332,7 +332,7 @@ async function sendReportToUser(ctx, eventId, scrapingData) {
 
 ```bash
 # Instagram API
-RAPIDAPI_INSTAGRAM_KEY=da6f54ca68mshc06984da37c569bp1743f1jsne4c79beeb969
+RAPIDAPI_INSTAGRAM_KEY=your-rapidapi-key-here
 RAPIDAPI_INSTAGRAM_HOST=real-time-instagram-scraper-api1.p.rapidapi.com
 
 # База данных

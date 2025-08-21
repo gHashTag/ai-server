@@ -8,7 +8,7 @@ const { Pool } = require('pg')
 
 class DirectInstagramScraper {
   constructor() {
-    this.apiKey = 'da6f54ca68mshc06984da37c569bp1743f1jsne4c79beeb969'
+    this.apiKey = process.env.RAPIDAPI_INSTAGRAM_KEY || 'your-rapidapi-key-here'
     this.host = 'real-time-instagram-scraper-api1.p.rapidapi.com'
     this.baseUrl = 'https://real-time-instagram-scraper-api1.p.rapidapi.com'
 

@@ -7,7 +7,7 @@ const axios = require('axios')
 async function testWithDifferentUsers() {
   console.log('🔍 Тестируем Instagram API с разными пользователями...')
 
-  const API_KEY = 'da6f54ca68mshc06984da37c569bp1743f1jsne4c79beeb969'
+  const API_KEY = process.env.RAPIDAPI_INSTAGRAM_KEY || 'your-rapidapi-key-here'
   const HOST = 'real-time-instagram-scraper-api1.p.rapidapi.com'
   const BASE_URL = 'https://real-time-instagram-scraper-api1.p.rapidapi.com'
 
