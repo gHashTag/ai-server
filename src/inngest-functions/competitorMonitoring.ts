@@ -4,7 +4,7 @@
  */
 
 import { inngest } from '@/core/inngest/clients'
-import { Pool } from 'pg'
+import { supabase } from '@/supabase/client'
 import { z } from 'zod'
 
 // Схема валидации входных данных
@@ -18,12 +18,6 @@ const CompetitorMonitoringEventSchema = z.object({
   max_age_days: z.number().min(1).max(30).default(7),
   delivery_format: z.enum(['digest', 'individual', 'archive']).default('digest'),
   project_id: z.number().positive().optional(),
-})
-
-// База данных
-const dbPool = new Pool({
-  connectionString: process.env.NEON_DATABASE_URL || '',
-  ssl: { rejectUnauthorized: false }
 })
 
 // Логгер
@@ -66,59 +60,91 @@ export const competitorMonitoring = inngest.createFunction(
 
     // Step 2: Создание подписки на конкурента
     const subscription = await step.run('create-subscription', async () => {
-      const client = await dbPool.connect()
-      
-      try {
-        // Проверяем лимит подписок (максимум 10 на пользователя)
-        const countResult = await client.query(`
-          SELECT COUNT(*) FROM competitor_subscriptions 
-          WHERE user_telegram_id = $1 AND bot_name = $2 AND is_active = true
-        `, [validatedData.user_telegram_id, validatedData.bot_name])
+      // Проверяем лимит подписок (максимум 10 на пользователя)
+      const { count } = await supabase
+        .from('competitor_subscriptions')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_telegram_id', validatedData.user_telegram_id)
+        .eq('bot_name', validatedData.bot_name)
+        .eq('is_active', true)
 
-        if (parseInt(countResult.rows[0].count) >= 10) {
-          throw new Error('Maximum 10 active subscriptions per user')
-        }
-
-        // Создаем подписку
-        const result = await client.query(`
-          INSERT INTO competitor_subscriptions 
-          (user_telegram_id, user_chat_id, bot_name, competitor_username, 
-           max_reels, min_views, max_age_days, delivery_format)
-          VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-          ON CONFLICT (user_telegram_id, competitor_username, bot_name) 
-          DO UPDATE SET 
-            is_active = true,
-            max_reels = $5,
-            min_views = $6,
-            max_age_days = $7,
-            delivery_format = $8,
-            updated_at = NOW()
-          RETURNING *
-        `, [
-          validatedData.user_telegram_id,
-          validatedData.user_chat_id,
-          validatedData.bot_name,
-          validatedData.username.replace('@', ''),
-          validatedData.max_reels,
-          validatedData.min_views,
-          validatedData.max_age_days,
-          validatedData.delivery_format
-        ])
-
-        // Обновляем профиль конкурента
-        await client.query(`
-          INSERT INTO competitor_profiles (username, total_subscribers)
-          VALUES ($1, 1)
-          ON CONFLICT (username) DO UPDATE SET
-            total_subscribers = competitor_profiles.total_subscribers + 1,
-            updated_at = NOW()
-        `, [validatedData.username.replace('@', '')])
-
-        log.info(`✅ Подписка создана на @${validatedData.username}`)
-        return result.rows[0]
-      } finally {
-        client.release()
+      if (count && count >= 10) {
+        throw new Error('Maximum 10 active subscriptions per user')
       }
+
+      // Создаем или обновляем подписку
+      const subscriptionData = {
+        user_telegram_id: validatedData.user_telegram_id,
+        user_chat_id: validatedData.user_chat_id,
+        bot_name: validatedData.bot_name,
+        competitor_username: validatedData.username.replace('@', ''),
+        max_reels: validatedData.max_reels,
+        min_views: validatedData.min_views,
+        max_age_days: validatedData.max_age_days,
+        delivery_format: validatedData.delivery_format,
+        is_active: true,
+        updated_at: new Date().toISOString()
+      }
+
+      const { data: existingSubscription } = await supabase
+        .from('competitor_subscriptions')
+        .select('*')
+        .eq('user_telegram_id', validatedData.user_telegram_id)
+        .eq('competitor_username', validatedData.username.replace('@', ''))
+        .eq('bot_name', validatedData.bot_name)
+        .single()
+
+      let subscriptionResult
+
+      if (existingSubscription) {
+        // Обновляем существующую подписку
+        const { data, error } = await supabase
+          .from('competitor_subscriptions')
+          .update(subscriptionData)
+          .eq('id', existingSubscription.id)
+          .select()
+          .single()
+
+        if (error) throw error
+        subscriptionResult = data
+      } else {
+        // Создаем новую подписку
+        const { data, error } = await supabase
+          .from('competitor_subscriptions')
+          .insert(subscriptionData)
+          .select()
+          .single()
+
+        if (error) throw error
+        subscriptionResult = data
+      }
+
+      // Обновляем профиль конкурента
+      const { data: existingProfile } = await supabase
+        .from('competitor_profiles')
+        .select('*')
+        .eq('username', validatedData.username.replace('@', ''))
+        .single()
+
+      if (existingProfile) {
+        await supabase
+          .from('competitor_profiles')
+          .update({
+            total_subscribers: existingProfile.total_subscribers + 1,
+            updated_at: new Date().toISOString()
+          })
+          .eq('username', validatedData.username.replace('@', ''))
+      } else {
+        await supabase
+          .from('competitor_profiles')
+          .insert({
+            username: validatedData.username.replace('@', ''),
+            total_subscribers: 1
+          })
+      }
+
+      log.info(`✅ Подписка создана на @${validatedData.username}`)
+      return subscriptionResult
     })
 
     // Step 3: Запуск парсинга рилзов конкурента
@@ -155,28 +181,27 @@ export const competitorMonitoring = inngest.createFunction(
       // Ждем некоторое время, чтобы парсинг завершился
       await new Promise(resolve => setTimeout(resolve, 15000)) // 15 секунд
       
-      const client = await dbPool.connect()
-      
-      try {
-        // Получаем свежие рилзы конкурента из БД
-        const result = await client.query(`
-          SELECT * FROM instagram_apify_reels 
-          WHERE owner_username = $1 
-          AND project_id = $2
-          AND scraped_at >= NOW() - INTERVAL '1 hour'
-          ORDER BY published_at DESC, views_count DESC
-          LIMIT $3
-        `, [
-          validatedData.username.replace('@', ''),
-          validatedData.project_id || 999,
-          validatedData.max_reels
-        ])
+      // Получаем свежие рилзы конкурента из БД
+      const oneHourAgo = new Date()
+      oneHourAgo.setHours(oneHourAgo.getHours() - 1)
 
-        log.info(`📦 Найдено ${result.rows.length} рилзов в БД`)
-        return result.rows
-      } finally {
-        client.release()
+      const { data: reels, error } = await supabase
+        .from('instagram_apify_reels')
+        .select('*')
+        .eq('owner_username', validatedData.username.replace('@', ''))
+        .eq('project_id', validatedData.project_id || 999)
+        .gte('scraped_at', oneHourAgo.toISOString())
+        .order('published_at', { ascending: false })
+        .order('views_count', { ascending: false })
+        .limit(validatedData.max_reels)
+
+      if (error) {
+        log.error('❌ Ошибка получения рилзов:', error)
+        return []
       }
+
+      log.info(`📦 Найдено ${reels?.length || 0} рилзов в БД`)
+      return reels || []
     })
 
     // Step 5: Подготовка результата для пользователя (1 лучший рилз)
@@ -286,26 +311,22 @@ export const competitorMonitoring = inngest.createFunction(
 
     // Step 7: Записываем историю доставки
     await step.run('record-delivery-history', async () => {
-      const client = await dbPool.connect()
-      
-      try {
-        await client.query(`
-          INSERT INTO competitor_delivery_history 
-          (subscription_id, reels_count, delivery_status, reels_data)
-          VALUES ($1, $2, $3, $4)
-        `, [
-          subscription.id,
-          userResult.reels_count_in_db,
-          'sent',
-          JSON.stringify({
+      const { error } = await supabase
+        .from('competitor_delivery_history')
+        .insert({
+          subscription_id: subscription.id,
+          reels_count: userResult.reels_count_in_db,
+          delivery_status: 'sent',
+          reels_data: {
             latest_reel: userResult.latest_reel,
             total_reels: userResult.reels_count_in_db
-          })
-        ])
-        
+          }
+        })
+
+      if (error) {
+        log.error('❌ Ошибка записи истории доставки:', error)
+      } else {
         log.info('📝 История доставки записана')
-      } finally {
-        client.release()
       }
     })
 
@@ -350,22 +371,24 @@ export async function getCompetitorReels(
   limit: number = 10, 
   projectId?: number
 ) {
-  const client = await dbPool.connect()
-  
-  try {
-    const result = await client.query(`
-      SELECT * FROM instagram_apify_reels 
-      WHERE owner_username = $1 
-      ${projectId ? 'AND project_id = $3' : ''}
-      ORDER BY published_at DESC, views_count DESC
-      LIMIT $2
-    `, projectId 
-      ? [username.replace('@', ''), limit, projectId]
-      : [username.replace('@', ''), limit]
-    )
+  let query = supabase
+    .from('instagram_apify_reels')
+    .select('*')
+    .eq('owner_username', username.replace('@', ''))
+    .order('published_at', { ascending: false })
+    .order('views_count', { ascending: false })
+    .limit(limit)
 
-    return result.rows
-  } finally {
-    client.release()
+  if (projectId) {
+    query = query.eq('project_id', projectId)
   }
+
+  const { data, error } = await query
+
+  if (error) {
+    log.error('❌ Ошибка получения рилзов конкурента:', error)
+    return []
+  }
+
+  return data || []
 }

@@ -8,12 +8,17 @@ async function testMonitoringFunction() {
   console.log('🚀 Тестирование функции мониторинга конкурентов...')
   
   // Проверяем переменные окружения
-  if (!process.env.NEON_DATABASE_URL) {
-    console.error('❌ NEON_DATABASE_URL не настроена')
+  if (!process.env.SUPABASE_URL) {
+    console.error('❌ SUPABASE_URL не настроена')
     return
   }
   
-  console.log('✅ База данных настроена')
+  if (!process.env.SUPABASE_SERVICE_KEY) {
+    console.error('❌ SUPABASE_SERVICE_KEY не настроена')
+    return
+  }
+  
+  console.log('✅ Supabase настроен')
   
   // Тестовые данные
   const testData = {
@@ -31,58 +36,49 @@ async function testMonitoringFunction() {
   console.log('📋 Данные для теста:', testData)
   
   try {
-    // Проверим соединение с БД
-    const { Pool } = require('pg')
-    const dbPool = new Pool({
-      connectionString: process.env.NEON_DATABASE_URL,
-      ssl: { rejectUnauthorized: false }
-    })
+    // Проверим соединение с Supabase
+    const { createClient } = require('@supabase/supabase-js')
+    const supabase = createClient(
+      process.env.SUPABASE_URL,
+      process.env.SUPABASE_SERVICE_KEY
+    )
     
-    const client = await dbPool.connect()
+    // Проверяем таблицы (через запрос к таблице)
+    console.log('📋 Проверяем таблицы конкурентов...')
     
-    try {
-      // Проверяем таблицы
-      const tables = await client.query(`
-        SELECT table_name FROM information_schema.tables 
-        WHERE table_schema = 'public' 
-        AND table_name LIKE '%competitor%'
-      `)
+    const { data: subscriptions, error } = await supabase
+      .from('competitor_subscriptions')
+      .select('*')
+      .eq('user_telegram_id', testData.user_telegram_id)
+      .limit(3)
+    
+    if (error) {
+      console.log('❌ Ошибка подключения к Supabase:', error.message)
+      return
+    }
+    
+    console.log('✅ Подключение к Supabase работает')
+    console.log(`👥 Текущих подписок: ${subscriptions.length}`)
+    
+    if (subscriptions.length > 0) {
+      console.log('📊 Последние подписки:')
+      subscriptions.forEach((sub, i) => {
+        console.log(`${i + 1}. @${sub.competitor_username} (активна: ${sub.is_active})`)
+      })
+    }
       
-      console.log('📋 Найдены таблицы:', tables.rows.map(r => r.table_name))
-      
-      // Проверяем текущие подписки
-      const subscriptions = await client.query(`
-        SELECT * FROM competitor_subscriptions 
-        WHERE user_telegram_id = $1 
-        LIMIT 3
-      `, [testData.user_telegram_id])
-      
-      console.log(`👥 Текущих подписок: ${subscriptions.rows.length}`)
-      
-      if (subscriptions.rows.length > 0) {
-        console.log('📊 Последние подписки:')
-        subscriptions.rows.forEach((sub, i) => {
-          console.log(`${i + 1}. @${sub.competitor_username} (активна: ${sub.is_active})`)
-        })
-      }
-      
-      // Проверяем существующие рилзы в БД
-      const reels = await client.query(`
-        SELECT COUNT(*) as count, owner_username 
-        FROM instagram_apify_reels 
-        WHERE owner_username = $1
-        GROUP BY owner_username
-      `, [testData.username])
-      
-      if (reels.rows.length > 0) {
-        console.log(`🎬 Рилзов @${testData.username} в БД: ${reels.rows[0].count}`)
-      } else {
-        console.log(`📭 Рилзов @${testData.username} в БД пока нет`)
-      }
-      
-    } finally {
-      client.release()
-      await dbPool.end()
+    // Проверяем существующие рилзы в БД
+    const { data: reels, error: reelsError } = await supabase
+      .from('instagram_apify_reels')
+      .select('*', { count: 'exact', head: true })
+      .eq('owner_username', testData.username)
+    
+    if (reelsError) {
+      console.log('⚠️ Ошибка проверки рилзов:', reelsError.message)
+    } else if (reels && reels.length > 0) {
+      console.log(`🎬 Рилзов @${testData.username} в БД: ${reels.length}`)
+    } else {
+      console.log(`📭 Рилзов @${testData.username} в БД пока нет`)
     }
     
     console.log('\n🎯 Тест завершен успешно!')
@@ -122,45 +118,61 @@ async function createTestSubscription() {
   console.log('\n🧪 Создание тестовой подписки в БД...')
   
   try {
-    const { Pool } = require('pg')
-    const dbPool = new Pool({
-      connectionString: process.env.NEON_DATABASE_URL,
-      ssl: { rejectUnauthorized: false }
-    })
-    
-    const client = await dbPool.connect()
-    
-    try {
-      const result = await client.query(`
-        INSERT INTO competitor_subscriptions 
-        (user_telegram_id, user_chat_id, bot_name, competitor_username, 
-         max_reels, min_views, max_age_days, delivery_format)
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-        ON CONFLICT (user_telegram_id, competitor_username, bot_name) 
-        DO UPDATE SET 
-          is_active = true,
-          updated_at = NOW()
-        RETURNING *
-      `, [
-        '144022504',
-        '144022504', 
-        'neuro_blogger_bot',
-        'natgeo',
-        5,
-        1000,
-        14,
-        'digest'
-      ])
-      
-      console.log('✅ Тестовая подписка создана:')
-      console.log(`   ID: ${result.rows[0].id}`)
-      console.log(`   Конкурент: @${result.rows[0].competitor_username}`)
-      console.log(`   Активна: ${result.rows[0].is_active}`)
-      
-    } finally {
-      client.release()
-      await dbPool.end()
+    const { createClient } = require('@supabase/supabase-js')
+    const supabase = createClient(
+      process.env.SUPABASE_URL,
+      process.env.SUPABASE_SERVICE_KEY
+    )
+
+    const subscriptionData = {
+      user_telegram_id: '144022504',
+      user_chat_id: '144022504',
+      bot_name: 'neuro_blogger_bot',
+      competitor_username: 'natgeo',
+      max_reels: 5,
+      min_views: 1000,
+      max_age_days: 14,
+      delivery_format: 'digest',
+      is_active: true
     }
+
+    // Проверяем существующую подписку
+    const { data: existing } = await supabase
+      .from('competitor_subscriptions')
+      .select('*')
+      .eq('user_telegram_id', subscriptionData.user_telegram_id)
+      .eq('competitor_username', subscriptionData.competitor_username)
+      .eq('bot_name', subscriptionData.bot_name)
+      .single()
+
+    let result
+    if (existing) {
+      // Обновляем существующую
+      const { data, error } = await supabase
+        .from('competitor_subscriptions')
+        .update(subscriptionData)
+        .eq('id', existing.id)
+        .select()
+        .single()
+      
+      if (error) throw error
+      result = data
+    } else {
+      // Создаем новую
+      const { data, error } = await supabase
+        .from('competitor_subscriptions')
+        .insert(subscriptionData)
+        .select()
+        .single()
+      
+      if (error) throw error
+      result = data
+    }
+    
+    console.log('✅ Тестовая подписка создана:')
+    console.log(`   ID: ${result.id}`)
+    console.log(`   Конкурент: @${result.competitor_username}`)
+    console.log(`   Активна: ${result.is_active}`)
     
   } catch (error) {
     console.error('❌ Ошибка создания подписки:', error.message)

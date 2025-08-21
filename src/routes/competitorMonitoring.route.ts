@@ -78,47 +78,39 @@ router.get('/status/:username', async (req, res) => {
     }
 
     const { getCompetitorReels } = await import('@/inngest-functions/competitorMonitoring')
-    const { Pool } = await import('pg')
+    const { supabase } = await import('@/supabase/client')
     
-    const dbPool = new Pool({
-      connectionString: process.env.NEON_DATABASE_URL || '',
-      ssl: { rejectUnauthorized: false }
-    })
-    
-    const client = await dbPool.connect()
-    
-    try {
-      // Проверяем подписку
-      const subscriptionResult = await client.query(`
-        SELECT 
-          cs.*,
-          cp.display_name,
-          cp.followers_count,
-          cdh.delivered_at as last_delivery,
-          cdh.reels_count as last_delivery_reels_count
-        FROM competitor_subscriptions cs
-        LEFT JOIN competitor_profiles cp ON cs.competitor_username = cp.username
-        LEFT JOIN LATERAL (
-          SELECT delivered_at, reels_count 
-          FROM competitor_delivery_history 
-          WHERE subscription_id = cs.id 
-          ORDER BY delivered_at DESC 
-          LIMIT 1
-        ) cdh ON true
-        WHERE cs.competitor_username = $1 
-          AND cs.user_telegram_id = $2 
-          AND cs.bot_name = $3
-      `, [username.replace('@', ''), user_telegram_id, bot_name])
+    // Проверяем подписку
+    const { data: subscription, error: subscriptionError } = await supabase
+      .from('competitor_subscriptions')
+      .select(`
+        *,
+        competitor_profiles!inner(
+          display_name,
+          followers_count
+        )
+      `)
+      .eq('competitor_username', username.replace('@', ''))
+      .eq('user_telegram_id', user_telegram_id)
+      .eq('bot_name', bot_name)
+      .single()
 
-      if (subscriptionResult.rows.length === 0) {
-        return res.status(404).json({
-          success: false,
-          monitoring: false,
-          message: `No monitoring found for @${username}`
-        })
-      }
+    if (subscriptionError || !subscription) {
+      return res.status(404).json({
+        success: false,
+        monitoring: false,
+        message: `No monitoring found for @${username}`
+      })
+    }
 
-      const subscription = subscriptionResult.rows[0]
+    // Получаем последнюю доставку
+    const { data: lastDelivery } = await supabase
+      .from('competitor_delivery_history')
+      .select('delivered_at, reels_count')
+      .eq('subscription_id', subscription.id)
+      .order('delivered_at', { ascending: false })
+      .limit(1)
+      .single()
       
       // Получаем рилзы из БД
       const reels = await getCompetitorReels(username, 5, 999)
@@ -129,15 +121,15 @@ router.get('/status/:username', async (req, res) => {
         subscription: {
           id: subscription.id,
           competitor_username: subscription.competitor_username,
-          display_name: subscription.display_name,
+          display_name: subscription.competitor_profiles?.display_name,
           max_reels: subscription.max_reels,
           min_views: subscription.min_views,
           max_age_days: subscription.max_age_days,
           delivery_format: subscription.delivery_format,
           is_active: subscription.is_active,
           created_at: subscription.created_at,
-          last_delivery: subscription.last_delivery,
-          last_delivery_reels_count: subscription.last_delivery_reels_count
+          last_delivery: lastDelivery?.delivered_at,
+          last_delivery_reels_count: lastDelivery?.reels_count
         },
         reels_in_database: reels.length,
         latest_reels: reels.slice(0, 3).map(reel => ({
@@ -153,11 +145,6 @@ router.get('/status/:username', async (req, res) => {
         }
       })
       
-    } finally {
-      client.release()
-      await dbPool.end()
-    }
-    
   } catch (error: any) {
     console.error('Error checking monitoring status:', error)
     res.status(500).json({

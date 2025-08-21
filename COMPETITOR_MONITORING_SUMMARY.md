@@ -1,9 +1,9 @@
-# 💰 Invest in Competitor - Итоговое резюме
+# 🔍 Competitor Monitoring - Итоговое резюме
 
 ## ✅ Что реализовано
 
-### 🎯 Основная функция `investInCompetitor`
-**Файл:** `src/inngest-functions/investInCompetitor.ts`
+### 🎯 Основная функция `competitorMonitoring`
+**Файл:** `src/inngest-functions/competitorMonitoring.ts`
 
 **Что делает:**
 1. **Подписывается** на Instagram конкурента по username
@@ -23,11 +23,11 @@
 - Поддерживает разные форматы доставки (digest/individual/archive)
 
 ### 🌐 API Endpoints
-**Файл:** `src/routes/investCompetitor.route.ts`
+**Файл:** `src/routes/competitorMonitoring.route.ts`
 
-- `POST /api/invest-competitor` - подписка на конкурента
-- `GET /api/invest-competitor/status/:username` - проверка статуса
-- `POST /api/invest-competitor/trigger-delivery/:username` - ручная доставка
+- `POST /api/competitor-monitoring` - подписка на конкурента
+- `GET /api/competitor-monitoring/status/:username` - проверка статуса
+- `POST /api/competitor-monitoring/trigger-delivery/:username` - ручная доставка
 
 ### 🗄️ База данных
 **Используются существующие таблицы:**
