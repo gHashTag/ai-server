@@ -10,7 +10,7 @@ const path = require('path')
 
 const API_BASE_URL =
   process.env.NODE_ENV === 'production'
-    ? 'https://ai-server-u14194.vm.elestio.app'
+    ? 'https://ai-server-production-production-8e2d.up.railway.app'
     : 'http://localhost:4000'
 
 // Минимальный валидный JPEG (1x1 пиксель, разные цвета)
