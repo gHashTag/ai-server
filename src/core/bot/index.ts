@@ -1,4 +1,4 @@
-import { BOT_NAMES } from '@/config'
+import { BOT_NAMES, BOT_TOKENS } from '@/config'
 import { config } from 'dotenv'
 import { pulseBot } from '@/config'
 import { logger } from '@utils/logger'
@@ -7,7 +7,7 @@ import { Telegraf } from 'telegraf'
 import { MyContext } from '@/interfaces'
 config({ path: `.env.${process.env.NODE_ENV || 'development'}.local` })
 
-export const bots = Object.values(BOT_NAMES).map(
+export const bots = BOT_TOKENS.map(
   token => new Telegraf<MyContext>(token)
 )
 
