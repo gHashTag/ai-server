@@ -16,10 +16,11 @@ import { morphImages } from './morphImages'
 import { logMonitor, triggerLogMonitor } from './logMonitor'
 import { criticalErrorMonitor, healthCheck } from './criticalErrorMonitor'
 import { instagramApifyScraper } from './instagramApifyScraper'
-import {
-  competitorAutoParser,
-  triggerCompetitorAutoParser,
-} from './competitorAutoParser'
+// TEMP DISABLED FOR PRODUCTION FIX
+// import {
+//   competitorAutoParser,
+//   triggerCompetitorAutoParser,
+// } from './competitorAutoParser'
 import { competitorDelivery } from './competitorDelivery'
 import { systemMonitor, triggerSystemMonitor } from './systemMonitor'
 import {
@@ -49,8 +50,8 @@ export const functions = [
   criticalErrorMonitor, // 🚨 Мониторинг критических ошибок в реальном времени
   healthCheck, // 💚 Проверка состояния сервисов каждые 30 минут
   instagramApifyScraper, // 📱 RILS парсер через Apify
-  competitorAutoParser, // ⏰ Автоматический парсинг конкурентов каждые 24 часа
-  triggerCompetitorAutoParser, // 🔄 Ручной запуск автопарсинга
+  // TEMP DISABLED: competitorAutoParser, // ⏰ Автоматический парсинг конкурентов каждые 24 часа
+  // TEMP DISABLED: triggerCompetitorAutoParser, // 🔄 Ручной запуск автопарсинга
   competitorDelivery, // 📬 Доставка рилсов конкурентов подписчикам
   systemMonitor, // 📊 Ежедневный системный мониторинг
   triggerSystemMonitor, // 🔄 Ручной запуск системного мониторинга
@@ -77,7 +78,7 @@ export { morphImages } // 🧬 НОВАЯ функция для морфинга
 export { logMonitor, triggerLogMonitor } // 📊 Функции мониторинга логов
 export { criticalErrorMonitor, healthCheck } // 🚨💚 Функции критического мониторинга
 export { instagramApifyScraper } // 📱 RILS парсер через Apify
-export { competitorAutoParser, triggerCompetitorAutoParser } // ⏰ Автоматический парсинг конкурентов
+// TEMP DISABLED: export { competitorAutoParser, triggerCompetitorAutoParser } // ⏰ Автоматический парсинг конкурентов
 export { competitorDelivery } // 📬 Доставка рилсов конкурентов
 export { systemMonitor, triggerSystemMonitor } // 📊 Системный мониторинг
 export { systemHealthCheck, triggerHealthCheck, healthTestHandler } // 💚 Проверка здоровья системы
@@ -99,7 +100,7 @@ export * from './morphImages' // 🧬 НОВАЯ функция для морф�
 export * from './logMonitor' // 📊 Функции мониторинга логов
 export * from './criticalErrorMonitor' // 🚨💚 Функции критического мониторинга
 export * from './instagramApifyScraper' // 📱 RILS парсер через Apify
-export * from './competitorAutoParser' // ⏰ Автоматический парсинг конкурентов
+// TEMP DISABLED: export * from './competitorAutoParser' // ⏰ Автоматический парсинг конкурентов
 export * from './competitorDelivery' // 📬 Доставка рилсов конкурентов
 export * from './systemMonitor' // 📊 Системный мониторинг
 export * from './systemHealthCheck' // 💚 Проверка здоровья системы
