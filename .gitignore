@@ -210,6 +210,18 @@ certbot/
 # ----------------
 .nexrender/
 
+# Test Scripts Output
+# -------------------
+test-scripts/output/
+test-scripts/temp/
+test-scripts/**/*.log
+
+# Reports Output
+# --------------
+reports/*.xlsx
+reports/*.csv
+reports/*.json
+
 # Optional: Archives Directory
 # Uncomment if you want to ignore archived files
 # archives/
