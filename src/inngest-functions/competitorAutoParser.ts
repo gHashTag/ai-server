@@ -4,14 +4,7 @@
  */
 
 import { inngest } from '@/core/inngest/clients'
-import pkg from 'pg'
-const { Pool } = pkg
-
-// База данных
-const dbPool = new Pool({
-  connectionString: process.env.NEON_DATABASE_URL || '',
-  ssl: { rejectUnauthorized: false }
-})
+import { supabase } from '@/supabase/client'
 
 // Логгер
 const log = {
@@ -39,28 +32,29 @@ export const competitorAutoParser = inngest.createFunction(
 
     // Step 1: Получение активных подписок
     const activeSubscriptions = await step.run('get-active-subscriptions', async () => {
-      const client = await dbPool.connect()
-      
-      try {
-        const result = await client.query(`
-          SELECT 
-            cs.*,
-            cp.display_name,
-            cp.followers_count,
-            cp.is_verified,
-            cp.is_private
-          FROM competitor_subscriptions cs
-          LEFT JOIN competitor_profiles cp ON cs.competitor_username = cp.username
-          WHERE cs.is_active = true
-            AND (cs.next_parse_at IS NULL OR cs.next_parse_at <= NOW())
-          ORDER BY cs.competitor_username, cs.created_at
+      const { data: subscriptions, error } = await supabase
+        .from('competitor_subscriptions')
+        .select(`
+          *,
+          competitor_profiles(
+            display_name,
+            followers_count,
+            is_verified,
+            is_private
+          )
         `)
+        .eq('is_active', true)
+        .or('next_parse_at.is.null,next_parse_at.lte.' + new Date().toISOString())
+        .order('competitor_username')
+        .order('created_at')
         
-        log.info(`📋 Найдено активных подписок: ${result.rows.length}`)
-        return result.rows
-      } finally {
-        client.release()
+      if (error) {
+        log.error('❌ Ошибка получения подписок:', error)
+        return []
       }
+      
+      log.info(`📋 Найдено активных подписок: ${subscriptions?.length || 0}`)
+      return subscriptions || []
     })
 
     if (activeSubscriptions.length === 0) {
@@ -169,24 +163,22 @@ export const competitorAutoParser = inngest.createFunction(
 
     // Step 4: Обновление времени следующего парсинга
     await step.run('update-next-parse-time', async () => {
-      const client = await dbPool.connect()
+      const nextParseTime = new Date()
+      nextParseTime.setHours(nextParseTime.getHours() + 24) // Через 24 часа
       
-      try {
-        const nextParseTime = new Date()
-        nextParseTime.setHours(nextParseTime.getHours() + 24) // Через 24 часа
+      const { error } = await supabase
+        .from('competitor_subscriptions')
+        .update({
+          last_parsed_at: new Date().toISOString(),
+          next_parse_at: nextParseTime.toISOString()
+        })
+        .eq('is_active', true)
+        .or('next_parse_at.is.null,next_parse_at.lte.' + new Date().toISOString())
         
-        await client.query(`
-          UPDATE competitor_subscriptions 
-          SET 
-            last_parsed_at = NOW(),
-            next_parse_at = $1
-          WHERE is_active = true
-            AND (next_parse_at IS NULL OR next_parse_at <= NOW())
-        `, [nextParseTime])
-        
+      if (error) {
+        log.error('❌ Ошибка обновления времени парсинга:', error)
+      } else {
         log.info('⏰ Время следующего парсинга обновлено')
-      } finally {
-        client.release()
       }
     })
 

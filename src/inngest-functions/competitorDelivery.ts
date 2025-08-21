@@ -4,18 +4,11 @@
  */
 
 import { inngest } from '@/core/inngest/clients'
-import pkg from 'pg'
+import { supabase } from '@/supabase/client'
 import * as XLSX from 'xlsx'
 import archiver from 'archiver'
 import { promises as fs } from 'fs'
 import path from 'path'
-const { Pool } = pkg
-
-// База данных
-const dbPool = new Pool({
-  connectionString: process.env.NEON_DATABASE_URL || '',
-  ssl: { rejectUnauthorized: false }
-})
 
 // Логгер
 const log = {
@@ -48,21 +41,20 @@ export const competitorDelivery = inngest.createFunction(
 
     // Step 1: Получение подписчиков конкурента
     const subscribers = await step.run('get-subscribers', async () => {
-      const client = await dbPool.connect()
-      
-      try {
-        const result = await client.query(`
-          SELECT * FROM competitor_subscriptions 
-          WHERE competitor_username = $1 
-            AND is_active = true
-          ORDER BY created_at
-        `, [competitor_username])
+      const { data: subscriptions, error } = await supabase
+        .from('competitor_subscriptions')
+        .select('*')
+        .eq('competitor_username', competitor_username)
+        .eq('is_active', true)
+        .order('created_at')
         
-        log.info(`👥 Найдено подписчиков: ${result.rows.length}`)
-        return result.rows
-      } finally {
-        client.release()
+      if (error) {
+        log.error('❌ Ошибка получения подписчиков:', error)
+        return []
       }
+      
+      log.info(`👥 Найдено подписчиков: ${subscriptions?.length || 0}`)
+      return subscriptions || []
     })
 
     if (subscribers.length === 0) {
@@ -72,26 +64,26 @@ export const competitorDelivery = inngest.createFunction(
 
     // Step 2: Получение свежих рилсов конкурента
     const reelsData = await step.run('get-fresh-reels', async () => {
-      const client = await dbPool.connect()
+      // Получаем рилсы за последние 24 часа
+      const yesterday = new Date()
+      yesterday.setHours(yesterday.getHours() - 24)
       
-      try {
-        // Получаем рилсы за последние 24 часа
-        const yesterday = new Date()
-        yesterday.setHours(yesterday.getHours() - 24)
+      const { data: reels, error } = await supabase
+        .from('instagram_apify_reels')
+        .select('*')
+        .eq('owner_username', competitor_username)
+        .eq('project_id', project_id)
+        .gte('scraped_at', yesterday.toISOString())
+        .order('views_count', { ascending: false })
+        .order('likes_count', { ascending: false })
         
-        const result = await client.query(`
-          SELECT * FROM instagram_apify_reels 
-          WHERE owner_username = $1 
-            AND scraped_at >= $2
-            AND project_id = $3
-          ORDER BY views_count DESC, likes_count DESC
-        `, [competitor_username, yesterday, project_id])
-        
-        log.info(`🎬 Найдено свежих рилсов: ${result.rows.length}`)
-        return result.rows
-      } finally {
-        client.release()
+      if (error) {
+        log.error('❌ Ошибка получения рилсов:', error)
+        return []
       }
+      
+      log.info(`🎬 Найдено свежих рилсов: ${reels?.length || 0}`)
+      return reels || []
     })
 
     if (reelsData.length === 0) {
@@ -298,16 +290,18 @@ async function sendArchive(bot: any, subscriber: any, reels: any[], competitor: 
  * Запись истории доставки
  */
 async function recordDelivery(subscriptionId: string, reelsCount: number, status: string, error: string | null, reelsData: any[] | null) {
-  const client = await dbPool.connect()
-  
-  try {
-    await client.query(`
-      INSERT INTO competitor_delivery_history 
-      (subscription_id, reels_count, delivery_status, error_message, reels_data)
-      VALUES ($1, $2, $3, $4, $5)
-    `, [subscriptionId, reelsCount, status, error, reelsData ? JSON.stringify(reelsData) : null])
-  } finally {
-    client.release()
+  const { error: insertError } = await supabase
+    .from('competitor_delivery_history')
+    .insert({
+      subscription_id: subscriptionId,
+      reels_count: reelsCount,
+      delivery_status: status,
+      error_message: error,
+      reels_data: reelsData
+    })
+    
+  if (insertError) {
+    log.error('❌ Ошибка записи истории доставки:', insertError)
   }
 }
 
