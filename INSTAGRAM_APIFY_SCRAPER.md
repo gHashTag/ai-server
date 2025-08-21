@@ -77,14 +77,14 @@ CREATE TABLE instagram_apify_reels (
 
 ```bash
 # Apify API
-APIFY_TOKEN=your-apify-token
+APIFY_TOKEN=apify_example_replace_with_real_token
 
 # Supabase
-SUPABASE_URL=your-supabase-url
-SUPABASE_SERVICE_KEY=your-service-key
+SUPABASE_URL=https://example-project.supabase.co
+SUPABASE_SERVICE_KEY=supabase_example_replace_with_real_key
 
 # Telegram (опционально)
-BOT_TOKEN_1=your-telegram-bot-token
+BOT_TOKEN_1=123456:ABC-example-replace-with-real-bot-token
 ```
 
 ## 🧪 Тестирование
