@@ -25,11 +25,11 @@ describe('retry - Detailed Tests', () => {
 
   describe('Retry Logic', () => {
     it('should retry on failure and succeed on second try', async () => {
-      const mockFn = jest.fn()
-        .mockRejectedValueOnce(new Error('First failure'))
-        .mockResolvedValueOnce('success')
+      const mockFn = jest.fn() as jest.MockedFunction<() => Promise<string>>
+      mockFn.mockRejectedValueOnce(new Error('First failure'))
+      mockFn.mockResolvedValueOnce('success')
 
-      const result = await retry(mockFn as any, 3, 0)
+      const result = await retry(mockFn, 3, 0)
 
       expect(result).toBe('success')
       expect(mockFn).toHaveBeenCalledTimes(2)
@@ -52,12 +52,12 @@ describe('retry - Detailed Tests', () => {
     })
 
     it('should succeed on last possible attempt', async () => {
-      const mockFn = jest.fn()
-        .mockRejectedValueOnce(new Error('Fail 1'))
-        .mockRejectedValueOnce(new Error('Fail 2'))
-        .mockResolvedValueOnce('success on third try')
+      const mockFn = jest.fn() as jest.MockedFunction<() => Promise<string>>
+      mockFn.mockRejectedValueOnce(new Error('Fail 1'))
+      mockFn.mockRejectedValueOnce(new Error('Fail 2'))
+      mockFn.mockResolvedValueOnce('success on third try')
 
-      const result = await retry(mockFn as any, 3, 0)
+      const result = await retry(mockFn, 3, 0)
 
       expect(result).toBe('success on third try')
       expect(mockFn).toHaveBeenCalledTimes(3)
@@ -67,13 +67,13 @@ describe('retry - Detailed Tests', () => {
   describe('Exponential Backoff', () => {
     it('should use exponential backoff (delay doubles)', async () => {
       // Note: Testing actual timing is flaky, so we'll test the logic indirectly
-      const mockFn = jest.fn()
-        .mockRejectedValueOnce(new Error('Fail 1'))
-        .mockRejectedValueOnce(new Error('Fail 2'))
-        .mockResolvedValueOnce('success')
+      const mockFn = jest.fn() as jest.MockedFunction<() => Promise<string>>
+      mockFn.mockRejectedValueOnce(new Error('Fail 1'))
+      mockFn.mockRejectedValueOnce(new Error('Fail 2'))
+      mockFn.mockResolvedValueOnce('success')
 
       const startTime = Date.now()
-      await retry(mockFn as any, 3, 50) // Start with 50ms delay
+      await retry(mockFn, 3, 50) // Start with 50ms delay
 
       const totalTime = Date.now() - startTime
       // First retry: 50ms, second retry: 100ms, so at least 150ms total
@@ -82,12 +82,12 @@ describe('retry - Detailed Tests', () => {
     })
 
     it('should use default delay of 1000ms', async () => {
-      const mockFn = jest.fn()
-        .mockRejectedValueOnce(new Error('First failure'))
-        .mockResolvedValueOnce('success')
+      const mockFn = jest.fn() as jest.MockedFunction<() => Promise<string>>
+      mockFn.mockRejectedValueOnce(new Error('First failure'))
+      mockFn.mockResolvedValueOnce('success')
 
       const startTime = Date.now()
-      await retry(mockFn as any, 2) // Default 1000ms delay
+      await retry(mockFn, 2) // Default 1000ms delay
 
       const elapsedTime = Date.now() - startTime
       expect(elapsedTime).toBeGreaterThanOrEqual(1000)
@@ -127,12 +127,12 @@ describe('retry - Detailed Tests', () => {
       const error2 = new Error('Second error') 
       const finalError = new Error('Final error')
 
-      const mockFn = jest.fn()
-        .mockRejectedValueOnce(error1)
-        .mockRejectedValueOnce(error2)
-        .mockRejectedValueOnce(finalError)
+      const mockFn = jest.fn() as jest.MockedFunction<() => Promise<never>>
+      mockFn.mockRejectedValueOnce(error1)
+      mockFn.mockRejectedValueOnce(error2)
+      mockFn.mockRejectedValueOnce(finalError)
 
-      await expect(retry(mockFn as any, 3, 0)).rejects.toThrow('Final error')
+      await expect(retry(mockFn, 3, 0)).rejects.toThrow('Final error')
     })
 
     it('should preserve error properties', async () => {
@@ -140,10 +140,11 @@ describe('retry - Detailed Tests', () => {
       customError.code = 'CUSTOM_CODE'
       customError.statusCode = 500
 
-      const mockFn = jest.fn().mockRejectedValue(customError)
+      const mockFn = jest.fn() as jest.MockedFunction<() => Promise<never>>
+      mockFn.mockRejectedValue(customError)
 
       try {
-        await retry(mockFn as any, 2, 0)
+        await retry(mockFn, 2, 0)
       } catch (error: any) {
         expect(error.code).toBe('CUSTOM_CODE')
         expect(error.statusCode).toBe(500)
@@ -153,26 +154,28 @@ describe('retry - Detailed Tests', () => {
 
   describe('Edge Cases', () => {
     it('should handle attempts = 1 (no retries)', async () => {
-      const mockFn = jest.fn().mockRejectedValue(new Error('Single attempt'))
+      const mockFn = jest.fn() as jest.MockedFunction<() => Promise<never>>
+      mockFn.mockRejectedValue(new Error('Single attempt'))
 
-      await expect(retry(mockFn as any, 1, 0)).rejects.toThrow('Single attempt')
+      await expect(retry(mockFn, 1, 0)).rejects.toThrow('Single attempt')
       expect(mockFn).toHaveBeenCalledTimes(1)
     })
 
     it('should handle attempts = 0 (invalid, but treated as no execution)', async () => {
-      const mockFn = jest.fn().mockRejectedValue(new Error('Zero attempts'))
+      const mockFn = jest.fn() as jest.MockedFunction<() => Promise<never>>
+      mockFn.mockRejectedValue(new Error('Zero attempts'))
 
-      await expect(retry(mockFn as any, 0, 0)).rejects.toThrow('Zero attempts')
+      await expect(retry(mockFn, 0, 0)).rejects.toThrow('Zero attempts')
       expect(mockFn).toHaveBeenCalledTimes(0)
     })
 
     it('should handle zero delay', async () => {
-      const mockFn = jest.fn()
-        .mockRejectedValueOnce(new Error('First failure'))
-        .mockResolvedValueOnce('success')
+      const mockFn = jest.fn() as jest.MockedFunction<() => Promise<string>>
+      mockFn.mockRejectedValueOnce(new Error('First failure'))
+      mockFn.mockResolvedValueOnce('success')
 
       const startTime = Date.now()
-      await retry(mockFn as any, 2, 0)
+      await retry(mockFn, 2, 0)
       const elapsedTime = Date.now() - startTime
 
       // Should complete very quickly with 0 delay

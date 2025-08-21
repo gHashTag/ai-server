@@ -19,11 +19,11 @@ describe('generateImageToVideo Service', () => {
     jest.clearAllMocks()
   })
 
-  it('should generate video from image with stable-video-diffusion model', async () => {
+  it('should generate video from image with minimax model', async () => {
     const result = await generateImageToVideo(
       'https://example.com/image.jpg',
       'dancing person',
-      'stable-video-diffusion-img2vid-xt',
+      'minimax',
       '123456',
       'testuser',
       true,
@@ -33,11 +33,11 @@ describe('generateImageToVideo Service', () => {
     expect(result).toBeDefined()
   })
 
-  it('should generate video from image with haiper model', async () => {
+  it('should generate video from image with haiper-video-2 model', async () => {
     const result = await generateImageToVideo(
       'https://example.com/image.jpg',
       'walking in the park',
-      'haiper',
+      'haiper-video-2',
       '123456',
       'testuser',
       false,
@@ -51,7 +51,7 @@ describe('generateImageToVideo Service', () => {
     const result = await generateImageToVideo(
       'https://example.com/image.jpg',
       'танцующий человек',
-      'stable-video-diffusion-img2vid-xt',
+      'ray-v2',
       '123456',
       'testuser',
       true,
@@ -65,7 +65,7 @@ describe('generateImageToVideo Service', () => {
     const result = await generateImageToVideo(
       'https://example.com/image.jpg',
       'person dancing gracefully',
-      'haiper',
+      'kling-v1.6-pro',
       '123456',
       'testuser',
       false,
@@ -82,7 +82,7 @@ describe('generateImageToVideo Service', () => {
       await generateImageToVideo(
         'https://example.com/image.jpg',
         'test motion',
-        'stable-video-diffusion-img2vid-xt',
+        'wan-image-to-video',
         '123456',
         'testuser',
         true,
@@ -99,7 +99,7 @@ describe('generateImageToVideo Service', () => {
     const result = await generateImageToVideo(
       'https://example.com/image.jpg',
       longPrompt,
-      'haiper',
+      'haiper-video-2',
       '123456',
       'testuser',
       false,
@@ -120,7 +120,7 @@ describe('generateImageToVideo Service', () => {
       await generateImageToVideo(
         imageUrl,
         'test motion',
-        'stable-video-diffusion-img2vid-xt',
+        'minimax',
         '123456',
         'testuser',
         true,
