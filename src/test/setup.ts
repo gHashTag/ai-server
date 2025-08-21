@@ -173,13 +173,9 @@ jest.mock('@/price/helpers', () => ({
   })
 }))
 
-jest.mock('@/helpers/errorMessageAdmin', () => ({
-  errorMessageAdmin: jest.fn()
-}))
 
 jest.mock('@/helpers', () => ({
   errorMessage: jest.fn(),
-  errorMessageAdmin: jest.fn(),
   downloadFile: (jest.fn() as any).mockResolvedValue(Buffer.from('fake image data')),
   processApiResponse: (jest.fn() as any).mockResolvedValue(['https://fake-image-url.jpg']),
   pulse: (jest.fn() as any).mockResolvedValue(true),
