@@ -215,7 +215,7 @@ export const competitorMonitoring = inngest.createFunction(
       }
     })
 
-    // Step 5: Подготовка результата для пользователя (1 лучший рилз)
+    // Step 5: Подготовка результата для пользователя (1 последний рилз)
     const userResult = await step.run('prepare-user-result', async () => {
       if (reelsData.length === 0) {
         log.warn('⚠️ Рилзы не найдены, возвращаем информацию о подписке')
@@ -231,8 +231,8 @@ export const competitorMonitoring = inngest.createFunction(
         }
       }
 
-      // Берем лучший рилз (первый в отсортированном списке)
-      const bestReel = reelsData[0]
+      // Берем последний опубликованный рилз (первый в списке, отсортированном по дате)
+      const latestReel = reelsData[0]
       
       return {
         success: true,
@@ -242,18 +242,18 @@ export const competitorMonitoring = inngest.createFunction(
         message: `✅ Успешно подписались на @${validatedData.username}!`,
         reels_count_in_db: reelsData.length,
         latest_reel: {
-          id: bestReel.reel_id,
-          url: bestReel.url,
-          video_url: bestReel.video_url,
-          thumbnail_url: bestReel.thumbnail_url,
-          caption: bestReel.caption,
-          owner_username: bestReel.owner_username,
-          views_count: bestReel.views_count,
-          likes_count: bestReel.likes_count,
-          comments_count: bestReel.comments_count,
-          published_at: bestReel.published_at,
-          music_artist: bestReel.music_artist,
-          music_title: bestReel.music_title,
+          id: latestReel.reel_id,
+          url: latestReel.url,
+          video_url: latestReel.video_url,
+          thumbnail_url: latestReel.thumbnail_url,
+          caption: latestReel.caption,
+          owner_username: latestReel.owner_username,
+          views_count: latestReel.views_count,
+          likes_count: latestReel.likes_count,
+          comments_count: latestReel.comments_count,
+          published_at: latestReel.published_at,
+          music_artist: latestReel.music_artist,
+          music_title: latestReel.music_title,
         }
       }
     })
@@ -269,7 +269,7 @@ export const competitorMonitoring = inngest.createFunction(
           
           if (userResult.latest_reel) {
             const reel = userResult.latest_reel
-            message += `🎬 Последний рилз от @${reel.owner_username}:\n`
+            message += `🎬 Последний рилз от @${reel.owner_username} (подписка активна):\n`
             message += `👁 ${reel.views_count.toLocaleString()} просмотров\n`
             message += `❤️ ${reel.likes_count.toLocaleString()} лайков\n`
             
