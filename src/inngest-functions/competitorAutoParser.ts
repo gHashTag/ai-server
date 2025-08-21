@@ -137,6 +137,22 @@ export const competitorAutoParser = inngest.createFunction(
           // Небольшая задержка между запросами
           await new Promise(resolve => setTimeout(resolve, 2000))
           
+          // Запускаем доставку результатов подписчикам
+          setTimeout(async () => {
+            try {
+              await inngest.send({
+                name: 'competitor/delivery-reels',
+                data: {
+                  competitor_username: group.competitor_username,
+                  project_id: 999
+                }
+              })
+              log.info(`📬 Доставка запущена для @${group.competitor_username}`)
+            } catch (deliveryError: any) {
+              log.error(`❌ Ошибка запуска доставки @${group.competitor_username}:`, deliveryError.message)
+            }
+          }, 30000) // Ждем 30 секунд чтобы парсинг успел завершиться
+
         } catch (error: any) {
           log.error(`❌ Ошибка парсинга @${group.competitor_username}:`, error.message)
           results.push({
