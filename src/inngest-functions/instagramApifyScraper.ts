@@ -5,7 +5,7 @@
 
 import { inngest } from '@/core/inngest/clients'
 import { ApifyClient } from 'apify-client'
-import { Pool } from 'pg'
+import { supabase } from '@/supabase/client'
 import { z } from 'zod'
 import { instagramScrapingRates } from '@/price/helpers/modelsCost'
 import { updateUserBalance } from '@/core/supabase/updateUserBalance'
@@ -48,11 +48,7 @@ interface ApifyReelItem {
   }
 }
 
-// База данных
-const dbPool = new Pool({
-  connectionString: process.env.NEON_DATABASE_URL || '',
-  ssl: { rejectUnauthorized: false },
-})
+// Supabase клиент уже импортирован
 
 // Логгер
 const log = {
@@ -324,82 +320,58 @@ export const instagramApifyScraper = inngest.createFunction(
       }))
     })
 
-    // Step 6: Сохранение в базу данных
+    // Step 6: Сохранение в базу данных Supabase
     const saveResult = await step.run('save-to-database', async () => {
-      const client = await dbPool.connect()
       let saved = 0
       let duplicates = 0
 
       try {
-        // Создаём таблицу если её нет
-        await client.query(`
-          CREATE TABLE IF NOT EXISTS instagram_apify_reels (
-            id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-            reel_id VARCHAR(255) UNIQUE,
-            url TEXT NOT NULL,
-            video_url TEXT,
-            thumbnail_url TEXT,
-            caption TEXT,
-            hashtags JSONB,
-            owner_username VARCHAR(255),
-            owner_id VARCHAR(255),
-            views_count INTEGER DEFAULT 0,
-            likes_count INTEGER DEFAULT 0,
-            comments_count INTEGER DEFAULT 0,
-            duration FLOAT,
-            published_at TIMESTAMP,
-            music_artist VARCHAR(255),
-            music_title VARCHAR(255),
-            project_id INTEGER,
-            scraped_at TIMESTAMP DEFAULT NOW(),
-            created_at TIMESTAMP DEFAULT NOW()
-          )
-        `)
-
-        // Сохраняем рилсы
-        for (const reel of processedReels) {
-          try {
-            await client.query(
-              `INSERT INTO instagram_apify_reels 
-               (reel_id, url, video_url, thumbnail_url, caption, hashtags,
-                owner_username, owner_id, views_count, likes_count, 
-                comments_count, duration, published_at, music_artist, 
-                music_title, project_id)
-               VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
-               ON CONFLICT (reel_id) DO NOTHING`,
-              [
-                reel.reel_id,
-                reel.url,
-                reel.video_url,
-                reel.thumbnail_url,
-                reel.caption,
-                JSON.stringify(reel.hashtags),
-                reel.owner_username,
-                reel.owner_id,
-                reel.views_count,
-                reel.likes_count,
-                reel.comments_count,
-                reel.duration,
-                reel.published_at,
-                reel.music_artist,
-                reel.music_title,
-                validatedData.project_id,
-              ]
-            )
-            saved++
-          } catch (error: any) {
-            if (error.code === '23505') {
+        // Преобразуем данные для Supabase
+        const reelsForInsert = processedReels.map(reel => ({
+          reel_id: reel.reel_id,
+          url: reel.url,
+          video_url: reel.video_url,
+          thumbnail_url: reel.thumbnail_url,
+          caption: reel.caption,
+          hashtags: reel.hashtags,
+          owner_username: reel.owner_username,
+          owner_id: reel.owner_id,
+          views_count: reel.views_count,
+          likes_count: reel.likes_count,
+          comments_count: reel.comments_count,
+          duration: reel.duration,
+          published_at: reel.published_at,
+          music_artist: reel.music_artist,
+          music_title: reel.music_title,
+          project_id: validatedData.project_id,
+          scraped_at: new Date().toISOString()
+        }))
+        
+        // Сохраняем рилсы через upsert (вставка или обновление)
+        for (const reel of reelsForInsert) {
+          const { error } = await supabase
+            .from('instagram_apify_reels')
+            .upsert(reel, {
+              onConflict: 'reel_id',
+              ignoreDuplicates: false
+            })
+          
+          if (error) {
+            if (error.code === '23505' || error.message.includes('duplicate')) {
               duplicates++
             } else {
               log.error(`Ошибка сохранения рилса: ${error.message}`)
             }
+          } else {
+            saved++
           }
         }
-
-        log.info(`💾 Сохранено в БД: ${saved} новых, ${duplicates} дубликатов`)
+        
+        log.info(`💾 Сохранено в Supabase: ${saved} новых, ${duplicates} дубликатов`)
         return { saved, duplicates, total: saved + duplicates }
-      } finally {
-        client.release()
+      } catch (error) {
+        log.error('❌ Ошибка сохранения в Supabase:', error)
+        return { saved: 0, duplicates: 0, total: 0 }
       }
     })
 
