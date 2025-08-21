@@ -12,9 +12,9 @@ const fs = require('fs')
 // Правильная конфигурация KIE AI API (из актуальной документации)
 const KIE_AI_CONFIG = {
   BASE_URL: 'https://api.kie.ai',
-  API_KEY: process.env.KIE_AI_API_KEY || 'f52f224a92970aa6b7c7780104a00f71',
+  API_KEY: process.env.KIE_AI_API_KEY || 'your_kie_ai_api_key_here',
   HEADERS: {
-    'Authorization': `Bearer ${process.env.KIE_AI_API_KEY || 'f52f224a92970aa6b7c7780104a00f71'}`,
+    'Authorization': `Bearer ${process.env.KIE_AI_API_KEY || 'your_kie_ai_api_key_here'}`,
     'Content-Type': 'application/json',
     'Accept': 'application/json'
   }
