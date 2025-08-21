@@ -26,15 +26,38 @@ process.env.BOT_TOKEN_TEST_1 = 'test-bot-token-test-1'
 process.env.BOT_TOKEN_TEST_2 = 'test-bot-token-test-2'
 process.env.NEXRENDER_PORT = '4001'
 process.env.AERENDER_PATH = '/Applications/Adobe After Effects 2025/aerender'
+process.env.BFL_API_KEY = 'test-bfl-key'
+process.env.BFL_WEBHOOK_URL = 'https://test.webhook.url'
 
 // Mock внешние модули
 jest.mock('@supabase/supabase-js')
 jest.mock('telegraf')
 jest.mock('replicate')
-jest.mock('elevenlabs')
+jest.mock('elevenlabs', () => ({
+  ElevenLabs: jest.fn().mockImplementation(() => ({
+    generate: (jest.fn() as any).mockResolvedValue({
+      pipe: (jest.fn() as any).mockImplementation((stream: any) => {
+        setTimeout(() => stream.emit('finish'), 100)
+        return stream
+      })
+    })
+  }))
+}))
 jest.mock('openai')
 jest.mock('inngest')
-jest.mock('axios')
+jest.mock('axios', () => ({
+  default: {
+    get: (jest.fn() as any).mockResolvedValue({
+      data: Buffer.from('fake image data'),
+      headers: { 'content-type': 'image/jpeg' }
+    }),
+    post: (jest.fn() as any).mockResolvedValue({
+      data: { success: true },
+      status: 200
+    })
+  },
+  isAxiosError: jest.fn().mockReturnValue(false)
+}))
 jest.mock('fs', () => require('./__mocks__/fs'))
 
 // Mock core modules
@@ -75,12 +98,41 @@ jest.mock('@/core/supabase', () => ({
         // For other services that need chaining (like getAspectRatio)
         return {
           eq: (jest.fn() as any).mockReturnValue({
+            eq: (jest.fn() as any).mockReturnValue({
+              eq: (jest.fn() as any).mockReturnValue({
+                eq: (jest.fn() as any).mockReturnValue({
+                  maybeSingle: (jest.fn() as any).mockResolvedValue({
+                    data: { prompt_id: 'test-prompt-id' },
+                    error: null
+                  })
+                })
+              })
+            }),
             single: (jest.fn() as any).mockResolvedValue({
               data: { aspect_ratio: '1:1' },
               error: null
             })
           })
         }
+      }),
+      insert: (jest.fn() as any).mockReturnValue({
+        select: (jest.fn() as any).mockResolvedValue({
+          data: [{ prompt_id: 'test-prompt-id' }],
+          error: null
+        })
+      })
+    })
+  }
+}))
+
+// Mock elevenlabs client
+jest.mock('@/core/elevenlabs', () => ({
+  __esModule: true,
+  default: {
+    generate: (jest.fn() as any).mockResolvedValue({
+      pipe: (jest.fn() as any).mockImplementation((stream: any) => {
+        setTimeout(() => stream.emit('finish'), 100)
+        return stream
       })
     })
   }
@@ -89,6 +141,7 @@ jest.mock('@/core/supabase', () => ({
 // Mock helpers
 jest.mock('@/price/helpers', () => ({
   sendPaymentNotification: (jest.fn() as any).mockResolvedValue(true),
+  sendBalanceMessage: jest.fn(),
   processBalanceOperation: (jest.fn() as any).mockResolvedValue({
     success: true,
     newBalance: 1000
@@ -105,10 +158,12 @@ jest.mock('@/helpers/errorMessageAdmin', () => ({
 
 jest.mock('@/helpers', () => ({
   errorMessage: jest.fn(),
+  errorMessageAdmin: jest.fn(),
   downloadFile: (jest.fn() as any).mockResolvedValue(Buffer.from('fake image data')),
   processApiResponse: (jest.fn() as any).mockResolvedValue('https://fake-image-url.jpg'),
   pulse: (jest.fn() as any).mockResolvedValue(true),
-  saveFileLocally: (jest.fn() as any).mockResolvedValue('/fake/local/path/image.jpg')
+  saveFileLocally: (jest.fn() as any).mockResolvedValue('/fake/local/path/image.jpg'),
+  sendBalanceMessage: jest.fn()
 }))
 
 // Глобальные моки для console

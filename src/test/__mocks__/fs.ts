@@ -31,7 +31,11 @@ export const stat = (jest.fn() as any).mockImplementation((path, callback) => {
   }
 })
 
-export const mkdir = (jest.fn() as any).mockImplementation((path, callback) => {
+export const mkdir = (jest.fn() as any).mockImplementation((path, options?, callback?) => {
+  if (typeof options === 'function') {
+    callback = options
+    options = undefined
+  }
   if (callback) callback(null)
 })
 
