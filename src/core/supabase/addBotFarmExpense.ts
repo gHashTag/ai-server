@@ -7,12 +7,12 @@ import { PaymentType } from '@/interfaces/payments.interface'
  */
 export enum ExpenseCategory {
   PERSONAL = 'PERSONAL', // Личные расходы
-  SHARED = 'SHARED',     // Общие расходы проекта
+  SHARED = 'SHARED', // Общие расходы проекта
   INFRASTRUCTURE = 'INFRASTRUCTURE', // Инфраструктура
-  AI_SERVICES = 'AI_SERVICES',       // AI сервисы
-  DEVELOPMENT = 'DEVELOPMENT',       // Разработка
-  HOSTING = 'HOSTING',               // Хостинг
-  OTHER = 'OTHER'                    // Прочие
+  AI_SERVICES = 'AI_SERVICES', // AI сервисы
+  DEVELOPMENT = 'DEVELOPMENT', // Разработка
+  HOSTING = 'HOSTING', // Хостинг
+  OTHER = 'OTHER', // Прочие
 }
 
 /**
@@ -31,33 +31,36 @@ export enum ExpenseType {
   STORAGE = 'STORAGE',
   TUNNELING = 'TUNNELING',
   RESEARCH = 'RESEARCH',
-  OTHER = 'OTHER'
+  OTHER = 'OTHER',
 }
 
 /**
  * Интерфейс для расхода фермы ботов
  */
 export interface BotFarmExpense {
-  date: string           // Дата в формате 'YYYY-MM-DD' или 'DD/MM/YYYY'
-  name: string          // Название расхода
-  amount: number        // Сумма в исходной валюте
-  currency: string      // Валюта (THB, USD, RUB и т.д.)
-  description: string   // Описание
-  purpose: string       // Для чего нужно
-  url?: string          // Ссылка на магазин/сервис
+  date: string // Дата в формате 'YYYY-MM-DD' или 'DD/MM/YYYY'
+  name: string // Название расхода
+  amount: number // Сумма в исходной валюте
+  currency: string // Валюта (THB, USD, RUB и т.д.)
+  description: string // Описание
+  purpose: string // Для чего нужно
+  url?: string // Ссылка на магазин/сервис
   category: ExpenseCategory // Категория расхода
-  expenseType: ExpenseType  // Тип расхода
+  expenseType: ExpenseType // Тип расхода
 }
 
 /**
  * Конвертирует дату из формата DD/MM в YYYY-MM-DD
  */
-function convertDateFormat(dateStr: string, year: number = new Date().getFullYear()): string {
+function convertDateFormat(
+  dateStr: string,
+  year: number = new Date().getFullYear()
+): string {
   // Если дата уже в формате YYYY-MM-DD, возвращаем как есть
   if (dateStr.includes('-') && dateStr.length === 10) {
     return dateStr
   }
-  
+
   // Конвертируем из DD/MM в YYYY-MM-DD
   const [day, month] = dateStr.split('/')
   return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`
@@ -74,19 +77,19 @@ function determineCategory(expenseType: ExpenseType): ExpenseCategory {
     case ExpenseType.VIDEO_GENERATION:
     case ExpenseType.MUSIC_GENERATION:
       return ExpenseCategory.AI_SERVICES
-    
+
     case ExpenseType.HOSTING:
     case ExpenseType.DATABASE:
     case ExpenseType.STORAGE:
     case ExpenseType.TUNNELING:
       return ExpenseCategory.INFRASTRUCTURE
-    
+
     case ExpenseType.DEVELOPMENT_TOOLS:
       return ExpenseCategory.DEVELOPMENT
-    
+
     case ExpenseType.RESEARCH:
       return ExpenseCategory.SHARED
-    
+
     default:
       return ExpenseCategory.OTHER
   }
@@ -97,14 +100,19 @@ function determineCategory(expenseType: ExpenseType): ExpenseCategory {
  */
 function determineExpenseType(name: string): ExpenseType {
   const nameUpper = name.toUpperCase()
-  
+
   if (nameUpper.includes('OPENAI') || nameUpper.includes('CHATGPT')) {
     return ExpenseType.AI_API
   }
   if (nameUpper.includes('ELEVENLABS')) {
     return ExpenseType.VOICE_GENERATION
   }
-  if (nameUpper.includes('REPLICATE') || nameUpper.includes('RUNWAY') || nameUpper.includes('HEYGEN') || nameUpper.includes('HEDRA')) {
+  if (
+    nameUpper.includes('REPLICATE') ||
+    nameUpper.includes('RUNWAY') ||
+    nameUpper.includes('HEYGEN') ||
+    nameUpper.includes('HEDRA')
+  ) {
     return ExpenseType.VIDEO_GENERATION
   }
   if (nameUpper.includes('SUNO') || nameUpper.includes('JAMMABLE')) {
@@ -116,7 +124,11 @@ function determineExpenseType(name: string): ExpenseType {
   if (nameUpper.includes('ELEST') || nameUpper.includes('HOSTING')) {
     return ExpenseType.HOSTING
   }
-  if (nameUpper.includes('CURSOR') || nameUpper.includes('WARP') || nameUpper.includes('AUGMENT')) {
+  if (
+    nameUpper.includes('CURSOR') ||
+    nameUpper.includes('WARP') ||
+    nameUpper.includes('AUGMENT')
+  ) {
     return ExpenseType.DEVELOPMENT_TOOLS
   }
   if (nameUpper.includes('PINECONE')) {
@@ -131,28 +143,32 @@ function determineExpenseType(name: string): ExpenseType {
   if (nameUpper.includes('OBSIDIAN') || nameUpper.includes('STORAGE')) {
     return ExpenseType.STORAGE
   }
-  
+
   return ExpenseType.OTHER
 }
 
 /**
  * Добавляет расход фермы ботов в таблицу payments_v2
- * 
+ *
  * @param expense - Данные расхода
  * @returns Promise<boolean> - успешно ли добавлен расход
  */
-export const addBotFarmExpense = async (expense: Omit<BotFarmExpense, 'category' | 'expenseType'>): Promise<boolean> => {
+export const addBotFarmExpense = async (
+  expense: Omit<BotFarmExpense, 'category' | 'expenseType'>
+): Promise<boolean> => {
   try {
     // Автоматически определяем тип и категорию расхода
     const expenseType = determineExpenseType(expense.name)
     const category = determineCategory(expenseType)
-    
+
     // Конвертируем дату в правильный формат
     const paymentDate = convertDateFormat(expense.date, 2024) // Предполагаем 2024 год для майских расходов
-    
+
     // Генерируем уникальный inv_id для системного расхода
-    const invId = `farm_expense_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
-    
+    const invId = `farm_expense_${Date.now()}_${Math.random()
+      .toString(36)
+      .substr(2, 9)}`
+
     console.log('💰 Добавление расхода фермы ботов:', {
       name: expense.name,
       amount: expense.amount,
@@ -189,13 +205,13 @@ export const addBotFarmExpense = async (expense: Omit<BotFarmExpense, 'category'
           original_name: expense.name,
           url: expense.url || null,
           is_bot_farm_expense: true,
-          processed_at: new Date().toISOString()
+          processed_at: new Date().toISOString(),
         },
         subscription_type: null, // Не связано с подпиской
         service_type: null, // Не связано с пользовательскими сервисами
         payment_date: new Date(paymentDate),
         created_at: new Date(),
-        updated_at: new Date()
+        updated_at: new Date(),
       })
       .select() // Возвращаем созданную запись
 
@@ -233,13 +249,13 @@ export const addBotFarmExpense = async (expense: Omit<BotFarmExpense, 'category'
 
 /**
  * Добавляет массив расходов фермы ботов
- * 
+ *
  * @param expenses - Массив расходов
  * @returns Promise<{ success: number, failed: number, errors: string[] }>
  */
 export const addMultipleBotFarmExpenses = async (
   expenses: Array<Omit<BotFarmExpense, 'category' | 'expenseType'>>
-): Promise<{ success: number, failed: number, errors: string[] }> => {
+): Promise<{ success: number; failed: number; errors: string[] }> => {
   let successCount = 0
   let failedCount = 0
   const errors: string[] = []
@@ -251,12 +267,14 @@ export const addMultipleBotFarmExpenses = async (
   for (let i = 0; i < expenses.length; i++) {
     const expense = expenses[i]
     console.log(`\n⏳ Обработка ${i + 1}/${expenses.length}: ${expense.name}`)
-    
+
     const result = await addBotFarmExpense(expense)
-    
+
     if (result) {
       successCount++
-      console.log(`✅ ${i + 1}/${expenses.length}: ${expense.name} - успешно добавлен`)
+      console.log(
+        `✅ ${i + 1}/${expenses.length}: ${expense.name} - успешно добавлен`
+      )
     } else {
       failedCount++
       const errorMsg = `Не удалось добавить расход: ${expense.name}`

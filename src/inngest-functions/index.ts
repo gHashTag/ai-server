@@ -16,8 +16,17 @@ import { morphImages } from './morphImages'
 import { logMonitor, triggerLogMonitor } from './logMonitor'
 import { criticalErrorMonitor, healthCheck } from './criticalErrorMonitor'
 import { instagramApifyScraper } from './instagramApifyScraper'
-import { competitorAutoParser, triggerCompetitorAutoParser } from './competitorAutoParser'
+import {
+  competitorAutoParser,
+  triggerCompetitorAutoParser,
+} from './competitorAutoParser'
 import { competitorDelivery } from './competitorDelivery'
+import { systemMonitor, triggerSystemMonitor } from './systemMonitor'
+import {
+  systemHealthCheck,
+  triggerHealthCheck,
+  healthTestHandler,
+} from './systemHealthCheck'
 
 // Export all functions in array (for Inngest registration)
 export const functions = [
@@ -43,6 +52,11 @@ export const functions = [
   competitorAutoParser, // ⏰ Автоматический парсинг конкурентов каждые 24 часа
   triggerCompetitorAutoParser, // 🔄 Ручной запуск автопарсинга
   competitorDelivery, // 📬 Доставка рилсов конкурентов подписчикам
+  systemMonitor, // 📊 Ежедневный системный мониторинг
+  triggerSystemMonitor, // 🔄 Ручной запуск системного мониторинга
+  systemHealthCheck, // 💚 Проверка здоровья системы каждые 30 минут
+  triggerHealthCheck, // 🔄 Ручной запуск проверки здоровья
+  healthTestHandler, // 🧪 Обработчик тестовых событий для health check
 ]
 
 // Individual exports for compatibility
@@ -65,6 +79,8 @@ export { criticalErrorMonitor, healthCheck } // 🚨💚 Функции крит
 export { instagramApifyScraper } // 📱 RILS парсер через Apify
 export { competitorAutoParser, triggerCompetitorAutoParser } // ⏰ Автоматический парсинг конкурентов
 export { competitorDelivery } // 📬 Доставка рилсов конкурентов
+export { systemMonitor, triggerSystemMonitor } // 📊 Системный мониторинг
+export { systemHealthCheck, triggerHealthCheck, healthTestHandler } // 💚 Проверка здоровья системы
 
 // Export everything
 export * from './helloworld'
@@ -85,5 +101,7 @@ export * from './criticalErrorMonitor' // 🚨💚 Функции критиче
 export * from './instagramApifyScraper' // 📱 RILS парсер через Apify
 export * from './competitorAutoParser' // ⏰ Автоматический парсинг конкурентов
 export * from './competitorDelivery' // 📬 Доставка рилсов конкурентов
+export * from './systemMonitor' // 📊 Системный мониторинг
+export * from './systemHealthCheck' // 💚 Проверка здоровья системы
 
 export default functions

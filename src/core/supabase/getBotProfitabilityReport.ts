@@ -40,12 +40,12 @@ export interface BotProfitabilityStats {
 const monthNames: { [key: number]: string } = {
   5: 'Май',
   6: 'Июнь',
-  7: 'Июль'
+  7: 'Июль',
 }
 
 /**
  * Получает данные о прибыльности ботов из таблицы payments_v2
- * 
+ *
  * @param dateFrom - Дата начала периода (YYYY-MM-DD)
  * @param dateTo - Дата окончания периода (YYYY-MM-DD)
  * @param botName - Фильтр по имени бота (опционально)
@@ -61,7 +61,7 @@ export const getBotProfitability = async (
       description: 'Getting bot profitability data',
       dateFrom,
       dateTo,
-      botName
+      botName,
     })
 
     let query = supabase
@@ -100,56 +100,57 @@ export const getBotProfitability = async (
         description: 'No bot profitability data found',
         dateFrom,
         dateTo,
-        botName
+        botName,
       })
       return []
     }
 
     // Преобразуем данные в нужный формат
-    const profitabilityReports: BotProfitabilityReport[] = data
-      .map(payment => {
-        const paymentDate = new Date(payment.payment_date)
-        const month = paymentDate.getMonth() + 1
-        
-        return {
-          id: payment.id,
-          bot_name: payment.bot_name,
-          amount: payment.amount || 0,
-          stars: payment.stars || 0,
-          currency: payment.currency,
-          payment_date: payment.payment_date,
-          month,
-          month_name: monthNames[month] || `Месяц ${month}`,
-          type: payment.type,
-          status: payment.status,
-          subscription_type: payment.subscription_type,
-          payment_method: payment.payment_method,
-          description: payment.description
-        }
-      })
+    const profitabilityReports: BotProfitabilityReport[] = data.map(payment => {
+      const paymentDate = new Date(payment.payment_date)
+      const month = paymentDate.getMonth() + 1
+
+      return {
+        id: payment.id,
+        bot_name: payment.bot_name,
+        amount: payment.amount || 0,
+        stars: payment.stars || 0,
+        currency: payment.currency,
+        payment_date: payment.payment_date,
+        month,
+        month_name: monthNames[month] || `Месяц ${month}`,
+        type: payment.type,
+        status: payment.status,
+        subscription_type: payment.subscription_type,
+        payment_method: payment.payment_method,
+        description: payment.description,
+      }
+    })
 
     logger.info('✅ Получены данные о прибыльности ботов:', {
       description: 'Bot profitability data retrieved successfully',
       count: profitabilityReports.length,
       dateFrom,
       dateTo,
-      botName
+      botName,
     })
 
     return profitabilityReports
-
   } catch (error) {
-    logger.error('❌ Критическая ошибка при получении данных о прибыльности ботов:', {
-      description: 'Critical error getting bot profitability data',
-      error: error instanceof Error ? error.message : String(error),
-    })
+    logger.error(
+      '❌ Критическая ошибка при получении данных о прибыльности ботов:',
+      {
+        description: 'Critical error getting bot profitability data',
+        error: error instanceof Error ? error.message : String(error),
+      }
+    )
     return []
   }
 }
 
 /**
  * Группирует данные о прибыльности ботов и создает сводную статистику
- * 
+ *
  * @param profitabilityData - Массив данных о прибыльности
  * @returns BotProfitabilityStats[]
  */
@@ -166,7 +167,7 @@ export const generateBotProfitabilityStats = (
         total_stars_income: 0,
         rub_transactions: 0,
         stars_transactions: 0,
-        months: {}
+        months: {},
       })
     }
 
@@ -180,7 +181,7 @@ export const generateBotProfitabilityStats = (
         rub_income: 0,
         stars_income: 0,
         rub_transactions: 0,
-        stars_transactions: 0
+        stars_transactions: 0,
       }
     }
 
@@ -200,17 +201,19 @@ export const generateBotProfitabilityStats = (
     }
   })
 
-  return Array.from(statsMap.values()).sort((a, b) => 
+  return Array.from(statsMap.values()).sort((a, b) =>
     a.bot_name.localeCompare(b.bot_name)
   )
 }
 
 /**
  * Отображает отчет о прибыльности ботов в консоли
- * 
+ *
  * @param stats - Статистика прибыльности ботов
  */
-export const displayBotProfitabilityReport = (stats: BotProfitabilityStats[]): void => {
+export const displayBotProfitabilityReport = (
+  stats: BotProfitabilityStats[]
+): void => {
   console.log('\n📈 АНАЛИЗ ПРИБЫЛЬНОСТИ БОТОВ')
   console.log('=' * 80)
 
@@ -227,26 +230,38 @@ export const displayBotProfitabilityReport = (stats: BotProfitabilityStats[]): v
     console.log('-'.repeat(50))
 
     // Сортируем месяцы по порядку
-    const sortedMonths = Object.entries(botStats.months).sort(([a], [b]) => a.localeCompare(b))
+    const sortedMonths = Object.entries(botStats.months).sort(([a], [b]) =>
+      a.localeCompare(b)
+    )
 
     sortedMonths.forEach(([monthKey, monthData]) => {
       console.log(`  📅 ${monthData.month_name} (${monthKey}):`)
-      
+
       if (monthData.rub_income > 0) {
-        console.log(`    💰 Рубли: ${monthData.rub_income.toFixed(2)} RUB (${monthData.rub_transactions} транзакций)`)
+        console.log(
+          `    💰 Рубли: ${monthData.rub_income.toFixed(2)} RUB (${
+            monthData.rub_transactions
+          } транзакций)`
+        )
       }
-      
+
       if (monthData.stars_income > 0) {
-        console.log(`    ⭐ Звезды: ${monthData.stars_income} STARS (${monthData.stars_transactions} транзакций)`)
+        console.log(
+          `    ⭐ Звезды: ${monthData.stars_income} STARS (${monthData.stars_transactions} транзакций)`
+        )
       }
-      
+
       if (monthData.rub_income === 0 && monthData.stars_income === 0) {
         console.log(`    🚫 Нет доходов`)
       }
     })
-    
-    console.log(`  📊 ИТОГО по боту: ${botStats.total_rub_income.toFixed(2)} RUB | ${botStats.total_stars_income} STARS`)
-    
+
+    console.log(
+      `  📊 ИТОГО по боту: ${botStats.total_rub_income.toFixed(2)} RUB | ${
+        botStats.total_stars_income
+      } STARS`
+    )
+
     totalRubIncome += botStats.total_rub_income
     totalStarsIncome += botStats.total_stars_income
   })

@@ -16,71 +16,132 @@ import { VIDEO_MODELS_CONFIG } from '@/config/models.config'
 import { PaymentType } from '@/interfaces/payments.interface'
 import { ModeEnum } from '@/interfaces/modes'
 import { GoogleVeo3Service } from './googleVeo3Service'
+import { KieAiService } from './kieAiService'
+
+/**
+ * Обработка через дорогой Vertex AI (fallback)
+ */
+async function processVertexAI(
+  videoModel: string,
+  aspect_ratio: string, 
+  prompt: string,
+  imageUrl?: string,
+  duration?: number
+) {
+  const { VertexVeoService } = await import('./vertexVeoService');
+  const projectId = process.env.GOOGLE_CLOUD_PROJECT || 'neuroblogger';
+  
+  const veoService = new VertexVeoService(projectId);
+  
+  // Veo 3 поддерживает только 16:9, поэтому всегда используем его
+  // TODO: В будущем можно будет добавить поддержку других соотношений
+  let veoAspectRatio: '16:9' | '9:16' | '1:1' = '16:9';
+  console.log('Using aspect ratio 16:9 for Veo (other ratios not supported yet)');
+  
+  // Определяем модель
+  let modelId: string;
+  if (videoModel === 'veo-3') {
+    modelId = 'veo-3.0-generate-preview';
+  } else if (videoModel === 'veo-3-fast') {
+    modelId = 'veo-3.0-generate-fast';
+    console.log('⚡ Using Veo 3 Fast mode for quicker generation');
+  } else {
+    modelId = 'veo-2.0-generate-001';
+  }
+  
+  // Не используем GCS, получаем видео в base64
+  // const storageUri = `gs://veo-videos-${projectId}/`;
+  
+  const result = await veoService.generateAndWaitForVideo({
+    prompt,
+    modelId,
+    aspectRatio: veoAspectRatio,
+    duration: duration, // Передаем duration в API
+    // storageUri, // Закомментировано - получаем base64 вместо GCS
+    image: imageUrl ? {
+      gcsUri: imageUrl,
+      mimeType: 'image/jpeg'
+    } : undefined
+  });
+  
+  // Возвращаем URL видео или base64
+  if (result.videos && result.videos[0]) {
+    const video = result.videos[0];
+    
+    // Если есть GCS URL, возвращаем его
+    if (video.gcsUri) {
+      return video.gcsUri;
+    }
+    
+    // Если есть base64, формируем data URL
+    if (video.bytesBase64Encoded) {
+      // Возвращаем base64 с префиксом data URL
+      return `data:video/mp4;base64,${video.bytesBase64Encoded}`;
+    }
+  }
+  throw new Error('No video generated');
+}
 
 export const processVideoGeneration = async (
   videoModel: string,
   aspect_ratio: string,
   prompt: string,
-  imageUrl?: string
+  imageUrl?: string,
+  duration: number = 5
 ) => {
-  // Обработка для Google Veo через Vertex AI
-  if (videoModel === 'veo-3' || videoModel === 'veo-3-fast' || videoModel === 'veo-2') {
-    const { VertexVeoService } = await import('./vertexVeoService');
-    const projectId = process.env.GOOGLE_CLOUD_PROJECT || 'neuroblogger';
+  // Получаем конфигурацию модели
+  const modelConfig = VIDEO_MODELS_CONFIG[videoModel]
+  
+  if (!modelConfig) {
+    throw new Error(`Unknown video model: ${videoModel}`)
+  }
+
+  // Проверяем, какой провайдер должен использоваться
+  const providerType = modelConfig.api?.input?.type
+  
+  // НОВАЯ ЛОГИКА: Используем Kie.ai для дешевых моделей
+  if (providerType === 'kie-ai') {
+    console.log(`🎯 Using Kie.ai for ${videoModel} (87% cheaper than Vertex AI!)`)
     
-    const veoService = new VertexVeoService(projectId);
+    const kieAiService = new KieAiService()
     
-    // Veo 3 поддерживает только 16:9, поэтому всегда используем его
-    // TODO: В будущем можно будет добавить поддержку других соотношений
-    let veoAspectRatio: '16:9' | '9:16' | '1:1' = '16:9';
-    console.log('Using aspect ratio 16:9 for Veo (other ratios not supported yet)');
+    // Проверяем доступность API
+    const isHealthy = await kieAiService.checkHealth()
+    if (!isHealthy) {
+      console.warn(`⚠️ Kie.ai API не доступен для ${videoModel}, используем резервный Vertex AI`)
+      // Fallback к Vertex AI если Kie.ai недоступен
+      return await processVertexAI(videoModel, aspect_ratio, prompt, imageUrl, duration)
+    }
     
-    // Определяем модель
-    let modelId: string;
-    if (videoModel === 'veo-3') {
-      modelId = 'veo-3.0-generate-preview';
-    } else if (videoModel === 'veo-3-fast') {
-      modelId = 'veo-3.0-generate-fast';
-      console.log('⚡ Using Veo 3 Fast mode for quicker generation');
+    // Маппинг aspect ratio
+    let kieAspectRatio: '16:9' | '9:16' | '1:1'
+    if (aspect_ratio === '9:16') {
+      kieAspectRatio = '9:16'
+    } else if (aspect_ratio === '1:1') {
+      kieAspectRatio = '1:1'
     } else {
-      modelId = 'veo-2.0-generate-001';
+      kieAspectRatio = '16:9'
     }
     
-    // Не используем GCS, получаем видео в base64
-    // const storageUri = `gs://veo-videos-${projectId}/`;
-    
-    const result = await veoService.generateAndWaitForVideo({
+    // Генерируем через Kie.ai
+    const result = await kieAiService.generateVideo({
+      model: videoModel as 'veo-3-fast' | 'veo-3' | 'runway-aleph',
       prompt,
-      modelId,
-      aspectRatio: veoAspectRatio,
-      // storageUri, // Закомментировано - получаем base64 вместо GCS
-      image: imageUrl ? {
-        gcsUri: imageUrl,
-        mimeType: 'image/jpeg'
-      } : undefined
-    });
+      duration,
+      aspectRatio: kieAspectRatio,
+      imageUrl
+    })
     
-    // Возвращаем URL видео или base64
-    if (result.videos && result.videos[0]) {
-      const video = result.videos[0];
-      
-      // Если есть GCS URL, возвращаем его
-      if (video.gcsUri) {
-        return video.gcsUri;
-      }
-      
-      // Если есть base64, формируем data URL
-      if (video.bytesBase64Encoded) {
-        // Возвращаем base64 с префиксом data URL
-        return `data:video/mp4;base64,${video.bytesBase64Encoded}`;
-      }
-    }
-    throw new Error('No video generated');
+    return result.videoUrl
   }
   
-  // Стандартная обработка через Replicate для остальных моделей
-  const modelConfig = VIDEO_MODELS_CONFIG[videoModel]
+  // СТАРАЯ ЛОГИКА: Vertex AI для обратной совместимости
+  if (videoModel === 'veo-3' || videoModel === 'veo-3-fast' || videoModel === 'veo-2') {
+    console.log(`⚠️ Using expensive Vertex AI for ${videoModel} (fallback mode)`)
+    return await processVertexAI(videoModel, aspect_ratio, prompt, imageUrl, duration)
+  }
 
+  // Стандартная обработка через Replicate для остальных моделей
   if (!modelConfig) {
     throw new Error('Invalid video model')
   }
@@ -105,7 +166,8 @@ export const generateTextToVideo = async (
   telegram_id: string,
   username: string,
   is_ru: boolean,
-  bot_name: string
+  bot_name: string,
+  duration: number = 5
 ): Promise<{ videoLocalPath: string }> => {
   try {
     console.log('videoModel', videoModel)
@@ -165,7 +227,8 @@ export const generateTextToVideo = async (
       videoModel,
       userExists.aspect_ratio,
       prompt,
-      undefined // imageUrl для text-to-video пока не используется
+      undefined, // imageUrl для text-to-video пока не используется
+      duration // передаем duration
     )
     //const videoUrl = 'https://yuukfqcsdhkyxegfwlcb.supabase.co/storage/v1/object/public/dev/2025-01-15T06%2011%2018.236Z.mp4';
     let videoUrl: string

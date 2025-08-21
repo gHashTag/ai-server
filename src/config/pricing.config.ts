@@ -13,13 +13,13 @@ import { logger } from '@/utils/logger'
 export const CURRENCY_CONFIG = {
   // Стоимость одной звезды в долларах
   STAR_COST_USD: 0.016,
-  
+
   // Коэффициент наценки (50% = 1.5x)
   MARKUP_RATE: 1.5,
-  
+
   // Основная валюта системы
   DEFAULT_CURRENCY: 'RUB' as const,
-  
+
   // Курс рубля к доллару (обновляется динамически)
   RUB_TO_USD_RATE: 85, // Базовый курс
 } as const
@@ -37,7 +37,7 @@ export async function getCurrentRate(): Promise<number> {
     logger.error({
       message: '❌ Ошибка получения курса USDT/RUB',
       error: error instanceof Error ? error.message : 'Unknown error',
-      using_rate: currentRate
+      using_rate: currentRate,
     })
     return currentRate
   }
@@ -50,9 +50,10 @@ export function getDerivedValues() {
   return {
     // Стоимость одной звезды в рублях
     STAR_COST_RUB: CURRENCY_CONFIG.STAR_COST_USD * currentRate,
-    
+
     // Стоимость одной звезды в рублях с наценкой
-    STAR_COST_RUB_WITH_MARKUP: CURRENCY_CONFIG.STAR_COST_USD * currentRate * CURRENCY_CONFIG.MARKUP_RATE,
+    STAR_COST_RUB_WITH_MARKUP:
+      CURRENCY_CONFIG.STAR_COST_USD * currentRate * CURRENCY_CONFIG.MARKUP_RATE,
   }
 }
 
@@ -92,23 +93,27 @@ export const PricingCalculator = {
    * Конвертация долларов в звезды с учетом наценки
    */
   usdToStars(usd: number): number {
-    return Math.floor((usd / CURRENCY_CONFIG.STAR_COST_USD) * CURRENCY_CONFIG.MARKUP_RATE)
+    return Math.floor(
+      (usd / CURRENCY_CONFIG.STAR_COST_USD) * CURRENCY_CONFIG.MARKUP_RATE
+    )
   },
-  
+
   /**
    * Конвертация звезд в рубли
    */
   starsToRub(stars: number): number {
-    return parseFloat((stars * CURRENCY_CONFIG.STAR_COST_USD * currentRate).toFixed(2))
+    return parseFloat(
+      (stars * CURRENCY_CONFIG.STAR_COST_USD * currentRate).toFixed(2)
+    )
   },
-  
+
   /**
    * Конвертация долларов в рубли
    */
   usdToRub(usd: number): number {
     return parseFloat((usd * currentRate).toFixed(2))
   },
-  
+
   /**
    * Конвертация рублей в звезды (для покупки)
    */
@@ -126,7 +131,7 @@ export const rublesToDollarsRate = currentRate
 getCurrentRate().catch(error => {
   logger.error({
     message: '❌ Ошибка инициализации курса USDT/RUB',
-    error: error instanceof Error ? error.message : 'Unknown error'
+    error: error instanceof Error ? error.message : 'Unknown error',
   })
 })
 
@@ -135,7 +140,7 @@ setInterval(() => {
   getCurrentRate().catch(error => {
     logger.error({
       message: '❌ Ошибка обновления курса USDT/RUB',
-      error: error instanceof Error ? error.message : 'Unknown error'
+      error: error instanceof Error ? error.message : 'Unknown error',
     })
   })
 }, 300000) // 5 минут

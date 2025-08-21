@@ -231,3 +231,4 @@ reports/*.json
 !.gitkeep
 !**/.gitkeep
 vertex-ai-key.json
+worktrees/

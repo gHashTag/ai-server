@@ -15,23 +15,26 @@ export interface ErrorReport {
  */
 export async function reportError(errorData: ErrorReport): Promise<void> {
   try {
-    const errorMessage = errorData.error instanceof Error 
-      ? errorData.error.message 
-      : String(errorData.error)
-    
-    const stack = errorData.stack || (errorData.error instanceof Error ? errorData.error.stack : undefined)
-    
+    const errorMessage =
+      errorData.error instanceof Error
+        ? errorData.error.message
+        : String(errorData.error)
+
+    const stack =
+      errorData.stack ||
+      (errorData.error instanceof Error ? errorData.error.stack : undefined)
+
     // Определяем уровень критичности
     const severity = errorData.severity || determineErrorSeverity(errorMessage)
-    
+
     // Логируем ошибку локально
     logger.error('Error reported to monitoring system', {
       error: errorMessage,
       severity,
       endpoint: errorData.endpoint,
-      userId: errorData.userId
+      userId: errorData.userId,
     })
-    
+
     // Отправляем событие в Inngest только для критических и высоких ошибок
     if (severity === 'critical' || severity === 'high') {
       await inngest.send({
@@ -43,10 +46,10 @@ export async function reportError(errorData: ErrorReport): Promise<void> {
           userId: errorData.userId,
           severity,
           context: errorData.context,
-          timestamp: new Date().toISOString()
-        }
+          timestamp: new Date().toISOString(),
+        },
       })
-      
+
       logger.info('Critical error event sent to Inngest', { severity })
     }
   } catch (err) {
@@ -58,9 +61,11 @@ export async function reportError(errorData: ErrorReport): Promise<void> {
 /**
  * Определяет уровень критичности ошибки на основе её содержания
  */
-function determineErrorSeverity(errorMessage: string): 'critical' | 'high' | 'medium' {
+function determineErrorSeverity(
+  errorMessage: string
+): 'critical' | 'high' | 'medium' {
   const message = errorMessage.toLowerCase()
-  
+
   // Критические ошибки
   const criticalPatterns = [
     'database',
@@ -71,9 +76,9 @@ function determineErrorSeverity(errorMessage: string): 'critical' | 'high' | 'me
     'undefined is not',
     'payment',
     'unauthorized',
-    'forbidden'
+    'forbidden',
   ]
-  
+
   // Высокие ошибки
   const highPatterns = [
     'timeout',
@@ -81,24 +86,29 @@ function determineErrorSeverity(errorMessage: string): 'critical' | 'high' | 'me
     'api error',
     'validation error',
     'bad request',
-    'not found'
+    'not found',
   ]
-  
+
   if (criticalPatterns.some(pattern => message.includes(pattern))) {
     return 'critical'
   }
-  
+
   if (highPatterns.some(pattern => message.includes(pattern))) {
     return 'high'
   }
-  
+
   return 'medium'
 }
 
 /**
  * Express middleware для автоматического отлова и репорта ошибок
  */
-export function errorReporterMiddleware(err: any, req: any, res: any, next: any) {
+export function errorReporterMiddleware(
+  err: any,
+  req: any,
+  res: any,
+  next: any
+) {
   // Отправляем ошибку в систему мониторинга
   reportError({
     error: err,
@@ -109,11 +119,11 @@ export function errorReporterMiddleware(err: any, req: any, res: any, next: any)
       body: req.body,
       headers: {
         'user-agent': req.headers['user-agent'],
-        'x-real-ip': req.headers['x-real-ip']
-      }
-    }
+        'x-real-ip': req.headers['x-real-ip'],
+      },
+    },
   })
-  
+
   // Передаем ошибку дальше для стандартной обработки
   next(err)
 }
@@ -131,7 +141,7 @@ export function withErrorReporting<T extends (...args: any[]) => Promise<any>>(
     } catch (error) {
       await reportError({
         error: error as Error,
-        ...context
+        ...context,
       })
       throw error
     }

@@ -14,7 +14,9 @@ const GROUP_CHAT_ID = ADMIN_TELEGRAM_ID // Используем ID админа 
 // Инициализация OpenAI для анализа логов
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY || process.env.DEEPSEEK_API_KEY,
-  baseURL: process.env.DEEPSEEK_API_KEY ? 'https://api.deepseek.com' : undefined
+  baseURL: process.env.DEEPSEEK_API_KEY
+    ? 'https://api.deepseek.com'
+    : undefined,
 })
 
 // Интерфейс для результата анализа
@@ -47,12 +49,12 @@ async function readLogs(): Promise<string> {
   // В Docker контейнере LOG_DIR=/app/logs, локально ../logs
   const logDir = process.env.LOG_DIR || '../logs'
   const logPath = join(logDir, 'combined.log')
-  
+
   if (!existsSync(logPath)) {
     logger.warn(`Log file not found at ${logPath}`)
     return ''
   }
-  
+
   try {
     // Читаем последние 10000 символов логов (чтобы не перегружать AI)
     const fullLog = readFileSync(logPath, 'utf-8')
@@ -69,19 +71,21 @@ function filterLast24Hours(logs: string): string {
   const lines = logs.split('\n')
   const now = Date.now()
   const dayAgo = now - 24 * 60 * 60 * 1000
-  
-  return lines.filter(line => {
-    try {
-      const match = line.match(/"timestamp":"([^"]+)"/)
-      if (match) {
-        const timestamp = new Date(match[1]).getTime()
-        return timestamp > dayAgo
+
+  return lines
+    .filter(line => {
+      try {
+        const match = line.match(/"timestamp":"([^"]+)"/)
+        if (match) {
+          const timestamp = new Date(match[1]).getTime()
+          return timestamp > dayAgo
+        }
+        return false
+      } catch {
+        return false
       }
-      return false
-    } catch {
-      return false
-    }
-  }).join('\n')
+    })
+    .join('\n')
 }
 
 // Анализ логов с помощью AI
@@ -96,7 +100,10 @@ async function analyzeLogs(logs: string): Promise<LogAnalysisResult> {
       errors: [],
       warnings: [],
       statistics: {},
-      recommendations: [`Проверьте, что приложение пишет логи в ${logPath}`, 'Убедитесь, что сервис логирования работает корректно.']
+      recommendations: [
+        `Проверьте, что приложение пишет логи в ${logPath}`,
+        'Убедитесь, что сервис логирования работает корректно.',
+      ],
     }
   }
 
@@ -143,21 +150,23 @@ async function analyzeLogs(logs: string): Promise<LogAnalysisResult> {
 
   try {
     const response = await openai.chat.completions.create({
-      model: process.env.DEEPSEEK_API_KEY ? 'deepseek-chat' : 'gpt-4-turbo-preview',
+      model: process.env.DEEPSEEK_API_KEY
+        ? 'deepseek-chat'
+        : 'gpt-4-turbo-preview',
       messages: [
         { role: 'system', content: systemPrompt },
-        { role: 'user', content: `Проанализируй следующие логи:\n\n${logs}` }
+        { role: 'user', content: `Проанализируй следующие логи:\n\n${logs}` },
       ],
       response_format: { type: 'json_object' },
       temperature: 0.3,
-      max_tokens: 2000
+      max_tokens: 2000,
     })
 
     const result = JSON.parse(response.choices[0].message.content || '{}')
     return result as LogAnalysisResult
   } catch (error) {
     logger.error('Error analyzing logs with AI:', error)
-    
+
     // Fallback анализ без AI
     return basicLogAnalysis(logs)
   }
@@ -169,49 +178,68 @@ function basicLogAnalysis(logs: string): LogAnalysisResult {
   const errors = lines.filter(line => line.includes('"level":"error"')).length
   const warnings = lines.filter(line => line.includes('"level":"warn"')).length
   const info = lines.filter(line => line.includes('"level":"info"')).length
-  
+
   const status = errors > 10 ? 'critical' : errors > 5 ? 'warning' : 'healthy'
-  
+
   return {
     status,
     summary: `Обработано ${lines.length} записей логов. Ошибок: ${errors}, Предупреждений: ${warnings}`,
-    errors: errors > 0 ? [{
-      message: 'Обнаружены ошибки в логах',
-      count: errors,
-      severity: errors > 10 ? 'high' : 'medium',
-      solution: 'Требуется детальный анализ ошибок'
-    }] : [],
-    warnings: warnings > 0 ? [{
-      message: 'Обнаружены предупреждения',
-      count: warnings
-    }] : [],
+    errors:
+      errors > 0
+        ? [
+            {
+              message: 'Обнаружены ошибки в логах',
+              count: errors,
+              severity: errors > 10 ? 'high' : 'medium',
+              solution: 'Требуется детальный анализ ошибок',
+            },
+          ]
+        : [],
+    warnings:
+      warnings > 0
+        ? [
+            {
+              message: 'Обнаружены предупреждения',
+              count: warnings,
+            },
+          ]
+        : [],
     statistics: {
       totalRequests: info,
-      errorRate: (errors / (lines.length || 1)) * 100
+      errorRate: (errors / (lines.length || 1)) * 100,
     },
-    recommendations: errors > 0 ? ['Исследовать и устранить источники ошибок'] : ['Система работает стабильно']
+    recommendations:
+      errors > 0
+        ? ['Исследовать и устранить источники ошибок']
+        : ['Система работает стабильно'],
   }
 }
 
 // Генерация креативного сообщения для Telegram
-async function generateTelegramMessage(analysis: LogAnalysisResult): Promise<string> {
+async function generateTelegramMessage(
+  analysis: LogAnalysisResult
+): Promise<string> {
   const statusEmoji = {
     healthy: '✅',
     warning: '⚠️',
-    critical: '🚨'
+    critical: '🚨',
   }
 
   const severityEmoji = {
     low: '📝',
     medium: '⚡',
-    high: '🔥'
+    high: '🔥',
   }
 
-  let message = `${statusEmoji[analysis.status]} <b>Отчет мониторинга системы</b>\n`
-  message += `📅 ${new Date().toLocaleString('ru-RU', { timeZone: 'Europe/Moscow' })}\n\n`
-  
+  let message = `${
+    statusEmoji[analysis.status]
+  } <b>Отчет мониторинга системы</b>\n`
+  message += `📅 ${new Date().toLocaleString('ru-RU', {
+    timeZone: 'Europe/Moscow',
+  })}\n\n`
+
   message += `<b>📊 Общий статус:</b> ${analysis.summary}\n\n`
-  
+
   // Статистика
   if (Object.keys(analysis.statistics).length > 0) {
     message += `<b>📈 Статистика за 24 часа:</b>\n`
@@ -219,21 +247,26 @@ async function generateTelegramMessage(analysis: LogAnalysisResult): Promise<str
       message += `• Всего запросов: ${analysis.statistics.totalRequests}\n`
     }
     if (analysis.statistics.successRate !== undefined) {
-      message += `• Успешность: ${analysis.statistics.successRate.toFixed(1)}%\n`
+      message += `• Успешность: ${analysis.statistics.successRate.toFixed(
+        1
+      )}%\n`
     }
     if (analysis.statistics.errorRate !== undefined) {
-      message += `• Уровень ошибок: ${analysis.statistics.errorRate.toFixed(2)}%\n`
+      message += `• Уровень ошибок: ${analysis.statistics.errorRate.toFixed(
+        2
+      )}%\n`
     }
     if (analysis.statistics.averageResponseTime) {
       message += `• Среднее время ответа: ${analysis.statistics.averageResponseTime}мс\n`
     }
     message += '\n'
   }
-  
+
   // Ошибки
   if (analysis.errors.length > 0) {
     message += `<b>❌ Обнаруженные проблемы:</b>\n`
-    for (const error of analysis.errors.slice(0, 3)) { // Максимум 3 ошибки
+    for (const error of analysis.errors.slice(0, 3)) {
+      // Максимум 3 ошибки
       message += `${severityEmoji[error.severity]} ${error.message}\n`
       message += `   Повторений: ${error.count}\n`
       if (error.solution) {
@@ -242,7 +275,7 @@ async function generateTelegramMessage(analysis: LogAnalysisResult): Promise<str
     }
     message += '\n'
   }
-  
+
   // Предупреждения
   if (analysis.warnings.length > 0) {
     message += `<b>⚡ Предупреждения:</b>\n`
@@ -251,7 +284,7 @@ async function generateTelegramMessage(analysis: LogAnalysisResult): Promise<str
     }
     message += '\n'
   }
-  
+
   // Рекомендации
   if (analysis.recommendations.length > 0) {
     message += `<b>🎯 Рекомендации:</b>\n`
@@ -260,7 +293,7 @@ async function generateTelegramMessage(analysis: LogAnalysisResult): Promise<str
     }
     message += '\n'
   }
-  
+
   // Достижения (если есть)
   if (analysis.achievements && analysis.achievements.length > 0) {
     message += `<b>🏆 Достижения:</b>\n`
@@ -277,18 +310,20 @@ async function generateTelegramMessage(analysis: LogAnalysisResult): Promise<str
       '🚀 Всё идёт по плану, капитан!',
       '🌟 Отличная работа! Держим планку!',
       '✨ Стабильность - признак мастерства!',
-      '🎯 Цель достигнута: нулевой даунтайм!'
+      '🎯 Цель достигнута: нулевой даунтайм!',
     ]
-    message += `\n${healthyPhrases[Math.floor(Math.random() * healthyPhrases.length)]}`
+    message += `\n${
+      healthyPhrases[Math.floor(Math.random() * healthyPhrases.length)]
+    }`
   } else if (analysis.status === 'warning') {
     message += '\n⚡ Требуется внимание, но ситуация под контролем!'
   } else {
     message += '\n🔧 Пора засучить рукава и исправить проблемы!'
   }
-  
+
   // Добавляем хештеги
   message += '\n\n#мониторинг #devops #ai_server'
-  
+
   return message
 }
 
@@ -296,21 +331,22 @@ async function generateTelegramMessage(analysis: LogAnalysisResult): Promise<str
 async function sendTelegramNotification(message: string): Promise<void> {
   try {
     const bot = new Bot(BOT_TOKEN)
-    
+
     // Отправляем в группу (сейчас админу)
-    await bot.telegram.sendMessage(GROUP_CHAT_ID, message, { 
+    await bot.telegram.sendMessage(GROUP_CHAT_ID, message, {
       parse_mode: 'HTML',
-      disable_web_page_preview: true 
+      disable_web_page_preview: true,
     })
-    
+
     // Если есть критические ошибки, дублируем администратору
     if (message.includes('🚨')) {
-      await bot.telegram.sendMessage(ADMIN_TELEGRAM_ID, 
-        `🚨 <b>КРИТИЧЕСКОЕ УВЕДОМЛЕНИЕ</b>\n\n${message}`, 
+      await bot.telegram.sendMessage(
+        ADMIN_TELEGRAM_ID,
+        `🚨 <b>КРИТИЧЕСКОЕ УВЕДОМЛЕНИЕ</b>\n\n${message}`,
         { parse_mode: 'HTML' }
       )
     }
-    
+
     logger.info('Log monitoring report sent successfully')
   } catch (error) {
     logger.error('Error sending Telegram notification:', error)
@@ -331,42 +367,42 @@ export const logMonitor = inngest.createFunction(
   },
   async ({ event, step }) => {
     logger.info('Starting log monitoring task...')
-    
+
     // Шаг 1: Чтение логов
     const logs = await step.run('read-logs', async () => {
       logger.info('Reading logs from file system...')
       return await readLogs()
     })
-    
+
     // Шаг 2: Анализ логов
     const analysis = await step.run('analyze-logs', async () => {
       logger.info('Analyzing logs with AI...')
       return await analyzeLogs(logs)
     })
-    
+
     // Шаг 3: Генерация сообщения
     const message = await step.run('generate-message', async () => {
       logger.info('Generating Telegram message...')
       return await generateTelegramMessage(analysis)
     })
-    
+
     // Шаг 4: Отправка уведомления
     await step.run('send-notification', async () => {
       logger.info('Sending Telegram notification...')
       await sendTelegramNotification(message)
     })
-    
+
     logger.info('Log monitoring completed successfully', {
       status: analysis.status,
       errors: analysis.errors.length,
-      warnings: analysis.warnings.length
+      warnings: analysis.warnings.length,
     })
-    
+
     return {
       success: true,
       status: analysis.status,
       summary: analysis.summary,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
     }
   }
 )
@@ -381,31 +417,31 @@ export const triggerLogMonitor = inngest.createFunction(
   { event: 'logs/monitor.trigger' },
   async ({ event, step }) => {
     logger.info('Manual log monitoring triggered')
-    
+
     // Выполняем те же шаги, что и в основной функции
     const logs = await step.run('read-logs', async () => {
       return await readLogs()
     })
-    
+
     const analysis = await step.run('analyze-logs', async () => {
       return await analyzeLogs(logs)
     })
-    
+
     const message = await step.run('generate-message', async () => {
       return await generateTelegramMessage(analysis)
     })
-    
+
     await step.run('send-notification', async () => {
       await sendTelegramNotification(message)
     })
-    
+
     return {
       success: true,
       manual: true,
       status: analysis.status,
       summary: analysis.summary,
       triggeredBy: event.data?.userId || 'system',
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
     }
   }
 )

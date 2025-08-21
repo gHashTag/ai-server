@@ -34,6 +34,13 @@ export const conversionRatesV2: ConversionRates = {
   rublesToDollarsRate: 100,
 }
 
+// Стоимость Instagram парсинга
+export const instagramScrapingRates = {
+  costPerReelInDollars: 0.0023, // $2.30 за 1000 рилсов от Apify
+  costPerReelInStars: 0.144, // 0.0023 / 0.016 = 0.144 звезды за рилс
+  costPerReelInRubles: 0.23, // 0.0023 * 100 = 0.23 рубля за рилс
+}
+
 export function calculateCostInStars(
   steps: number,
   rates: { costPerStepInStars: number }

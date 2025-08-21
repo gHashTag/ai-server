@@ -52,7 +52,7 @@ export async function generateNeuroImageV2(
     if (!userGender) {
       // Если gender не передан, пытаемся получить из пользователя
       userGender = userExists.gender
-      
+
       // Если и в пользователе нет, пытаемся получить из последней тренировки
       if (!userGender) {
         const { data: lastTraining } = await supabase
@@ -62,11 +62,11 @@ export async function generateNeuroImageV2(
           .order('created_at', { ascending: false })
           .limit(1)
           .single()
-        
+
         userGender = lastTraining?.gender
       }
     }
-    
+
     console.log('🎭 Gender для генерации:', userGender || 'НЕ ОПРЕДЕЛЕН')
     // Расчет стоимости
     let costPerImage: number
@@ -120,12 +120,13 @@ export async function generateNeuroImageV2(
 
     // --- ЛОГИКА ЗАПУСКА ГЕНЕРАЦИИ BFL ---
     // ← ИСПРАВЛЕНО: Формируем промпт с учетом gender
-    const genderPrompt = userGender === 'male' 
-      ? 'handsome man, masculine features' 
-      : userGender === 'female' 
+    const genderPrompt =
+      userGender === 'male'
+        ? 'handsome man, masculine features'
+        : userGender === 'female'
         ? 'beautiful woman, feminine features'
         : 'person' // fallback если gender не определен
-    
+
     const input = {
       finetune_id,
       finetune_strength: 2,

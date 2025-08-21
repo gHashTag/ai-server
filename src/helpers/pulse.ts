@@ -15,7 +15,10 @@ export const pulse = async (
 
     // Проверяем права бота в канале
     try {
-      await pulseBot.telegram.getChatMember('@neuro_blogger_pulse', pulseBot.botInfo?.id ?? 0)
+      await pulseBot.telegram.getChatMember(
+        '@neuro_blogger_pulse',
+        pulseBot.botInfo?.id ?? 0
+      )
     } catch (error) {
       console.error('Bot does not have access to channel:', error)
       return // Молча возвращаемся если нет прав, чтобы не блокировать основной процесс
@@ -50,9 +53,9 @@ export const pulse = async (
       stack: error.stack,
       botId: pulseBot.botInfo?.id,
       chatId: '@neuro_blogger_pulse',
-      imageExists: fs.existsSync(image)
+      imageExists: fs.existsSync(image),
     })
-    
+
     // Молча возвращаемся чтобы не блокировать основной процесс
     return
   }
