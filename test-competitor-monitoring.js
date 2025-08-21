@@ -110,42 +110,37 @@ async function checkSubscriptionStatus() {
   console.log('\n📋 Проверка статуса подписок...')
   
   try {
-    const { Pool } = require('pg')
+    const { createClient } = require('@supabase/supabase-js')
     
-    const dbPool = new Pool({
-      connectionString: process.env.NEON_DATABASE_URL,
-      ssl: { rejectUnauthorized: false }
-    })
+    const supabase = createClient(
+      process.env.SUPABASE_URL,
+      process.env.SUPABASE_SERVICE_ROLE_KEY
+    )
     
-    const client = await dbPool.connect()
-    
-    try {
-      const result = await client.query(`
-        SELECT 
-          cs.*,
-          cp.display_name,
-          cp.followers_count
-        FROM competitor_subscriptions cs
-        LEFT JOIN competitor_profiles cp ON cs.competitor_username = cp.username
-        WHERE cs.user_telegram_id = '144022504'
-        ORDER BY cs.created_at DESC
-        LIMIT 5
+    // Получаем подписки
+    const { data: subscriptions, error: subError } = await supabase
+      .from('competitor_subscriptions')
+      .select(`
+        *,
+        competitor_profiles(display_name, followers_count)
       `)
-      
-      console.log(`📊 Найдено ${result.rows.length} подписок:`)
-      result.rows.forEach((sub, index) => {
-        console.log(`${index + 1}. @${sub.competitor_username}`)
-        console.log(`   🎯 Макс рилзов: ${sub.max_reels}`)
-        console.log(`   👁 Мин просмотров: ${sub.min_views}`)
-        console.log(`   ⏰ Создана: ${sub.created_at}`)
-        console.log(`   ✅ Активна: ${sub.is_active}`)
-        console.log('')
-      })
-      
-    } finally {
-      client.release()
-      await dbPool.end()
+      .eq('user_telegram_id', '144022504')
+      .order('created_at', { ascending: false })
+      .limit(5)
+    
+    if (subError) {
+      throw subError
     }
+    
+    console.log(`📊 Найдено ${subscriptions.length} подписок:`)
+    subscriptions.forEach((sub, index) => {
+      console.log(`${index + 1}. @${sub.competitor_username}`)
+      console.log(`   🎯 Макс рилзов: ${sub.max_reels}`)
+      console.log(`   👁 Мин просмотров: ${sub.min_views}`)
+      console.log(`   ⏰ Создана: ${sub.created_at}`)
+      console.log(`   ✅ Активна: ${sub.is_active}`)
+      console.log('')
+    })
     
   } catch (error) {
     console.error('❌ Ошибка проверки подписок:', error.message)
@@ -165,8 +160,13 @@ async function runAllTests() {
 }
 
 // Проверяем переменные окружения
-if (!process.env.NEON_DATABASE_URL) {
-  console.error('❌ NEON_DATABASE_URL не настроена')
+if (!process.env.SUPABASE_URL) {
+  console.error('❌ SUPABASE_URL не настроена')
+  process.exit(1)
+}
+
+if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
+  console.error('❌ SUPABASE_SERVICE_ROLE_KEY не настроена')
   process.exit(1)
 }
 

@@ -9,14 +9,14 @@ async function setupCompetitorTables() {
   console.log('🚀 Настройка таблиц мониторинга конкурентов в Supabase...')
 
   // Проверяем переменные окружения
-  if (!process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_KEY) {
-    console.error('❌ SUPABASE_URL и SUPABASE_SERVICE_KEY должны быть настроены')
+  if (!process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
+    console.error('❌ SUPABASE_URL и SUPABASE_SERVICE_ROLE_KEY должны быть настроены')
     process.exit(1)
   }
 
   const supabase = createClient(
     process.env.SUPABASE_URL,
-    process.env.SUPABASE_SERVICE_KEY
+    process.env.SUPABASE_SERVICE_ROLE_KEY
   )
 
   try {

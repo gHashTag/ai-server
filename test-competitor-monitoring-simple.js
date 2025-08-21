@@ -13,8 +13,8 @@ async function testMonitoringFunction() {
     return
   }
   
-  if (!process.env.SUPABASE_SERVICE_KEY) {
-    console.error('❌ SUPABASE_SERVICE_KEY не настроена')
+  if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
+    console.error('❌ SUPABASE_SERVICE_ROLE_KEY не настроена')
     return
   }
   
@@ -40,7 +40,7 @@ async function testMonitoringFunction() {
     const { createClient } = require('@supabase/supabase-js')
     const supabase = createClient(
       process.env.SUPABASE_URL,
-      process.env.SUPABASE_SERVICE_KEY
+      process.env.SUPABASE_SERVICE_ROLE_KEY
     )
     
     // Проверяем таблицы (через запрос к таблице)
@@ -121,7 +121,7 @@ async function createTestSubscription() {
     const { createClient } = require('@supabase/supabase-js')
     const supabase = createClient(
       process.env.SUPABASE_URL,
-      process.env.SUPABASE_SERVICE_KEY
+      process.env.SUPABASE_SERVICE_ROLE_KEY
     )
 
     const subscriptionData = {
