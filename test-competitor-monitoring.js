@@ -1,5 +1,5 @@
 /**
- * Тест функции investInCompetitor
+ * Тест функции мониторинга конкурентов
  * Проверяет подписку на конкурента и получение последнего рилза
  */
 
@@ -7,8 +7,8 @@
 const https = require('https')
 const fetch = require('node-fetch') // Если установлен
 
-async function testInvestInCompetitor() {
-  console.log('🚀 Запуск теста investInCompetitor...')
+async function testCompetitorMonitoring() {
+  console.log('🚀 Запуск теста мониторинга конкурентов...')
   
   try {
     // Тестовые данные
@@ -27,7 +27,7 @@ async function testInvestInCompetitor() {
     console.log('📋 Тестовые данные:', testData)
     
     // Отправляем запрос через API
-    const response = await fetch('http://localhost:3000/api/invest-competitor', {
+    const response = await fetch('http://localhost:3000/api/competitor-monitoring', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
@@ -78,10 +78,10 @@ async function testGetCompetitorStatus() {
   console.log('\n🔍 Тест проверки статуса через API...')
   
   try {
-    const response = await fetch('http://localhost:3000/api/invest-competitor/status/natgeo?user_telegram_id=144022504&bot_name=neuro_blogger_bot')
+    const response = await fetch('http://localhost:3000/api/competitor-monitoring/status/natgeo?user_telegram_id=144022504&bot_name=neuro_blogger_bot')
     const result = await response.json()
     
-    if (result.success && result.invested) {
+    if (result.success && result.monitoring) {
       console.log(`📊 Статус подписки:`)
       console.log(`   ✅ Активна: ${result.subscription.is_active}`)
       console.log(`   🎯 Макс рилзов: ${result.subscription.max_reels}`)
@@ -154,7 +154,7 @@ async function checkSubscriptionStatus() {
 
 // Запуск тестов
 async function runAllTests() {
-  await testInvestInCompetitor()
+  await testCompetitorMonitoring()
   
   // Ждем немного перед проверкой результатов
   console.log('\n⏳ Ждем 5 секунд перед проверкой...')

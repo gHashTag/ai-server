@@ -1,8 +1,8 @@
-# 💰 Invest in Competitor - Руководство по использованию
+# 🔍 Competitor Monitoring - Руководство по использованию
 
 ## Обзор
 
-Функция "Инвестиции в конкурента" позволяет:
+Функция мониторинга конкурентов позволяет:
 - **Подписаться** на Instagram конкурента по username
 - **Спарсить** и сохранить в БД его рилзы (по умолчанию 10)
 - **Получить** 1 лучший рилз сразу пользователю
@@ -12,7 +12,7 @@
 
 ```mermaid
 graph TD
-    A[Пользователь] -->|@username| B[investInCompetitor]
+    A[Пользователь] -->|@username| B[competitorMonitoring]
     B --> C[Создание подписки в БД]
     C --> D[Запуск парсинга Apify]
     D --> E[Сохранение 10 рилзов в БД]
@@ -27,7 +27,7 @@ graph TD
 ### 1. Через API
 
 ```bash
-curl -X POST http://localhost:3000/api/invest-competitor \
+curl -X POST http://localhost:3000/api/competitor-monitoring \
   -H "Content-Type: application/json" \
   -d '{
     "username": "natgeo",
@@ -42,14 +42,14 @@ curl -X POST http://localhost:3000/api/invest-competitor \
 ### 2. Через тестовый файл
 
 ```bash
-node test-invest-in-competitor.js
+node test-competitor-monitoring.js
 ```
 
 ### 3. Прямо через Inngest
 
 ```javascript
 await inngest.send({
-  name: 'competitor/invest',
+  name: 'competitor/monitor',
   data: {
     username: 'natgeo',
     user_telegram_id: '144022504',
@@ -85,14 +85,14 @@ await inngest.send({
 ## 📋 Проверка статуса
 
 ```bash
-curl "http://localhost:3000/api/invest-competitor/status/natgeo?user_telegram_id=144022504&bot_name=neuro_blogger_bot"
+curl "http://localhost:3000/api/competitor-monitoring/status/natgeo?user_telegram_id=144022504&bot_name=neuro_blogger_bot"
 ```
 
 Ответ:
 ```json
 {
   "success": true,
-  "invested": true,
+  "monitoring": true,
   "subscription": {
     "competitor_username": "natgeo",
     "max_reels": 10,
@@ -156,7 +156,7 @@ BOT_TOKEN_1=...
 
 1. **Быстрый тест**:
 ```bash
-node test-invest-in-competitor.js
+node test-competitor-monitoring-simple.js
 ```
 
 2. **Проверка БД**:
@@ -167,7 +167,7 @@ SELECT * FROM instagram_apify_reels WHERE owner_username = 'natgeo';
 
 3. **Ручная доставка**:
 ```bash
-curl -X POST http://localhost:3000/api/invest-competitor/trigger-delivery/natgeo
+curl -X POST http://localhost:3000/api/competitor-monitoring/trigger-delivery/natgeo
 ```
 
 ## 📱 Что получает пользователь
@@ -188,15 +188,15 @@ curl -X POST http://localhost:3000/api/invest-competitor/trigger-delivery/natgeo
 
 Добавьте в Telegram бот команду:
 ```javascript
-bot.command('invest', async (ctx) => {
+bot.command('monitor', async (ctx) => {
   const username = ctx.message.text.split(' ')[1]
   
   if (!username) {
-    return ctx.reply('Укажите username: /invest @natgeo')
+    return ctx.reply('Укажите username: /monitor @natgeo')
   }
   
-  // Запускаем инвестиции
-  await fetch('/api/invest-competitor', {
+  // Запускаем мониторинг
+  await fetch('/api/competitor-monitoring', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({

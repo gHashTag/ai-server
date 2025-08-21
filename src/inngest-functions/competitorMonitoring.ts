@@ -1,5 +1,5 @@
 /**
- * Функция "Инвестиции в конкурента" - подписка и парсинг Instagram конкурентов
+ * Функция мониторинга конкурентов - подписка и парсинг Instagram конкурентов
  * Объединяет логику подписки и начального парсинга с возвратом последнего рилза
  */
 
@@ -8,7 +8,7 @@ import { Pool } from 'pg'
 import { z } from 'zod'
 
 // Схема валидации входных данных
-const InvestCompetitorEventSchema = z.object({
+const CompetitorMonitoringEventSchema = z.object({
   username: z.string().min(1), // Instagram username конкурента (без @)
   user_telegram_id: z.string().min(1),
   user_chat_id: z.string().optional(),
@@ -29,32 +29,32 @@ const dbPool = new Pool({
 // Логгер
 const log = {
   info: (msg: string, data?: any) =>
-    console.log(`[INVEST-COMPETITOR] ${msg}`, data || ''),
+    console.log(`[COMPETITOR-MONITORING] ${msg}`, data || ''),
   error: (msg: string, data?: any) =>
-    console.error(`[INVEST-COMPETITOR] ${msg}`, data || ''),
+    console.error(`[COMPETITOR-MONITORING] ${msg}`, data || ''),
   warn: (msg: string, data?: any) =>
-    console.warn(`[INVEST-COMPETITOR] ${msg}`, data || ''),
+    console.warn(`[COMPETITOR-MONITORING] ${msg}`, data || ''),
 }
 
 /**
- * Функция инвестиций в конкурента
+ * Функция мониторинга конкурентов
  */
-export const investInCompetitor = inngest.createFunction(
+export const competitorMonitoring = inngest.createFunction(
   {
-    id: 'invest-in-competitor',
-    name: '💰 Invest in Competitor',
+    id: 'competitor-monitoring',
+    name: '🔍 Competitor Monitoring',
     concurrency: 2,
   },
-  { event: 'competitor/invest' },
+  { event: 'competitor/monitor' },
   async ({ event, step, runId }) => {
-    log.info('🚀 Инвестиции в конкурента запущены', {
+    log.info('🚀 Мониторинг конкурента запущен', {
       runId,
       eventData: event.data,
     })
 
     // Step 1: Валидация входных данных
     const validatedData = await step.run('validate-input', async () => {
-      const result = InvestCompetitorEventSchema.safeParse(event.data)
+      const result = CompetitorMonitoringEventSchema.safeParse(event.data)
       
       if (!result.success) {
         throw new Error(`Invalid input: ${result.error.message}`)
@@ -323,17 +323,17 @@ export const investInCompetitor = inngest.createFunction(
       }
     })
 
-    log.info('🎉 Инвестиции в конкурента завершены успешно', userResult)
+    log.info('🎉 Мониторинг конкурента настроен успешно', userResult)
     return userResult
   }
 )
 
 /**
- * Helper функция для запуска инвестиций в конкурента
+ * Helper функция для запуска мониторинга конкурента
  */
-export async function triggerInvestInCompetitor(data: any) {
+export async function triggerCompetitorMonitoring(data: any) {
   const result = await inngest.send({
-    name: 'competitor/invest',
+    name: 'competitor/monitor',
     data,
   })
   

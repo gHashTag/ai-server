@@ -1,11 +1,11 @@
 /**
- * Простой тест функции investInCompetitor
+ * Простой тест функции мониторинга конкурентов
  * Тестируем через прямой вызов Inngest события
  */
 
 // Простая проверка подключения к БД и отправки события
-async function testInvestFunction() {
-  console.log('🚀 Тестирование функции investInCompetitor...')
+async function testMonitoringFunction() {
+  console.log('🚀 Тестирование функции мониторинга конкурентов...')
   
   // Проверяем переменные окружения
   if (!process.env.NEON_DATABASE_URL) {
@@ -90,17 +90,17 @@ async function testInvestFunction() {
 📝 Для запуска полной функции используйте:
 
 1. Через API (если сервер запущен):
-   curl -X POST http://localhost:3000/api/invest-competitor \\
+   curl -X POST http://localhost:3000/api/competitor-monitoring \\
      -H "Content-Type: application/json" \\
      -d '${JSON.stringify(testData)}'
 
 2. Через Inngest напрямую (в коде):
    await inngest.send({
-     name: 'competitor/invest',
+     name: 'competitor/monitor',
      data: ${JSON.stringify(testData, null, 2)}
    })
 
-3. Через Telegram бот (добавьте команду /invest)
+3. Через Telegram бот (добавьте команду /monitor)
 
 🔄 Система автоматически:
 • Создаст подписку на @${testData.username}
@@ -168,7 +168,7 @@ async function createTestSubscription() {
 }
 
 async function main() {
-  await testInvestFunction()
+  await testMonitoringFunction()
   
   // Опционально создаем тестовую подписку
   const createTest = process.argv.includes('--create-test')

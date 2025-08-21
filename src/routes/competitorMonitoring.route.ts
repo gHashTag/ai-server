@@ -1,16 +1,16 @@
 /**
- * API endpoint для "инвестиций в конкурента"
+ * API endpoint для мониторинга конкурентов
  * Упрощенный интерфейс для подписки на конкурентов
  */
 
 import { Router } from 'express'
 import { z } from 'zod'
-import { triggerInvestInCompetitor } from '@/inngest-functions/investInCompetitor'
+import { triggerCompetitorMonitoring } from '@/inngest-functions/competitorMonitoring'
 
 const router = Router()
 
 // Схема валидации
-const InvestRequestSchema = z.object({
+const MonitoringRequestSchema = z.object({
   username: z.string().min(1).transform(val => val.replace('@', '')), // Удаляем @ если есть
   user_telegram_id: z.string().min(1),
   user_chat_id: z.string().optional(),
@@ -23,19 +23,19 @@ const InvestRequestSchema = z.object({
 })
 
 /**
- * POST /api/invest-competitor
+ * POST /api/competitor-monitoring
  * Подписка на конкурента с начальным парсингом
  */
 router.post('/', async (req, res) => {
   try {
-    const validatedData = InvestRequestSchema.parse(req.body)
+    const validatedData = MonitoringRequestSchema.parse(req.body)
     
-    // Запускаем функцию инвестиций
-    const result = await triggerInvestInCompetitor(validatedData)
+    // Запускаем функцию мониторинга
+    const result = await triggerCompetitorMonitoring(validatedData)
     
     res.json({
       success: true,
-      message: `Investment in @${validatedData.username} started successfully`,
+      message: `Monitoring for @${validatedData.username} started successfully`,
       event_id: result.eventId,
       competitor_username: validatedData.username,
       expected_reels: validatedData.max_reels,
@@ -45,7 +45,7 @@ router.post('/', async (req, res) => {
     })
     
   } catch (error: any) {
-    console.error('Error investing in competitor:', error)
+    console.error('Error starting competitor monitoring:', error)
     
     if (error.name === 'ZodError') {
       return res.status(400).json({
@@ -63,8 +63,8 @@ router.post('/', async (req, res) => {
 })
 
 /**
- * GET /api/invest-competitor/status/:username
- * Проверка статуса инвестиций в конкурента
+ * GET /api/competitor-monitoring/status/:username
+ * Проверка статуса мониторинга конкурента
  */
 router.get('/status/:username', async (req, res) => {
   try {
@@ -77,7 +77,7 @@ router.get('/status/:username', async (req, res) => {
       })
     }
 
-    const { getCompetitorReels } = await import('@/inngest-functions/investInCompetitor')
+    const { getCompetitorReels } = await import('@/inngest-functions/competitorMonitoring')
     const { Pool } = await import('pg')
     
     const dbPool = new Pool({
@@ -113,8 +113,8 @@ router.get('/status/:username', async (req, res) => {
       if (subscriptionResult.rows.length === 0) {
         return res.status(404).json({
           success: false,
-          invested: false,
-          message: `No investment found for @${username}`
+          monitoring: false,
+          message: `No monitoring found for @${username}`
         })
       }
 
@@ -125,7 +125,7 @@ router.get('/status/:username', async (req, res) => {
       
       res.json({
         success: true,
-        invested: true,
+        monitoring: true,
         subscription: {
           id: subscription.id,
           competitor_username: subscription.competitor_username,
@@ -159,7 +159,7 @@ router.get('/status/:username', async (req, res) => {
     }
     
   } catch (error: any) {
-    console.error('Error checking investment status:', error)
+    console.error('Error checking monitoring status:', error)
     res.status(500).json({
       success: false,
       error: error.message
@@ -168,7 +168,7 @@ router.get('/status/:username', async (req, res) => {
 })
 
 /**
- * POST /api/invest-competitor/trigger-delivery/:username
+ * POST /api/competitor-monitoring/trigger-delivery/:username
  * Ручной запуск доставки для конкурента (для тестирования)
  */
 router.post('/trigger-delivery/:username', async (req, res) => {
@@ -201,4 +201,4 @@ router.post('/trigger-delivery/:username', async (req, res) => {
   }
 })
 
-export { router as investCompetitorRouter }
+export { router as competitorMonitoringRouter }
