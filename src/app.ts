@@ -128,6 +128,32 @@ export class App {
       res.json({ status: 'Событие отправлено! 🚀' })
     })
 
+    this.app.get('/trigger-instagram', async (req, res) => {
+      try {
+        const result = await inngest.send({
+          name: 'instagram/apify-scrape',
+          data: {
+            username_or_hashtag: 'cristiano',
+            project_id: 999,
+            source_type: 'competitor',
+            max_reels: 3,
+            requester_telegram_id: 'test_user_123',
+            bot_name: 'neuro_blogger_bot'
+          },
+        })
+        res.json({ 
+          status: 'Instagram Apify событие отправлено! 🎬', 
+          eventId: result.ids[0],
+          dashboard: 'http://localhost:8288'
+        })
+      } catch (error) {
+        res.status(500).json({ 
+          status: 'Ошибка отправки события', 
+          error: error.message 
+        })
+      }
+    })
+
     routes.forEach(route => {
       this.app.use('/', route.router)
     })
