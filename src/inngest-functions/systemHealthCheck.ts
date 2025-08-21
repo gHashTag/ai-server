@@ -302,16 +302,18 @@ export const systemHealthCheck = inngest.createFunction(
     )
     healthResults.push(parsingActivity)
 
-    // Step 6: Анализ результатов и отправка алертов
-    await step.run('analyze-and-alert', async () => {
-      const criticalIssues = healthResults.filter(r => r.status === 'critical')
-      const warningIssues = healthResults.filter(r => r.status === 'warning')
-      const healthyServices = healthResults.filter(r => r.status === 'healthy')
+    // Анализ результатов (вынесено из step для доступности переменных)
+    const criticalIssues = healthResults.filter(r => r.status === 'critical')
+    const warningIssues = healthResults.filter(r => r.status === 'warning')
+    const healthyServices = healthResults.filter(r => r.status === 'healthy')
 
-      // Общий статус системы
-      let systemStatus = 'healthy'
-      if (criticalIssues.length > 0) systemStatus = 'critical'
-      else if (warningIssues.length > 0) systemStatus = 'warning'
+    // Общий статус системы
+    let systemStatus = 'healthy'
+    if (criticalIssues.length > 0) systemStatus = 'critical'
+    else if (warningIssues.length > 0) systemStatus = 'warning'
+
+    // Step 6: Отправка алертов
+    await step.run('send-alerts', async () => {
 
       // Отправляем алерты только при проблемах или раз в час
       const shouldSendReport =
@@ -368,13 +370,13 @@ export const systemHealthCheck = inngest.createFunction(
           log.error('❌ Ошибка отправки health check alert:', error.message)
         }
       }
+    })
 
-      log.info('💚 Health check завершен', {
-        system_status: systemStatus,
-        healthy: healthyServices.length,
-        warnings: warningIssues.length,
-        critical: criticalIssues.length,
-      })
+    log.info('💚 Health check завершен', {
+      system_status: systemStatus,
+      healthy: healthyServices.length,
+      warnings: warningIssues.length,
+      critical: criticalIssues.length,
     })
 
     return {
