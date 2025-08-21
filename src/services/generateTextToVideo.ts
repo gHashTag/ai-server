@@ -123,9 +123,23 @@ export const processVideoGeneration = async (
       kieAspectRatio = '16:9'
     }
     
+    // Маппинг model names: от user-facing к Kie.ai API identifiers
+    const modelMapping: Record<string, 'veo3_fast' | 'veo3' | 'runway-aleph'> = {
+      'veo-3-fast': 'veo3_fast',
+      'veo-3': 'veo3',
+      'runway-aleph': 'runway-aleph'
+    }
+    
+    const kieApiModel = modelMapping[videoModel]
+    if (!kieApiModel) {
+      throw new Error(`Unsupported Kie.ai model: ${videoModel}`)
+    }
+    
+    console.log(`📋 Mapping ${videoModel} → ${kieApiModel} for Kie.ai API`)
+    
     // Генерируем через Kie.ai
     const result = await kieAiService.generateVideo({
-      model: videoModel as 'veo-3-fast' | 'veo-3' | 'runway-aleph',
+      model: kieApiModel,
       prompt,
       duration,
       aspectRatio: kieAspectRatio,

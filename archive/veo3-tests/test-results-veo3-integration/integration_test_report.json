@@ -1,0 +1,39 @@
+{
+  "timestamp": "2025-08-21T07:29:59.506Z",
+  "totalTime": 4104,
+  "successCount": 1,
+  "totalTests": 2,
+  "criticalFailures": 0,
+  "results": [
+    {
+      "scenario": "🎯 КРИТИЧНО: Вертикальное видео 9:16 (TikTok/Instagram)",
+      "format": "9:16",
+      "priority": "CRITICAL",
+      "success": true,
+      "error": null,
+      "videoUrl": "http://localhost:4000/temp/video_9:16_1755761395477.mp4",
+      "duration": 28,
+      "responseTime": 8,
+      "videoDownloaded": false,
+      "videoPath": null
+    },
+    {
+      "scenario": "📺 Горизонтальное видео 16:9 (YouTube)",
+      "format": "16:9",
+      "priority": "HIGH",
+      "success": false,
+      "error": "",
+      "videoUrl": null,
+      "duration": 20,
+      "responseTime": 0,
+      "videoDownloaded": false,
+      "videoPath": null
+    }
+  ],
+  "errors": [],
+  "summary": {
+    "vertical_9x16_working": true,
+    "horizontal_16x9_working": false,
+    "function_completed": true
+  }
+}
