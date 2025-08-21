@@ -377,21 +377,25 @@ export const systemHealthCheck = inngest.createFunction(
       })
     })
 
+    // Calculate status outside of step for return
+    const finalCriticalIssues = healthResults.filter(r => r.status === 'critical')
+    const finalWarningIssues = healthResults.filter(r => r.status === 'warning')
+
     return {
       success: true,
       timestamp: new Date(),
       system_status:
-        criticalIssues.length > 0
+        finalCriticalIssues.length > 0
           ? 'critical'
-          : warningIssues.length > 0
+          : finalWarningIssues.length > 0
           ? 'warning'
           : 'healthy',
       results: healthResults,
       summary: {
         total_services: healthResults.length,
         healthy: healthResults.filter(r => r.status === 'healthy').length,
-        warnings: healthResults.filter(r => r.status === 'warning').length,
-        critical: healthResults.filter(r => r.status === 'critical').length,
+        warnings: finalWarningIssues.length,
+        critical: finalCriticalIssues.length,
       },
     }
   }
