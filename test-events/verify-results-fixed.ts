@@ -9,7 +9,7 @@ import { validateProjectId } from '../src/core/instagram/database-validation'
 // Database connection
 const pool = new Pool({
   connectionString:
-    'postgresql://neondb_owner:npg_5RWzh7CwrXxE@ep-delicate-block-a1l1lt0p-pooler.ap-southeast-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require',
+    process.env.NEON_DATABASE_URL || 'postgresql://user:password@host/db',
   ssl: {
     rejectUnauthorized: false,
   },

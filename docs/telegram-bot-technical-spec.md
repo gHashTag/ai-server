@@ -381,7 +381,7 @@ RAPIDAPI_INSTAGRAM_KEY=your_rapidapi_key
 RAPIDAPI_INSTAGRAM_HOST=real-time-instagram-scraper-api1.p.rapidapi.com
 
 # OpenAI
-OPENAI_API_KEY=sk-your-openai-key
+OPENAI_API_KEY=your-openai-key
 ```
 
 ### Запуск

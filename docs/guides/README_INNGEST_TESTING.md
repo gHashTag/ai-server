@@ -56,7 +56,7 @@
   "data": {
     "reel_id": "test_reel_123",
     "project_id": 123,
-    "openai_api_key": "sk-test-key-placeholder"
+    "openai_api_key": "test-key-placeholder"
   }
 }
 ```
@@ -89,14 +89,14 @@ INSERT INTO reels_analysis (
 ### 2. Переменные окружения
 ```bash
 # Instagram API
-RAPIDAPI_INSTAGRAM_KEY=4c7fb71062mshe59423fd65d0fadp145d45jsn0548ea378f88
+RAPIDAPI_INSTAGRAM_KEY=your-rapidapi-key
 RAPIDAPI_INSTAGRAM_HOST=real-time-instagram-scraper-api1.p.rapidapi.com
 
 # OpenAI (для generateContentScripts)
-OPENAI_API_KEY=sk-your-openai-key
+OPENAI_API_KEY=your-openai-key
 
 # Database
-NEON_DATABASE_URL=postgresql://neondb_owner:npg_5RWzh7CwrXxE@ep-delicate-block-a1l1lt0p-pooler.ap-southeast-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require
+NEON_DATABASE_URL=postgresql://your-db-user:your-password@your-host/your-db?sslmode=require
 ```
 
 ## 📋 Следующие шаги

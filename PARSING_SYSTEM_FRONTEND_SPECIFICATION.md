@@ -107,7 +107,7 @@ https://your-server.com/api
 {
   "reel_id": "reel_123",
   "project_id": 123,
-  "openai_api_key": "sk-..." // опционально, если не в env
+  "openai_api_key": "your-key..." // опционально, если не в env
 }
 ```
 

@@ -75,7 +75,7 @@ export const testEvents = {
     data: {
       reel_id: 'test_reel_123',
       project_id: 123,
-      openai_api_key: 'sk-test-key-placeholder',
+      openai_api_key: 'test-key-placeholder',
     },
     user: {
       id: 'test-user-004',
@@ -145,7 +145,7 @@ export const fullWorkflowTest = {
     data: {
       reel_id: 'top_reel_from_step3',
       project_id: 999,
-      openai_api_key: process.env.OPENAI_API_KEY || 'sk-test-key',
+      openai_api_key: process.env.OPENAI_API_KEY || 'test-key-placeholder',
     },
     user: { id: 'workflow-test-004' },
     ts: Date.now(),
