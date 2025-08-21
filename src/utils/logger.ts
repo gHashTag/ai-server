@@ -3,7 +3,25 @@ import winston from 'winston'
 import morgan from 'morgan'
 import { isDev } from '@/config'
 
-const logDir = process.env.LOG_DIR || '/tmp/logs'
+// Force use of absolute paths only to avoid permission issues
+function getLogDir(): string {
+  const envLogDir = process.env.LOG_DIR
+  const isProduction = process.env.NODE_ENV === 'production'
+  
+  // Only use LOG_DIR if it's an absolute path (starts with /)
+  if (envLogDir && envLogDir.startsWith('/')) {
+    return envLogDir
+  }
+  
+  // Use safe defaults for relative paths or missing LOG_DIR
+  return isProduction ? '/app/logs' : '/tmp/logs'
+}
+
+const logDir = getLogDir()
+
+console.log(`LOG_DIR environment variable: ${process.env.LOG_DIR}`)
+console.log(`Using log directory: ${logDir}`)
+console.log(`NODE_ENV: ${process.env.NODE_ENV}`)
 
 if (!existsSync(logDir)) {
   try {

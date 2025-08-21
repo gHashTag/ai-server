@@ -28,9 +28,11 @@ healthcheckPath = "/health"
 NODE_ENV = "testing"
 APP_ENV = "testing"
 PORT = "${{ PORT }}"
+LOG_DIR = "/app/logs"
 
 # Переменные для продакшн окружения (production branch)  
 [environments.production.variables]
 NODE_ENV = "production"
 APP_ENV = "production" 
 PORT = "${{ PORT }}"
+LOG_DIR = "/app/logs"

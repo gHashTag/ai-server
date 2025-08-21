@@ -4,7 +4,7 @@
 process.env.NODE_ENV = 'production'
 
 // Устанавливаем переменные из production конфигурации
-process.env.ORIGIN = 'https://ai-server-u14194.vm.elestio.app'
+process.env.ORIGIN = 'https://ai-server-production-production-8e2d.up.railway.app'
 process.env.NGROK_URL = 'https://8b3cdc98ffacc1.lhr.life'
 
 // Добавляем обязательные переменные для работы конфигурации

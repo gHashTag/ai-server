@@ -1,7 +1,7 @@
 const axios = require('axios')
 
 async function checkWebhook() {
-  const url = 'https://ai-server-u14194.vm.elestio.app/webhooks/replicate'
+  const url = 'https://ai-server-production-production-8e2d.up.railway.app/webhooks/replicate'
   const payload = {
     id: 'test-from-script',
     status: 'succeeded',
