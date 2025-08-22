@@ -86,5 +86,19 @@ export class GenerationRoute implements Routes {
       `${this.path}/morph-queue/stats`,
       this.generationController.getMorphingQueueStats
     )
+
+    // 📹 API для мониторинга видео заданий
+    this.router.get(
+      `${this.path}/text-to-video/status/:job_id`,
+      this.generationController.getVideoJobStatus
+    )
+    this.router.get(
+      `${this.path}/video-jobs/user/:telegram_id`,
+      this.generationController.getUserVideoJobs
+    )
+    this.router.get(
+      `${this.path}/video-jobs/stats`,
+      this.generationController.getVideoJobsStats
+    )
   }
 }
