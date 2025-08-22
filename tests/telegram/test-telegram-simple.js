@@ -1,6 +1,6 @@
 const { Telegraf } = require('telegraf');
 
-const BOT_TOKEN = '7667727700:AAEJIvtBWxgy_cj_Le_dGMpqA_dz7Pwhj0c';
+const BOT_TOKEN = process.env.MONITORING_BOT_TOKEN || process.env.BOT_TOKEN_1;
 // const GROUP_CHAT_ID = '-1002250147975';
 const ADMIN_ID = '144022504'; // Отправляем админу для теста
 
