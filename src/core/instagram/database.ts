@@ -30,8 +30,8 @@ const dbConfig: PoolConfig = {
   connectionTimeoutMillis: 2000,
 }
 
-if (!process.env.NEON_DATABASE_URL) {
-  throw new Error('NEON_DATABASE_URL environment variable is required')
+if (!process.env.SUPABASE_URL) {
+  throw new Error('SUPABASE_URL environment variable is required')
 }
 
 export const neonDB = new Pool(dbConfig)

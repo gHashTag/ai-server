@@ -6,7 +6,6 @@
 
 // Mock environment variables BEFORE any imports
 process.env.RAPIDAPI_INSTAGRAM_KEY = 'test_key'
-process.env.NEON_DATABASE_URL = 'postgresql://test'
 process.env.NEXT_PUBLIC_MANAGEMENT_TOKEN = 'test_token'
 process.env.SUPABASE_URL = 'https://test.supabase.co'
 process.env.SUPABASE_SERVICE_KEY = 'test_service_key'

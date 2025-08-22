@@ -11,7 +11,7 @@ async function checkProject38Users() {
   console.log('🔍 Проверка пользователей в проекте 38...\n')
 
   const client = new Client({
-    connectionString: process.env.NEON_DATABASE_URL,
+    connectionString: process.env.SUPABASE_URL,
     ssl: {
       rejectUnauthorized: false,
     },
