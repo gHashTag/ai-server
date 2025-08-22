@@ -29,6 +29,7 @@ import {
   healthTestHandler,
 } from './systemHealthCheck'
 import { generateVeo3Video } from './generateVeo3Video'
+import { reelsMonitor } from './reelsMonitor'
 
 // Export all functions in array (for Inngest registration)
 export const functions = [
@@ -60,6 +61,7 @@ export const functions = [
   triggerHealthCheck, // 🔄 Ручной запуск проверки здоровья
   healthTestHandler, // 🧪 Обработчик тестовых событий для health check
   generateVeo3Video, // 🎬 VEO3 видео генерация через Kie.ai API
+  reelsMonitor, // 🎬 NEW: Мониторинг новых рилсов каждые 4 часа
 ]
 
 // Individual exports for compatibility
@@ -85,6 +87,7 @@ export { competitorDelivery } // 📬 Доставка рилсов конкур
 export { systemMonitor, triggerSystemMonitor } // 📊 Системный мониторинг
 export { systemHealthCheck, triggerHealthCheck, healthTestHandler } // 💚 Проверка здоровья системы
 export { generateVeo3Video } // 🎬 VEO3 видео генерация через Kie.ai API
+export { reelsMonitor } // 🎬 NEW: Мониторинг новых рилсов каждые 4 часа
 
 // Export everything
 export * from './helloworld'
@@ -108,5 +111,6 @@ export * from './competitorDelivery' // 📬 Доставка рилсов ко�
 export * from './systemMonitor' // 📊 Системный мониторинг
 export * from './systemHealthCheck' // 💚 Проверка здоровья системы
 export * from './generateVeo3Video' // 🎬 VEO3 видео генерация через Kie.ai API
+export * from './reelsMonitor' // 🎬 NEW: Мониторинг новых рилсов каждые 4 часа
 
 export default functions

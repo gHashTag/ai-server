@@ -35,6 +35,9 @@ import {
   CreateUserResultSchema,
 } from '../core/instagram/schemas'
 
+// Импортируем Project Manager для автоматического создания проектов
+import { projectManager } from '../core/instagram/project-manager'
+
 // Simple logger
 const log = {
   info: (msg: string, data?: any) =>
@@ -1235,29 +1238,34 @@ export const instagramScraperV2 = inngest.createFunction(
       throw new Error('username_or_id is required')
     }
 
-    if (!eventData.project_id || eventData.project_id <= 0) {
-      log.error(
-        '❌ project_id is missing or invalid from event data:',
-        eventData
+    // project_id теперь опциональный - если не передан, создадим автоматически
+    const providedProjectId = eventData.project_id
+    if (providedProjectId && providedProjectId <= 0) {
+      log.warn(
+        '⚠️ Invalid project_id provided, will create new project:',
+        providedProjectId
       )
-      throw new Error('project_id must be a positive number')
     }
 
     // Устанавливаем дефолтные значения
     const username_or_id = String(eventData.username_or_id)
-    const project_id = Number(eventData.project_id)
+    const initial_project_id = eventData.project_id ? Number(eventData.project_id) : undefined
     const max_users = Number(eventData.max_users) || 50
     const max_reels_per_user = Number(eventData.max_reels_per_user) || 50
     const scrape_reels = Boolean(eventData.scrape_reels || false)
     const requester_telegram_id = eventData.requester_telegram_id || ''
+    const telegram_username = eventData.telegram_username || ''
+    const bot_name = eventData.bot_name || 'neuro_blogger_bot'
 
     log.info('✅ Event data parsed successfully:', {
       username_or_id,
-      project_id,
+      initial_project_id,
       max_users,
       max_reels_per_user,
       scrape_reels,
       requester_telegram_id,
+      telegram_username,
+      bot_name,
     })
 
     log.info('🚀 Instagram Scraper V2 started (simplified validation)', {
@@ -1267,7 +1275,9 @@ export const instagramScraperV2 = inngest.createFunction(
       scrapeReels: scrape_reels,
       maxReelsPerUser: max_reels_per_user,
       requester: requester_telegram_id,
-      projectId: project_id,
+      initialProjectId: initial_project_id,
+      telegramUsername: telegram_username,
+      botName: bot_name,
     })
 
     // Step 1: Validate input
@@ -1284,29 +1294,58 @@ export const instagramScraperV2 = inngest.createFunction(
       return { valid: true, target: username_or_id }
     })
 
-    // Step 2: Validate project_id exists in database
+    // Step 2: Get or Create project
     const projectValidation = await step.run(
-      'validate-project-id',
+      'get-or-create-project',
       async () => {
-        const db = new InstagramDatabase()
-        const validation = await db.validateProjectId(project_id)
+        // Если нет telegram_id, но есть project_id, пробуем использовать его
+        if (!requester_telegram_id && initial_project_id) {
+          const existingProject = await projectManager.getProjectById(initial_project_id)
+          if (existingProject) {
+            log.info(
+              `✅ Using existing project: ${existingProject.name} (ID: ${existingProject.id})`
+            )
+            return {
+              valid: true,
+              projectId: existingProject.id,
+              projectName: existingProject.name,
+              created: false,
+            }
+          }
+        }
 
-        if (!validation.exists) {
-          throw new Error(
-            `Project ID ${project_id} does not exist or is inactive`
+        // Если есть telegram_id, создаем или получаем проект
+        if (requester_telegram_id) {
+          const { project, created } = await projectManager.validateOrCreateProject(
+            initial_project_id,
+            requester_telegram_id,
+            telegram_username,
+            bot_name
           )
+
+          log.info(
+            created 
+              ? `✅ Created new project: ${project.name} (ID: ${project.id})`
+              : `✅ Using existing project: ${project.name} (ID: ${project.id})`
+          )
+
+          return {
+            valid: true,
+            projectId: project.id,
+            projectName: project.name,
+            created,
+          }
         }
 
-        log.info(
-          `✅ Project validation successful: ${validation.projectName} (ID: ${project_id})`
+        // Если нет ни telegram_id, ни валидного project_id
+        throw new Error(
+          'Either requester_telegram_id or valid project_id is required'
         )
-        return {
-          valid: true,
-          projectId: project_id,
-          projectName: validation.projectName,
-        }
       }
     )
+
+    // Используем полученный project_id для дальнейшей работы
+    const project_id = projectValidation.projectId
 
     // Step 3: Call Instagram API with Zod validation
     const apiResult = await step.run('call-instagram-api', async () => {
