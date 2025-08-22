@@ -1,0 +1,15 @@
+{
+    "mcpServers": {
+      "ai-server-neurophoto": {
+        "command": "/Users/playra/.nvm/versions/node/v20.19.2/bin/node",
+        "args": ["/Users/playra/ai-server/scripts/start-mcp-for-cursor.js"],
+        "cwd": "/Users/playra/ai-server",
+        "env": {
+          "NODE_ENV": "production",
+          "SERVER_URL": "http://localhost:4000",
+          "PATH": "/Users/playra/.nvm/versions/node/v20.19.2/bin:/usr/local/bin:/usr/bin:/bin",
+          "HOME": "/Users/playra"
+        }
+      }
+    }
+  }

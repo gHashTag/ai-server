@@ -220,3 +220,4 @@ certbot/
 !**/.gitkeep
 vertex-ai-key.json
 worktrees/
+.env.temp
