@@ -103,12 +103,22 @@ export class UniversalWebhookController {
    */
   private async handleKieAiWebhook(req: Request, res: Response): Promise<void> {
     try {
-      const { taskId, videoUrl, status, error } = req.body;
+      // Kie.ai может отправлять различные структуры в зависимости от версии API
+      const { 
+        taskId, 
+        videoUrl, 
+        status, 
+        error,
+        result, // новое поле для результата
+        metadata // дополнительные метаданные
+      } = req.body;
       
       logger.info(`📹 Kie.ai webhook received`, {
         taskId,
         status,
-        videoUrl: videoUrl ? 'present' : 'absent'
+        videoUrl: videoUrl ? 'present' : 'absent',
+        result: result ? 'present' : 'absent',
+        metadata: metadata || null
       });
       
       // Ищем задачу в базе данных
@@ -131,24 +141,47 @@ export class UniversalWebhookController {
       }
       
       // Обновляем статус задачи
-      if (status === 'completed' && videoUrl) {
+      // Поддержка как старого формата (videoUrl), так и нового (result.videoUrl)
+      const finalVideoUrl = videoUrl || result?.videoUrl || result?.url;
+      
+      if ((status === 'completed' || status === 'success') && finalVideoUrl) {
+        const updateData: any = {
+          status: 'completed',
+          video_url: finalVideoUrl,
+          completed_at: new Date().toISOString()
+        };
+        
+        // Сохраняем дополнительные метаданные если они есть
+        if (metadata || result?.metadata) {
+          updateData.metadata = {
+            ...taskData?.metadata,
+            ...(metadata || result?.metadata)
+          };
+        }
+        
         await supabase
           .from('video_tasks')
-          .update({
-            status: 'completed',
-            video_url: videoUrl,
-            completed_at: new Date().toISOString()
-          })
+          .update(updateData)
           .eq('task_id', taskId);
         
         // Отправляем видео пользователю через Telegram
         if (taskData?.telegram_id && taskData?.bot_name) {
           const { bot } = getBotByName(taskData.bot_name);
           
-          await bot.telegram.sendVideo(taskData.telegram_id, videoUrl, {
-            caption: taskData.is_ru 
-              ? `🎬 Ваше видео готово!\n⚡ Сгенерировано через Kie.ai (экономия 87%)\n📹 Модель: ${taskData.model || 'veo-3-fast'}`
-              : `🎬 Your video is ready!\n⚡ Generated via Kie.ai (87% savings)\n📹 Model: ${taskData.model || 'veo-3-fast'}`
+          // Формируем сообщение с дополнительной информацией
+          let caption = taskData.is_ru 
+            ? `🎬 Ваше видео готово!\n⚡ Сгенерировано через Kie.ai (экономия 87%)\n📹 Модель: ${taskData.model || 'veo-3-fast'}`
+            : `🎬 Your video is ready!\n⚡ Generated via Kie.ai (87% savings)\n📹 Model: ${taskData.model || 'veo-3-fast'}`;
+          
+          // Добавляем информацию о водяном знаке если он был
+          if (taskData.metadata?.watermark) {
+            caption += taskData.is_ru 
+              ? `\n💧 Водяной знак: ${taskData.metadata.watermark}`
+              : `\n💧 Watermark: ${taskData.metadata.watermark}`;
+          }
+          
+          await bot.telegram.sendVideo(taskData.telegram_id, finalVideoUrl, {
+            caption
           });
           
           logger.info(`✅ Video sent to user ${taskData.telegram_id}`);
