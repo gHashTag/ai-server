@@ -39,9 +39,16 @@ interface KieAiGenerationOptions {
   prompt: string;
   duration: number; // 2-10 секунд
   aspectRatio?: '16:9' | '9:16' | '1:1';
-  imageUrl?: string; // для image-to-video
+  imageUrl?: string; // для image-to-video (deprecated, используйте imageUrls)
+  imageUrls?: string[]; // массив изображений для image-to-video
+  watermark?: string; // водяной знак для видео
+  callBackUrl?: string; // URL для webhook callback
+  seeds?: number; // seed для генерации (для воспроизводимости)
+  enableFallback?: boolean; // включить fallback на другие модели
   userId?: string;
   projectId?: number;
+  botName?: string; // имя бота для telegram уведомлений
+  isRu?: boolean; // флаг для русского языка
 }
 
 interface KieAiResponse {
@@ -50,6 +57,7 @@ interface KieAiResponse {
     videoUrl: string;
     duration: number;
     taskId?: string;
+    status?: string;
   };
   cost: {
     usd: number;
@@ -59,6 +67,12 @@ interface KieAiResponse {
   model: string;
   processingTime?: number;
   error?: string;
+  metadata?: {
+    watermark?: string;
+    seeds?: number;
+    enableFallback?: boolean;
+    imageCount?: number;
+  };
 }
 
 export class KieAiService {
@@ -130,6 +144,7 @@ export class KieAiService {
     processingTime: number;
     taskId?: string;
     status?: string;
+    metadata?: any;
   }> {
     if (!this.apiKey) {
       throw new Error('KIE_AI_API_KEY is required for video generation');
@@ -141,8 +156,15 @@ export class KieAiService {
       duration,
       aspectRatio = '16:9',
       imageUrl,
+      imageUrls,
+      watermark,
+      callBackUrl,
+      seeds,
+      enableFallback,
       userId,
-      projectId
+      projectId,
+      botName,
+      isRu
     } = options;
 
     // Валидация модели
@@ -168,17 +190,48 @@ export class KieAiService {
       console.log(`   • Duration: ${clampedDuration}s`);  
       console.log(`   • Aspect Ratio: ${aspectRatio}`);
       console.log(`   • Estimated cost: $${costUSD.toFixed(3)}`);
+      
+      // Логируем дополнительные параметры если они есть
+      if (imageUrls && imageUrls.length > 0) {
+        console.log(`   • Images: ${imageUrls.length} image(s) provided`);
+      } else if (imageUrl) {
+        console.log(`   • Image: single image provided (deprecated)`);
+      }
+      if (watermark) console.log(`   • Watermark: ${watermark}`);
+      if (callBackUrl) console.log(`   • Callback URL: ${callBackUrl}`);
+      if (seeds !== undefined) console.log(`   • Seed: ${seeds}`);
+      if (enableFallback !== undefined) console.log(`   • Fallback: ${enableFallback}`);
+      
 
       // Формируем запрос к Kie.ai API
-      const requestBody = {
+      const requestBody: any = {
         model: model,
         prompt: prompt,
-        duration: clampedDuration,
-        aspectRatio: aspectRatio,
-        ...(imageUrl && { imageUrl }),
-        ...(userId && { userId }),
-        ...(projectId && { projectId })
+        aspectRatio: aspectRatio
       };
+      
+      // Добавляем опциональные поля
+      // Приоритет imageUrls над imageUrl для обратной совместимости
+      if (imageUrls && imageUrls.length > 0) {
+        requestBody.imageUrls = imageUrls;
+      } else if (imageUrl) {
+        // Поддержка старого API для обратной совместимости
+        requestBody.imageUrls = [imageUrl];
+      }
+      
+      if (watermark) requestBody.watermark = watermark;
+      if (callBackUrl) requestBody.callBackUrl = callBackUrl;
+      if (seeds !== undefined) requestBody.seeds = seeds;
+      if (enableFallback !== undefined) requestBody.enableFallback = enableFallback;
+      
+      // Валидация callback URL если указан
+      if (callBackUrl) {
+        try {
+          new URL(callBackUrl);
+        } catch (error) {
+          throw new Error(`Invalid callback URL: ${callBackUrl}`);
+        }
+      }
 
       const response = await axios.post(`${this.baseUrl}/veo/generate`, requestBody, {
         headers: {
@@ -207,6 +260,8 @@ export class KieAiService {
             task_id: taskId,
             provider: 'kie-ai',
             telegram_id: options.userId,
+            bot_name: botName,
+            is_ru: isRu,
             model: model,
             prompt: prompt,
             status: 'processing',
@@ -214,7 +269,12 @@ export class KieAiService {
               duration: clampedDuration,
               aspectRatio: aspectRatio,
               cost: costUSD,
-              projectId: options.projectId
+              projectId: options.projectId,
+              watermark: watermark,
+              seeds: seeds,
+              enableFallback: enableFallback,
+              imageCount: imageUrls?.length || (imageUrl ? 1 : 0),
+              callBackUrl: callBackUrl
             }
           };
           
