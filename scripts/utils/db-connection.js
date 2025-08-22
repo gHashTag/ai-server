@@ -6,12 +6,12 @@
 const { Pool } = require('pg')
 
 function createDatabaseConnection() {
-  const connectionString = process.env.NEON_DATABASE_URL || process.env.DATABASE_URL
+  const connectionString = process.env.SUPABASE_URL
   
   if (!connectionString) {
     console.error('❌ Database connection string is required')
-    console.error('Please set NEON_DATABASE_URL or DATABASE_URL in your .env file')
-    console.error('Example: NEON_DATABASE_URL=postgresql://user:password@host:port/database')
+    console.error('Please set SUPABASE_URL in your .env file')
+    console.error('Example: SUPABASE_URL=postgresql://user:password@host:port/database')
     process.exit(1)
   }
 
