@@ -9,7 +9,13 @@ const { Pool } = pkg
 async function checkDatabaseSchema() {
   console.log('🔍 === ПРОВЕРКА СХЕМЫ БАЗЫ ДАННЫХ ===\n')
 
-  const connectionString = process.env.NEON_DATABASE_URL || 'postgresql://neondb_owner:npg_5RWzh7CwrXxE@ep-delicate-block-a1l1lt0p-pooler.ap-southeast-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require'
+  const connectionString = process.env.NEON_DATABASE_URL || process.env.DATABASE_URL
+  
+  if (!connectionString) {
+    console.error('❌ Database connection string is required')
+    console.error('Please set NEON_DATABASE_URL or DATABASE_URL in your .env file')
+    process.exit(1)
+  }
   
   const pool = new Pool({
     connectionString,

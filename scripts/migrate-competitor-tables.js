@@ -1,17 +1,10 @@
-const { Pool } = require('pg')
 const fs = require('fs')
 const path = require('path')
+const { createDatabaseConnection, validateConnection } = require('./utils/db-connection')
 
 async function runMigration() {
-  const connectionString = process.env.NEON_DATABASE_URL || 'postgresql://neondb_owner:npg_5RWzh7CwrXxE@ep-delicate-block-a1l1lt0p-pooler.ap-southeast-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require'
-  
-  const dbPool = new Pool({
-    connectionString,
-    ssl: { rejectUnauthorized: false },
-    max: 20,
-    connectionTimeoutMillis: 30000,
-    idleTimeoutMillis: 30000
-  })
+  const dbPool = createDatabaseConnection()
+  await validateConnection(dbPool)
 
   try {
     console.log('🔧 Applying competitor subscriptions migration...')
