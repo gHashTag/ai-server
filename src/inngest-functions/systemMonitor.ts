@@ -311,7 +311,7 @@ ${deliveryStats.errors
 🤖 Run ID: ${runId}
         `
 
-        await bot.api.sendMessage(process.env.ADMIN_CHAT_ID, report)
+        await bot.telegram.sendMessage(process.env.ADMIN_CHAT_ID, report)
         log.info('📤 Ежедневный отчет отправлен админам')
       } catch (error: any) {
         log.error('❌ Ошибка отправки ежедневного отчета:', error.message)

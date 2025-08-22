@@ -168,7 +168,7 @@ export const systemHealthCheck = inngest.createFunction(
         const { bot } = getBotByName('neuro_blogger_bot')
 
         // Проверяем API через getMe
-        const botInfo = await bot.api.getMe()
+        const botInfo = await bot.telegram.getMe()
 
         const responseTime = Date.now() - startTime
 
@@ -364,7 +364,7 @@ export const systemHealthCheck = inngest.createFunction(
           message += `\n🕐 Проверка: ${new Date().toLocaleString('ru-RU')}`
           message += `\n🤖 Run ID: ${runId}`
 
-          await bot.api.sendMessage(process.env.ADMIN_CHAT_ID, message)
+          await bot.telegram.sendMessage(process.env.ADMIN_CHAT_ID, message)
           log.info('🚨 Health check alert отправлен', { status: systemStatus })
         } catch (error: any) {
           log.error('❌ Ошибка отправки health check alert:', error.message)
