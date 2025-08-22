@@ -37,14 +37,39 @@ if (!existsSync(logDir)) {
 }
 
 // Установите уровень логирования через переменную окружения
-const logLevel = process.env.LOG_LEVEL || (isDev ? 'debug' : 'info')
+const logLevel = process.env.LOG_LEVEL || (isDev ? 'info' : 'warn')
+
+// Создаем кастомный формат для фильтрации 
+const customFormat = winston.format.combine(
+  winston.format.timestamp(),
+  winston.format.printf(({ level, message, timestamp }) => {
+    // Фильтруем избыточные сообщения
+    if (typeof message === 'string') {
+      // Скрываем служебные HTTP запросы в development
+      if (isDev && message.includes('GET /health')) return ''
+      if (isDev && message.includes('OPTIONS /')) return ''
+      
+      // Показываем только важные HTTP запросы
+      if (message.includes('POST /api/') || 
+          message.includes('GET /api/') || 
+          message.includes('PUT /api/') || 
+          message.includes('DELETE /api/')) {
+        return `${timestamp} [${level.toUpperCase()}]: ${message}`
+      }
+      
+      // Показываем все остальные сообщения для info и выше
+      if (level !== 'debug') {
+        return `${timestamp} [${level.toUpperCase()}]: ${message}`
+      }
+    }
+    return `${timestamp} [${level.toUpperCase()}]: ${message}`
+  })
+)
+
 // Создаем логгер
 const logger = winston.createLogger({
   level: logLevel,
-  format: winston.format.combine(
-    winston.format.timestamp(),
-    winston.format.json()
-  ),
+  format: customFormat,
   transports: [
     new winston.transports.Console(),
     new winston.transports.File({ filename: `${logDir}/combined.log` }),
