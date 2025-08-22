@@ -6,7 +6,7 @@
 
 const fetch = require('node-fetch')
 
-const PRODUCTION_URL = 'https://ai-server-express.railway.app'
+const PRODUCTION_URL = 'https://ai-server-production-production-8e2d.up.railway.app'
 
 async function testProductionStatus() {
   console.log('🩺 ПРОВЕРКА СТАТУСА ПРОДАКШН-СЕРВЕРА ПОСЛЕ HOTFIX')

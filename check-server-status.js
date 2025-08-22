@@ -4,7 +4,7 @@
 
 const axios = require('axios')
 
-const RAILWAY_URL = 'https://ai-server-production-d5e9.up.railway.app'
+const RAILWAY_URL = 'https://ai-server-production-production-8e2d.up.railway.app'
 
 async function checkServerStatus() {
   console.log('🔍 === ПРОВЕРКА СОСТОЯНИЯ СЕРВЕРА ===\n')
