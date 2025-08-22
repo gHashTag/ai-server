@@ -10,7 +10,7 @@ import { generateTextToVideo } from '@/services/generateTextToVideo'
 import { generateImageToVideo } from '@/services/generateImageToVideo'
 import { createVoiceAvatar } from '@/services/createVoiceAvatar'
 
-// Остальные сервисы (используются без Plan A/B)
+// Остальные сервисы с паттерном План А/Б
 import { generateImageToPrompt } from '@/services/generateImageToPrompt'
 import { generateNeuroImage } from '@/services/generateNeuroImage'
 import { generateNeuroImageV2 } from '@/services/generateNeuroImageV2'
@@ -136,17 +136,48 @@ export class GenerationController {
       res.status(200).json({ message: 'Processing started' })
 
       const { bot } = getBotByName(bot_name)
-      generateNeuroImage(
-        prompt,
-        model_url,
-        num_images,
-        telegram_id,
-        username,
-        is_ru,
-        bot
-      ).catch(error => {
-        console.error('Ошибка при генерации изображения:', error)
-      })
+
+      // Выбор между планом А (Inngest) и планом Б (Оригинальный сервис)
+      if (shouldUseInngest()) {
+        // План А - Inngest (асинхронная обработка через очереди)
+        logger.info({
+          message: 'План А - Inngest для neuro-image',
+          telegram_id,
+          model_url,
+        })
+
+        await inngest.send({
+          name: 'image/neuro-image.start',
+          data: {
+            prompt,
+            model_url,
+            num_images,
+            telegram_id,
+            username,
+            is_ru,
+            bot_name,
+          },
+        })
+      } else {
+        // План Б - Оригинальный сервис (прямой вызов)
+        logger.info({
+          message: 'План Б - Оригинальный сервис для neuro-image',
+          telegram_id,
+          model_url,
+        })
+
+        generateNeuroImage(
+          prompt,
+          model_url,
+          num_images,
+          telegram_id,
+          username,
+          is_ru,
+          bot
+        ).catch(error => {
+          logger.error('Ошибка при генерации нейро-изображения:', error)
+        })
+      }
     } catch (error) {
       next(error)
     }
