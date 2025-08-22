@@ -109,6 +109,11 @@ export const competitorDelivery = inngest.createFunction(
           const { getBotByName } = await import('@/core/bot')
           const { bot } = getBotByName(subscriber.bot_name)
 
+          if (!bot) {
+            log.error(`❌ Bot not found for subscriber: ${subscriber.bot_name}`)
+            continue
+          }
+
           await bot.api.sendMessage(
             subscriber.user_telegram_id,
             `📭 Нет новых рилсов от @${competitor_username} за последние 24 часа`
@@ -155,6 +160,11 @@ export const competitorDelivery = inngest.createFunction(
 
             const { getBotByName } = await import('@/core/bot')
             const { bot } = getBotByName(subscriber.bot_name)
+
+            if (!bot) {
+              log.error(`❌ Bot not found for subscriber: ${subscriber.bot_name}`)
+              continue
+            }
 
             // Определяем формат доставки
             const format = subscriber.delivery_format || 'digest'
