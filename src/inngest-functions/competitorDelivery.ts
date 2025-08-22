@@ -109,8 +109,8 @@ export const competitorDelivery = inngest.createFunction(
           const { getBotByName } = await import('@/core/bot')
           const { bot } = getBotByName(subscriber.bot_name)
           
-          if (!bot) {
-            log.error(`❌ Bot "${subscriber.bot_name}" not found for subscriber ${subscriber.user_telegram_id}`)
+          if (!bot || !bot.telegram) {
+            log.error(`❌ Bot instance is invalid for subscriber: ${subscriber.bot_name}`)
             continue
           }
 
@@ -271,6 +271,12 @@ async function sendDigest(
   reels: any[],
   competitor: string
 ) {
+  // Проверяем bot перед отправкой
+  if (!bot || !bot.telegram) {
+    console.error('❌ Bot instance is invalid in sendDigest');
+    throw new Error('Bot instance is required for sending digest');
+  }
+
   const topReel = reels[0]
   const totalViews = reels.reduce(
     (sum, reel) => sum + (reel.views_count || 0),
@@ -301,6 +307,12 @@ ${reels.length > 1 ? `\n📋 Еще ${reels.length - 1} рилсов в спис
  * Отправка рилсов по отдельности
  */
 async function sendIndividualReels(bot: any, subscriber: any, reels: any[]) {
+  // Проверяем bot перед отправкой
+  if (!bot || !bot.telegram) {
+    console.error('❌ Bot instance is invalid in sendIndividualReels');
+    throw new Error('Bot instance is required for sending individual reels');
+  }
+
   for (const reel of reels.slice(0, 5)) {
     // Максимум 5 штук чтобы не спамить
     const message = `
@@ -329,6 +341,12 @@ async function sendArchive(
   reels: any[],
   competitor: string
 ) {
+  // Проверяем bot перед отправкой
+  if (!bot || !bot.telegram) {
+    console.error('❌ Bot instance is invalid in sendArchive');
+    throw new Error('Bot instance is required for sending archive');
+  }
+
   // Создаем Excel файл
   const wb = XLSX.utils.book_new()
   const ws = XLSX.utils.json_to_sheet(

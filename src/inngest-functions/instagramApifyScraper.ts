@@ -449,6 +449,12 @@ export const instagramApifyScraper = inngest.createFunction(
           const { getBotByName } = await import('@/core/bot')
           const { bot } = getBotByName(validatedData.bot_name!)
 
+          // Проверяем bot перед отправкой
+          if (!bot || !bot.telegram) {
+            log.error('❌ Bot instance is invalid in instagramApifyScraper (telegram notification)');
+            return; // Пропускаем уведомление, но не ломаем основной процесс
+          }
+
           const totalCostStars =
             processedReels.length * instagramScrapingRates.costPerReelInStars
           const totalCostRubles =
@@ -567,6 +573,12 @@ ${processedReels
       try {
         const { getBotByName } = await import('@/core/bot')
         const { bot } = getBotByName(validatedData.bot_name)
+
+        // Проверяем bot перед отправкой
+        if (!bot || !bot.telegram) {
+          log.error('❌ Bot instance is invalid in instagramApifyScraper (admin notification)');
+          return; // Пропускаем уведомление админу, но не ломаем основной процесс
+        }
 
         const adminMessage = `
 🔧 Instagram Apify Scraper завершён
