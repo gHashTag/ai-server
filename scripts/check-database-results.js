@@ -14,7 +14,7 @@ async function checkDatabaseResults() {
   console.log('🔍 Проверка результатов в базе данных...\n')
 
   const client = new Client({
-    connectionString: process.env.NEON_DATABASE_URL,
+    connectionString: process.env.SUPABASE_URL,
     ssl: {
       rejectUnauthorized: false,
     },
