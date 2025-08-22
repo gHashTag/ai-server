@@ -7,6 +7,12 @@ export const sendCurrentBalanceMessage = async (
   currentBalance: number,
   bot: Telegraf<MyContext>
 ) => {
+  // Защитная проверка бота
+  if (!bot || !bot.telegram) {
+    console.error('❌ Bot instance is invalid in sendCurrentBalanceMessage');
+    throw new Error('Bot instance is required');
+  }
+
   await bot.telegram.sendMessage(
     telegram_id,
     isRu
