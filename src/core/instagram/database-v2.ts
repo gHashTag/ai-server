@@ -14,13 +14,24 @@ import { logger } from '@/utils/logger'
 /**
  * Database configuration for Instagram Content Agent
  */
+// Ленивая инициализация - подключение создается только при первом использовании
+function getConnectionString() {
+  const connectionString = process.env.NEON_DATABASE_URL || process.env.DATABASE_URL || process.env.SUPABASE_URL
+  
+  if (!connectionString) {
+    console.warn('⚠️ No database connection string found. Instagram features may not work.')
+    console.warn('Set NEON_DATABASE_URL, DATABASE_URL, or SUPABASE_URL environment variable.')
+    return null
+  }
+  
+  return connectionString
+}
+
 export const InstagramContentAgentConfig = {
-  // Using provided connection string from user
-  connectionString:
-    process.env.NEON_DATABASE_URL ||
-    process.env.DATABASE_URL || process.env.NEON_DATABASE_URL || (() => {
-      throw new Error('Database connection string is required. Please set DATABASE_URL or NEON_DATABASE_URL environment variable.')
-    })(),
+  // Ленивая инициализация - получаем строку подключения только при использовании
+  get connectionString() {
+    return getConnectionString()
+  },
   ssl: {
     rejectUnauthorized: false,
   },

@@ -45,16 +45,27 @@ const log = {
     console.warn(`[IG-WARN] ${msg}`, data || ''),
 }
 
-// Database connection pool
-const dbPool = new Pool({
-  connectionString:
-    process.env.NEON_DATABASE_URL || process.env.DATABASE_URL || (() => {
-      throw new Error('Database connection string is required. Please set DATABASE_URL or NEON_DATABASE_URL environment variable.')
-    })(),
-  ssl: {
-    rejectUnauthorized: false,
-  },
-})
+// Database connection pool - ленивая инициализация
+let dbPool: Pool | null = null
+
+function getDbPool(): Pool {
+  if (!dbPool) {
+    const connectionString = process.env.NEON_DATABASE_URL || process.env.DATABASE_URL || process.env.SUPABASE_URL
+    
+    if (!connectionString) {
+      throw new Error('Database connection string is required for Instagram scraping. Please set DATABASE_URL, NEON_DATABASE_URL, or SUPABASE_URL environment variable.')
+    }
+    
+    dbPool = new Pool({
+      connectionString,
+      ssl: {
+        rejectUnauthorized: false,
+      },
+    })
+  }
+  
+  return dbPool
+}
 
 // Instagram API Integration with Zod validation
 class InstagramAPI {
@@ -376,7 +387,7 @@ class InstagramDatabase {
     users: ValidatedInstagramUser[],
     projectId?: number
   ): Promise<DatabaseSaveResult> {
-    const client = await dbPool.connect()
+    const client = await getDbPool().connect()
     let saved = 0
     let duplicatesSkipped = 0
 
@@ -442,7 +453,7 @@ class InstagramDatabase {
   async createSingleUser(
     userData: CreateInstagramUserEvent
   ): Promise<CreateUserResult> {
-    const client = await dbPool.connect()
+    const client = await getDbPool().connect()
 
     try {
       // Ensure table exists
@@ -631,7 +642,7 @@ class InstagramDatabase {
     reels: ValidatedInstagramReel[],
     projectId?: number
   ): Promise<ReelsSaveResult> {
-    const client = await dbPool.connect()
+    const client = await getDbPool().connect()
     let saved = 0
     let duplicatesSkipped = 0
     let userId = ''
@@ -1481,7 +1492,7 @@ export const instagramScraperV2 = inngest.createFunction(
           let allReelsData: any[] = []
           if (scrape_reels && reelsResults.length > 0) {
             // Собираем все рилсы из результатов
-            const client = await dbPool.connect()
+            const client = await getDbPool().connect()
             try {
               const reelsQuery = `
               SELECT * FROM instagram_user_reels 
