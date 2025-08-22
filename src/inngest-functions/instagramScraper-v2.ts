@@ -15,6 +15,9 @@ import path from 'path'
 // Используем основной Inngest клиент
 import { inngest } from '@/core/inngest/clients'
 
+// Импортируем Apify функцию для замены RapidAPI
+import { triggerApifyInstagramScraping } from './instagramApifyScraper'
+
 // Импортируем Zod-схемы
 import {
   InstagramScrapingEventSchema,
@@ -34,6 +37,9 @@ import {
   type CreateUserResult,
   CreateUserResultSchema,
 } from '../core/instagram/schemas'
+
+// Импортируем Project Manager для автоматического создания проектов
+import { projectManager } from '../core/instagram/project-manager'
 
 // Simple logger
 const log = {
@@ -67,297 +73,8 @@ function getDbPool(): Pool {
   return dbPool
 }
 
-// Instagram API Integration with Zod validation
-class InstagramAPI {
-  private apiKey: string
-  private host: string
-  private baseUrl: string
-
-  constructor() {
-    this.apiKey = process.env.RAPIDAPI_INSTAGRAM_KEY || ''
-    this.host =
-      process.env.RAPIDAPI_INSTAGRAM_HOST ||
-      'real-time-instagram-scraper-api1.p.rapidapi.com'
-    this.baseUrl = 'https://real-time-instagram-scraper-api1.p.rapidapi.com'
-  }
-
-  async getSimilarUsers(username: string, count = 50) {
-    const maxRetries = 1
-    let attempt = 0
-
-    while (attempt < maxRetries) {
-      try {
-        // Добавляем задержку между попытками
-        if (attempt > 0) {
-          const delay = Math.pow(2, attempt) * 1000 // Экспоненциальная задержка: 2s, 4s, 8s
-          log.warn(
-            `⏳ Rate limited, waiting ${delay / 1000}s before retry ${
-              attempt + 1
-            }/${maxRetries}`
-          )
-          await new Promise(resolve => setTimeout(resolve, delay))
-        }
-
-        log.info(
-          `📡 API call attempt ${attempt + 1}/${maxRetries} for: ${username}`
-        )
-
-        const response = await axios.get(
-          `${this.baseUrl}/v1/similar_users_v2`,
-          {
-            params: {
-              username_or_id: username,
-              count: count,
-            },
-            headers: {
-              'x-rapidapi-key': this.apiKey,
-              'x-rapidapi-host': this.host,
-              'Content-Type': 'application/json',
-            },
-            timeout: 30000,
-          }
-        )
-
-        // Валидируем ответ API с помощью Zod
-        const validationResult = validateInstagramApiResponse(response.data)
-
-        if (!validationResult.success) {
-          log.error('API Response Validation Error:', validationResult.error)
-          return {
-            success: false,
-            error: validationResult.error,
-            users: [],
-            total: 0,
-          }
-        }
-
-        // Проверяем, что data не является строкой (ошибкой API)
-        if (typeof validationResult.data!.data === 'string') {
-          const apiError = validationResult.data!.data.trim()
-          const errorMessage =
-            apiError || 'Instagram API returned empty error response'
-          log.error(
-            `❌ API returned error: "${apiError}" (original response logged)`
-          )
-          log.error(
-            'Full API response:',
-            JSON.stringify(response.data, null, 2)
-          )
-          return {
-            success: false,
-            error: `API error: ${errorMessage}`,
-            users: [],
-            total: 0,
-          }
-        }
-
-        const users = validationResult.data!.data.users
-        log.info(`✅ API Success: Found ${users.length} users (Zod validated)`)
-
-        return {
-          success: true,
-          users: users,
-          total: users.length,
-        }
-      } catch (error: any) {
-        attempt++
-
-        // Особая обработка для rate limiting (429)
-        if (error.response?.status === 429) {
-          log.warn(`⚠️ Rate limited (429) on attempt ${attempt}/${maxRetries}`)
-
-          if (attempt >= maxRetries) {
-            log.error(`❌ Max retries exceeded for rate limiting`)
-            return {
-              success: false,
-              error: `Rate limited after ${maxRetries} attempts. Please try again later.`,
-              users: [],
-              total: 0,
-            }
-          }
-          // Продолжаем цикл для следующей попытки
-          continue
-        }
-
-        // Для других ошибок - немедленный возврат
-        log.error(`❌ API Error on attempt ${attempt}:`, error.message)
-        return {
-          success: false,
-          error: error.message,
-          users: [],
-          total: 0,
-        }
-      }
-    }
-
-    // Не должны сюда попасть, но на всякий случай
-    return {
-      success: false,
-      error: 'Unexpected error in retry loop',
-      users: [],
-      total: 0,
-    }
-  }
-
-  /**
-   * Получает рилсы пользователя Instagram
-   */
-  async getUserReels(username: string, count = 50) {
-    const maxRetries = 3
-    let attempt = 0
-
-    while (attempt < maxRetries) {
-      try {
-        // Добавляем задержку между попытками
-        if (attempt > 0) {
-          const delay = Math.pow(2, attempt) * 1000
-          log.warn(
-            `⏳ Reels rate limited, waiting ${delay / 1000}s before retry ${
-              attempt + 1
-            }/${maxRetries}`
-          )
-          await new Promise(resolve => setTimeout(resolve, delay))
-        }
-
-        log.info(
-          `🎬 Reels API call attempt ${
-            attempt + 1
-          }/${maxRetries} for: ${username}`
-        )
-
-        const response = await axios.get(`${this.baseUrl}/v1/user_reels`, {
-          params: {
-            username_or_id: username,
-            count: count,
-          },
-          headers: {
-            'x-rapidapi-key': this.apiKey,
-            'x-rapidapi-host': this.host,
-            'Content-Type': 'application/json',
-          },
-          timeout: 30000,
-        })
-
-        // Валидируем ответ API с помощью Zod
-        const validationResult = validateInstagramReelsApiResponse(
-          response.data
-        )
-
-        if (!validationResult.success) {
-          log.error(
-            'Reels API Response Validation Error:',
-            validationResult.error
-          )
-          return {
-            success: false,
-            error: validationResult.error,
-            reels: [],
-            total: 0,
-            userId: '',
-            username: '',
-          }
-        }
-
-        const data = validationResult.data!.data
-
-        // Проверяем, что data не является строкой (ошибкой API)
-        if (typeof data === 'string') {
-          const apiError = data.trim()
-          const errorMessage =
-            apiError || 'Instagram Reels API returned empty error response'
-          log.error(
-            `❌ Reels API returned error: "${apiError}" (original response logged)`
-          )
-          log.error(
-            'Full Reels API response:',
-            JSON.stringify(response.data, null, 2)
-          )
-          return {
-            success: false,
-            error: `API error: ${errorMessage}`,
-            reels: [],
-            total: 0,
-            userId: '',
-            username: username,
-          }
-        }
-
-        // Проверяем что есть хотя бы один рилс
-        if (!data.items || data.items.length === 0) {
-          log.warn(`⚠️ No reels found for user ${username}`)
-          return {
-            success: true,
-            reels: [],
-            total: 0,
-            userId: '',
-            username: username, // Используем параметр функции
-          }
-        }
-
-        // Извлекаем информацию о пользователе из первого рилса
-        const firstReel = data.items[0]
-        const userId = firstReel?.media?.user?.pk?.toString() || ''
-        const actualUsername = firstReel?.media?.user?.username || username
-
-        log.info(
-          `✅ Reels API Success: Found ${data.items.length} reels for ${actualUsername} (Zod validated)`
-        )
-
-        return {
-          success: true,
-          reels: data.items,
-          total: data.items.length,
-          userId: userId,
-          username: actualUsername,
-        }
-      } catch (error: any) {
-        attempt++
-
-        // Особая обработка для rate limiting (429)
-        if (error.response?.status === 429) {
-          log.warn(
-            `⚠️ Reels rate limited (429) on attempt ${attempt}/${maxRetries}`
-          )
-
-          if (attempt >= maxRetries) {
-            log.error(`❌ Max retries exceeded for reels rate limiting`)
-            return {
-              success: false,
-              error: `Reels rate limited after ${maxRetries} attempts. Please try again later.`,
-              reels: [],
-              total: 0,
-              userId: '',
-              username: username, // Используем параметр функции
-            }
-          }
-          // Продолжаем цикл для следующей попытки
-          continue
-        }
-
-        // Для других ошибок - немедленный возврат
-        log.error(`❌ Reels API Error on attempt ${attempt}:`, error.message)
-        return {
-          success: false,
-          error: error.message,
-          reels: [],
-          total: 0,
-          userId: '',
-          username: username, // Используем параметр функции
-        }
-      }
-    }
-
-    // Не должны сюда попасть, но на всякий случай
-    return {
-      success: false,
-      error: 'Unexpected error in reels retry loop',
-      reels: [],
-      total: 0,
-      userId: '',
-      username: username, // Используем параметр функции
-    }
-  }
-}
+// УДАЛЁН: Instagram API класс заменён на Apify integration
+// Вся логика теперь работает через triggerApifyInstagramScraping в Step 3
 
 // Database operations with Zod validation
 class InstagramDatabase {
@@ -1211,11 +928,9 @@ export const instagramScraperV2 = inngest.createFunction(
     // ДИАГНОСТИКА ПЕРЕМЕННЫХ ОКРУЖЕНИЯ
     // ===============================================
     log.info('🔍 Диагностика переменных окружения:', {
-      RAPIDAPI_INSTAGRAM_KEY: process.env.RAPIDAPI_INSTAGRAM_KEY
-        ? `${process.env.RAPIDAPI_INSTAGRAM_KEY.substring(0, 10)}...`
+      APIFY_TOKEN: process.env.APIFY_TOKEN
+        ? `${process.env.APIFY_TOKEN.substring(0, 10)}...`
         : 'НЕ НАЙДЕН',
-      RAPIDAPI_INSTAGRAM_HOST:
-        process.env.RAPIDAPI_INSTAGRAM_HOST || 'НЕ НАЙДЕН',
       NODE_ENV: process.env.NODE_ENV || 'НЕ НАЙДЕН',
     })
 
@@ -1235,29 +950,34 @@ export const instagramScraperV2 = inngest.createFunction(
       throw new Error('username_or_id is required')
     }
 
-    if (!eventData.project_id || eventData.project_id <= 0) {
-      log.error(
-        '❌ project_id is missing or invalid from event data:',
-        eventData
+    // project_id теперь опциональный - если не передан, создадим автоматически
+    const providedProjectId = eventData.project_id
+    if (providedProjectId && providedProjectId <= 0) {
+      log.warn(
+        '⚠️ Invalid project_id provided, will create new project:',
+        providedProjectId
       )
-      throw new Error('project_id must be a positive number')
     }
 
     // Устанавливаем дефолтные значения
     const username_or_id = String(eventData.username_or_id)
-    const project_id = Number(eventData.project_id)
+    const initial_project_id = eventData.project_id ? Number(eventData.project_id) : undefined
     const max_users = Number(eventData.max_users) || 50
     const max_reels_per_user = Number(eventData.max_reels_per_user) || 50
     const scrape_reels = Boolean(eventData.scrape_reels || false)
     const requester_telegram_id = eventData.requester_telegram_id || ''
+    const telegram_username = eventData.telegram_username || ''
+    const bot_name = eventData.bot_name || 'neuro_blogger_bot'
 
     log.info('✅ Event data parsed successfully:', {
       username_or_id,
-      project_id,
+      initial_project_id,
       max_users,
       max_reels_per_user,
       scrape_reels,
       requester_telegram_id,
+      telegram_username,
+      bot_name,
     })
 
     log.info('🚀 Instagram Scraper V2 started (simplified validation)', {
@@ -1267,64 +987,106 @@ export const instagramScraperV2 = inngest.createFunction(
       scrapeReels: scrape_reels,
       maxReelsPerUser: max_reels_per_user,
       requester: requester_telegram_id,
-      projectId: project_id,
+      initialProjectId: initial_project_id,
+      telegramUsername: telegram_username,
+      botName: bot_name,
     })
 
-    // Step 1: Validate input
+    // Step 1: Validate input and environment
     const validation = await step.run('validate-input', async () => {
-      if (!process.env.RAPIDAPI_INSTAGRAM_KEY) {
-        throw new Error('Instagram API key is not configured')
+      if (!process.env.APIFY_TOKEN || process.env.APIFY_TOKEN.trim() === '') {
+        throw new Error('Apify token is not configured. Please set APIFY_TOKEN environment variable with a valid Apify API token.')
       }
 
       if (!process.env.SUPABASE_URL) {
-        throw new Error('Database URL is not configured')
+        throw new Error('Database URL is not configured. Please set SUPABASE_URL environment variable.')
       }
+      
+      // Log API configuration (without exposing full key)
+      log.info('🔧 API Configuration:', {
+        apifyTokenPresent: !!process.env.APIFY_TOKEN,
+        apifyTokenLength: process.env.APIFY_TOKEN?.length || 0,
+        apifyTokenPrefix: process.env.APIFY_TOKEN?.substring(0, 10) + '...',
+      })
 
-      log.info(`✅ Input validated with Zod: ${username_or_id}`)
+      log.info(`✅ Input validated: ${username_or_id}`)
       return { valid: true, target: username_or_id }
     })
 
-    // Step 2: Validate project_id exists in database
+    // Step 2: Get or Create project
     const projectValidation = await step.run(
-      'validate-project-id',
+      'get-or-create-project',
       async () => {
-        const db = new InstagramDatabase()
-        const validation = await db.validateProjectId(project_id)
+        // Если нет telegram_id, но есть project_id, пробуем использовать его
+        if (!requester_telegram_id && initial_project_id) {
+          const existingProject = await projectManager.getProjectById(initial_project_id)
+          if (existingProject) {
+            log.info(
+              `✅ Using existing project: ${existingProject.name} (ID: ${existingProject.id})`
+            )
+            return {
+              valid: true,
+              projectId: existingProject.id,
+              projectName: existingProject.name,
+              created: false,
+            }
+          }
+        }
 
-        if (!validation.exists) {
-          throw new Error(
-            `Project ID ${project_id} does not exist or is inactive`
+        // Если есть telegram_id, создаем или получаем проект
+        if (requester_telegram_id) {
+          const { project, created } = await projectManager.validateOrCreateProject(
+            initial_project_id,
+            requester_telegram_id,
+            telegram_username,
+            bot_name
           )
+
+          log.info(
+            created 
+              ? `✅ Created new project: ${project.name} (ID: ${project.id})`
+              : `✅ Using existing project: ${project.name} (ID: ${project.id})`
+          )
+
+          return {
+            valid: true,
+            projectId: project.id,
+            projectName: project.name,
+            created,
+          }
         }
 
-        log.info(
-          `✅ Project validation successful: ${validation.projectName} (ID: ${project_id})`
+        // Если нет ни telegram_id, ни валидного project_id
+        throw new Error(
+          'Either requester_telegram_id or valid project_id is required'
         )
-        return {
-          valid: true,
-          projectId: project_id,
-          projectName: validation.projectName,
-        }
       }
     )
 
-    // Step 3: Call Instagram API with Zod validation
-    const apiResult = await step.run('call-instagram-api', async () => {
-      // Добавляем базовую задержку для избежания rate limiting
-      log.info('⏳ Waiting 5 seconds before API call to avoid rate limiting...')
-      await new Promise(resolve => setTimeout(resolve, 5000))
+    // Используем полученный project_id для дальнейшей работы
+    const project_id = projectValidation.projectId
 
-      const api = new InstagramAPI()
-      const result = await api.getSimilarUsers(username_or_id, max_users)
+    // Step 3: Call Apify Instagram Scraper (заменили RapidAPI)
+    const apiResult = await step.run('call-apify-instagram-scraper', async () => {
+      log.info('🤖 Starting Apify Instagram scraping instead of RapidAPI...')
 
-      if (!result.success) {
-        throw new Error(`API call failed: ${result.error}`)
+      // Запускаем Apify парсинг
+      const result = await triggerApifyInstagramScraping({
+        username_or_hashtag: username_or_id,
+        project_id: project_id,
+        source_type: 'competitor',
+        max_reels: max_users,
+        requester_telegram_id: 'auto-system', // Системный вызов
+      })
+
+      // Возвращаем результат в формате совместимом с остальным кодом
+      return {
+        success: true,
+        users: [], // Apify обрабатывает данные асинхронно
+        total: 0,
+        message: 'Apify scraping initiated successfully',
+        apifyEventId: result.eventId
       }
-
-      log.info(
-        `✅ API call successful with Zod validation: ${result.total} users found`
-      )
-      return result
     })
 
     // Step 4: Process and validate users with Zod
@@ -1386,39 +1148,20 @@ export const instagramScraperV2 = inngest.createFunction(
       for (let i = 0; i < processedUsers.validUsers.length; i++) {
         const user: ValidatedInstagramUser = processedUsers.validUsers[i]!
 
-        // Step 6.X: Get reels for individual user
+        // Step 6.X: Get reels for individual user (ОТКЛЮЧЕНО: Apify не поддерживает индивидуальные reels)
         const userReelsResult = await step.run(
           `get-reels-for-user-${i}`,
           async () => {
-            // Добавляем задержку между запросами рилсов
-            if (i > 0) {
-              log.info('⏳ Waiting 3 seconds between reels requests...')
-              await new Promise(resolve => setTimeout(resolve, 3000))
+            // Reels scraping временно отключен - Apify обрабатывает это в своём workflow
+            log.warn(`⚠️ Reels scraping for individual users disabled with Apify integration`)
+            
+            return {
+              success: false,
+              error: 'Reels scraping disabled - handled by Apify workflow',
+              username: user.username,
+              reels: [],
+              total: 0,
             }
-
-            const api = new InstagramAPI()
-            const result = await api.getUserReels(
-              user.username,
-              max_reels_per_user
-            )
-
-            if (!result.success) {
-              log.warn(
-                `⚠️ Failed to get reels for ${user.username}: ${result.error}`
-              )
-              return {
-                success: false,
-                error: result.error,
-                username: user.username,
-                reels: [],
-                total: 0,
-              }
-            }
-
-            log.info(
-              `✅ Reels fetched for ${user.username}: ${result.total} reels found`
-            )
-            return result
           }
         )
 
