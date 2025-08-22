@@ -14,7 +14,8 @@ import path from 'path'
 // Используем основной Inngest клиент
 import { inngest } from '@/core/inngest/clients'
 
-// Импортируем Apify функцию
+
+// Импортируем Apify функцию для замены RapidAPI
 import { triggerApifyInstagramScraping } from './instagramApifyScraper'
 
 // Импортируем Zod-схемы
@@ -70,58 +71,6 @@ function getDbPool(): Pool {
   }
   
   return dbPool
-}
-
-// Apify Integration для Instagram парсинга
-class InstagramApifyClient {
-  constructor() {
-    // Проверяем наличие Apify токена
-    if (!process.env.APIFY_TOKEN || process.env.APIFY_TOKEN.trim() === '') {
-      throw new Error('APIFY_TOKEN environment variable is required and cannot be empty. Please check your environment configuration.')
-    }
-  }
-
-  async getSimilarUsers(username: string, count = 50, projectId: number) {
-    try {
-      log.info(`🤖 Using Apify to get Instagram data for: ${username}`)
-
-      // Запускаем Apify парсинг через существующую функцию
-      const apifyResult = await triggerApifyInstagramScraping({
-        username_or_hashtag: username,
-        project_id: projectId,
-        source_type: 'competitor',
-        max_reels: count,
-        requester_telegram_id: 'auto-system', // Чтобы не было списания
-      })
-
-      log.info(`✅ Apify parsing triggered successfully: ${apifyResult.eventId}`)
-
-      // Возвращаем успешный результат - данные будут сохранены через Apify
-      return {
-        success: true,
-        users: [], // Пустой массив, т.к. данные идут через Apify
-        total: 0,
-        apifyEventId: apifyResult.eventId,
-        message: 'Data parsing via Apify initiated successfully'
-      }
-    } catch (error: any) {
-      log.error(`❌ Apify parsing error:`, {
-        message: error.message,
-        username: username,
-        projectId: projectId
-      })
-      
-      return {
-        success: false,
-        error: `Apify parsing failed: ${error.message}`,
-        users: [],
-        total: 0,
-      }
-    }
-  }
-
-  // Рилсы теперь парсятся через Apify автоматически
-  // Метод getUserReels удален, так как Apify парсит все данные включая рилсы
 }
 
 // Database operations with Zod validation
@@ -1115,22 +1064,28 @@ export const instagramScraperV2 = inngest.createFunction(
     // Используем полученный project_id для дальнейшей работы
     const project_id = projectValidation.projectId
 
-    // Step 3: Call Apify Instagram Scraper
+    // Step 3: Call Apify Instagram Scraper (заменили RapidAPI)
     const apiResult = await step.run('call-apify-instagram-scraper', async () => {
-      log.info('🤖 Starting Apify Instagram scraping...')
+      log.info('🤖 Starting Apify Instagram scraping instead of RapidAPI...')
 
-      const apifyClient = new InstagramApifyClient()
-      const result = await apifyClient.getSimilarUsers(username_or_id, max_users, project_id)
+      // Запускаем Apify парсинг
+      const result = await triggerApifyInstagramScraping({
+        username_or_hashtag: username_or_id,
+        project_id: project_id,
+        source_type: 'competitor',
+        max_reels: max_users,
+        requester_telegram_id: 'auto-system', // Системный вызов
+      })
 
-      if (!result.success) {
-        throw new Error(`Apify parsing failed: ${result.error}`)
+      // Возвращаем результат в формате совместимом с остальным кодом
+      return {
+        success: true,
+        users: [], // Apify обрабатывает данные асинхронно
+        total: 0,
+        message: 'Apify scraping initiated successfully',
+        apifyEventId: result.eventId
       }
 
-      log.info(
-        `✅ Apify parsing initiated successfully: ${result.message}`
-      )
-      return result
-    })
 
     // Step 4: Apify processing (данные обрабатываются асинхронно)
     const processedUsers = await step.run(
@@ -1175,9 +1130,85 @@ export const instagramScraperV2 = inngest.createFunction(
     let totalReelsSaved = 0
     let totalReelsDuplicates = 0
 
-    if (scrape_reels) {
-      log.info('🎬 Reels will be processed by Apify scraper automatically')
-      log.info('⏭️ Reels processing delegated to Apify - no additional steps needed')
+    if (scrape_reels && processedUsers.validUsers.length > 0) {
+      log.info(
+        `🎬 Starting reels scraping for ${processedUsers.validUsers.length} users...`
+      )
+
+      for (let i = 0; i < processedUsers.validUsers.length; i++) {
+        const user: ValidatedInstagramUser = processedUsers.validUsers[i]!
+
+        // Step 6.X: Get reels for individual user (ОТКЛЮЧЕНО: Apify не поддерживает индивидуальные reels)
+        const userReelsResult = await step.run(
+          `get-reels-for-user-${i}`,
+          async () => {
+            // Reels scraping временно отключен - Apify обрабатывает это в своём workflow
+            log.warn(`⚠️ Reels scraping for individual users disabled with Apify integration`)
+            
+            return {
+              success: false,
+              error: 'Reels scraping disabled - handled by Apify workflow',
+              username: user.username,
+              reels: [],
+              total: 0,
+            }
+          }
+        )
+
+        // Step 6.X: Process and save reels if API call was successful
+        if (
+          userReelsResult.success &&
+          userReelsResult.reels &&
+          Array.isArray(userReelsResult.reels) &&
+          userReelsResult.reels.length > 0
+        ) {
+          const reelsSaveResult = await step.run(
+            `save-reels-for-user-${i}`,
+            async () => {
+              // Валидируем рилсы
+              const validationResult = validateInstagramReels(
+                userReelsResult.reels as any[],
+                project_id,
+                user.pk // ID пользователя, для которого собираем рилсы
+              )
+
+              if (validationResult.errors.length > 0) {
+                log.warn(
+                  `Some reels failed validation for ${user.username}:`,
+                  validationResult.errors
+                )
+              }
+
+              // Сохраняем в БД
+              const db = new InstagramDatabase()
+              const saveResult = await db.saveUserReels(
+                validationResult.validReels,
+                project_id
+              )
+
+              log.info(
+                `🎬 Reels saved for ${user.username}: ${saveResult.saved} saved, ${saveResult.duplicatesSkipped} duplicates`
+              )
+
+              return {
+                ...saveResult,
+                validReelsCount: validationResult.validReels.length,
+                invalidReelsCount: validationResult.invalidReels.length,
+                validationErrors: validationResult.errors,
+              }
+            }
+          )
+
+          reelsResults.push(reelsSaveResult)
+          totalReelsSaved += reelsSaveResult.saved
+          totalReelsDuplicates += reelsSaveResult.duplicatesSkipped
+        }
+      }
+
+      log.info(
+        `🎯 Reels scraping complete: ${totalReelsSaved} reels saved, ${totalReelsDuplicates} duplicates across ${reelsResults.length} users`
+      )
+
     } else {
       log.info('⏭️ Reels scraping disabled')
     }
