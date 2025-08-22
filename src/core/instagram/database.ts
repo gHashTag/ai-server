@@ -23,7 +23,7 @@ import {
 
 // Database configuration
 const dbConfig: PoolConfig = {
-  connectionString: process.env.NEON_DATABASE_URL,
+  connectionString: process.env.SUPABASE_URL,
   ssl: { rejectUnauthorized: false },
   max: 20,
   idleTimeoutMillis: 30000,

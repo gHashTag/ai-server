@@ -50,10 +50,10 @@ let dbPool: Pool | null = null
 
 function getDbPool(): Pool {
   if (!dbPool) {
-    const connectionString = process.env.NEON_DATABASE_URL || process.env.DATABASE_URL || process.env.SUPABASE_URL
+    const connectionString = process.env.SUPABASE_URL
     
     if (!connectionString) {
-      throw new Error('Database connection string is required for Instagram scraping. Please set DATABASE_URL, NEON_DATABASE_URL, or SUPABASE_URL environment variable.')
+      throw new Error('Database connection string is required for Instagram scraping. Please set SUPABASE_URL environment variable.')
     }
     
     dbPool = new Pool({

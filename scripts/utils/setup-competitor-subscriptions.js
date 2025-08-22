@@ -11,8 +11,8 @@ async function setupCompetitorSubscriptions() {
   console.log('🏗️  Настройка системы подписок на конкурентов...')
   
   const pool = new Pool({
-    connectionString: process.env.NEON_DATABASE_URL || process.env.DATABASE_URL,
-    ssl: process.env.NEON_DATABASE_URL ? { rejectUnauthorized: false } : false
+    connectionString: process.env.SUPABASE_URL,
+    ssl: process.env.SUPABASE_URL ? { rejectUnauthorized: false } : false
   })
 
   try {

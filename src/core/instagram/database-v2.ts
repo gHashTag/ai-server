@@ -16,11 +16,11 @@ import { logger } from '@/utils/logger'
  */
 // Ленивая инициализация - подключение создается только при первом использовании
 function getConnectionString() {
-  const connectionString = process.env.NEON_DATABASE_URL || process.env.DATABASE_URL || process.env.SUPABASE_URL
+  const connectionString = process.env.SUPABASE_URL
   
   if (!connectionString) {
     console.warn('⚠️ No database connection string found. Instagram features may not work.')
-    console.warn('Set NEON_DATABASE_URL, DATABASE_URL, or SUPABASE_URL environment variable.')
+    console.warn('Set SUPABASE_URL environment variable.')
     return null
   }
   
