@@ -4,7 +4,7 @@
 
 const axios = require('axios')
 
-const WORKING_URL = 'https://ai-server-express.railway.app'
+const WORKING_URL = 'https://ai-server-production-production-8e2d.up.railway.app'
 
 async function exploreServer() {
   console.log('🔍 === ИССЛЕДОВАНИЕ РАБОЧЕГО СЕРВЕРА ===\n')
