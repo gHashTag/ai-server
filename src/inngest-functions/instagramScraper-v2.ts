@@ -48,8 +48,9 @@ const log = {
 // Database connection pool
 const dbPool = new Pool({
   connectionString:
-    process.env.NEON_DATABASE_URL ||
-    'postgresql://neondb_owner:npg_vXnxbypES56V@ep-proud-grass-aegoipez-pooler.c-2.us-east-2.aws.neon.tech/neondb?sslmode=require',
+    process.env.NEON_DATABASE_URL || process.env.DATABASE_URL || (() => {
+      throw new Error('Database connection string is required. Please set DATABASE_URL or NEON_DATABASE_URL environment variable.')
+    })(),
   ssl: {
     rejectUnauthorized: false,
   },
