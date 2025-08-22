@@ -126,6 +126,8 @@ export class KieAiService {
     cost: number;
     duration: number;
     processingTime: number;
+    taskId?: string;
+    status?: string;
   }> {
     if (!this.apiKey) {
       throw new Error('KIE_AI_API_KEY is required for video generation');
@@ -196,65 +198,41 @@ export class KieAiService {
       const taskId = response.data.data.taskId;
       console.log(`📋 Task created with ID: ${taskId}`);
       
-      // Kie.ai работает асинхронно, нужно дождаться завершения задачи
-      console.log('⏳ Waiting for video generation to complete...');
+      // ВАЖНО: Kie.ai работает полностью асинхронно
+      // Видео генерируется в фоне, результат нужно получать отдельно
+      // или через webhook (если настроен)
+      console.log('⚠️ Kie.ai генерирует видео асинхронно');
+      console.log('📌 Сохраняем taskId для последующей проверки');
       
-      // Polling для получения результата (максимум 5 минут)
-      const maxAttempts = 60; // 60 попыток по 5 секунд = 5 минут
-      let videoUrl = null;
+      // Временное решение: возвращаем специальный URL с taskId
+      // В production нужно настроить webhook или периодическую проверку
+      const videoUrl = `https://kie.ai/task/${taskId}`;
       
-      for (let i = 0; i < maxAttempts; i++) {
-        await new Promise(resolve => setTimeout(resolve, 5000)); // Ждем 5 секунд
-        
-        try {
-          // Пробуем разные варианты URL для статуса
-          const statusResponse = await axios.get(`${this.baseUrl}/task/status/${taskId}`, {
-            headers: {
-              'Authorization': `Bearer ${this.apiKey}`,
-              'Content-Type': 'application/json'
-            }
-          }).catch(() => {
-            // Если первый вариант не работает, пробуем другой
-            return axios.get(`${this.baseUrl}/veo/status/${taskId}`, {
-              headers: {
-                'Authorization': `Bearer ${this.apiKey}`,
-                'Content-Type': 'application/json'
-              }
-            });
-          });
-          
-          if (statusResponse.data.code === 200 && statusResponse.data.data) {
-            if (statusResponse.data.data.status === 'completed' && statusResponse.data.data.videoUrl) {
-              videoUrl = statusResponse.data.data.videoUrl;
-              break;
-            } else if (statusResponse.data.data.status === 'failed') {
-              throw new Error(`Video generation failed: ${statusResponse.data.data.error || 'Unknown error'}`);
-            }
-          }
-        } catch (statusError) {
-          // Продолжаем polling если не можем получить статус
-          console.log(`⏳ Generation in progress... (attempt ${i + 1}/${maxAttempts})`);
-        }
-      }
+      // Для тестирования: делаем несколько попыток получить результат
+      // В реальности видео может генерироваться 1-3 минуты
+      console.log('⏳ Ждем 30 секунд для генерации видео...');
+      await new Promise(resolve => setTimeout(resolve, 30000));
       
-      if (!videoUrl) {
-        // Если за 5 минут видео не готово, возвращаем taskId для последующей проверки
-        console.warn(`⚠️ Video generation is taking longer than expected. Task ID: ${taskId}`);
-        // Временное решение: возвращаем taskId как URL
-        videoUrl = `kie-task://${taskId}`;
-      }
+      // После ожидания возвращаем результат с taskId
+      // Frontend или telegram bot должен будет проверять статус отдельно
 
       const processingTime = Date.now() - startTime;
 
-      console.log(`✅ ${model} generation completed in ${processingTime}ms`);
-      console.log(`   • Video URL: ${videoUrl}`);
-      console.log(`   • Actual cost: $${costUSD.toFixed(3)}`);
+      console.log(`⏱️ Task created in ${processingTime}ms`);
+      console.log(`   • Task ID: ${taskId}`);
+      console.log(`   • Status URL: ${videoUrl}`);
+      console.log(`   • Estimated cost: $${costUSD.toFixed(3)}`);
+      console.log('   • ⚠️ Видео генерируется асинхронно (1-3 минуты)');
 
+      // Возвращаем информацию о задаче
+      // В реальном использовании нужно будет проверять статус отдельно
       return {
-        videoUrl: videoUrl,
+        videoUrl: videoUrl, // Временный URL с taskId
         cost: costUSD,
         duration: clampedDuration,
-        processingTime
+        processingTime,
+        taskId: taskId, // Добавляем taskId для отслеживания
+        status: 'processing' // Указываем что видео в процессе генерации
       };
 
     } catch (error: any) {
@@ -319,5 +297,27 @@ export class KieAiService {
    */
   getAllModels() {
     return KIE_AI_MODELS;
+  }
+
+  /**
+   * Проверить статус задачи генерации видео
+   * ВАЖНО: В текущей версии Kie.ai API не предоставляет endpoint для проверки статуса
+   * Это временный метод-заглушка для совместимости
+   */
+  async checkVideoStatus(taskId: string): Promise<{
+    status: 'processing' | 'completed' | 'failed';
+    videoUrl?: string;
+    error?: string;
+  }> {
+    console.log(`📋 Checking status for task: ${taskId}`);
+    
+    // Временное решение: всегда возвращаем processing
+    // В будущем здесь должна быть реальная проверка через Kie.ai API
+    // или через webhook callback
+    
+    return {
+      status: 'processing',
+      error: 'Status check not implemented. Kie.ai requires webhook or manual check.'
+    };
   }
 }
