@@ -10,6 +10,7 @@
     "dev": "nodemon --config nodemon.json",
     "dev:server": "npm run build && cross-env NODE_ENV=development node dist/server.js",
     "dev:inngest": "npx inngest-cli@latest dev -u http://localhost:4000/api/inngest --port 8289 --log-level warn",
+    "dev:full": "node scripts/dev-full.js",
     "dev:mcp": "npm run build && node dist/mcp/index.js",
     "logs:clean": "node scripts/logs-viewer.js important",
     "logs:errors": "node scripts/logs-viewer.js error",
@@ -27,7 +28,6 @@
     "format": "prettier --write .",
     "ngrok": "ngrok http 2999",
     "tunnel": "ssh -R 80:localhost:4000 localhost.run",
-    "dev:inngest": "npx inngest-cli@latest dev -u http://localhost:4000/api/inngest",
     "mcp:server": "npm run build && node dist/mcp/index.js",
     "mcp:server:direct": "node dist/mcp/index.js",
     "mcp:dev": "nodemon --exec \"npm run build && node dist/mcp/index.js\" --watch src/mcp --ext ts"
