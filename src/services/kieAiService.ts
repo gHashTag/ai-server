@@ -7,16 +7,16 @@ import { errorMessage, errorMessageAdmin } from '@/helpers';
  * Экономия по сравнению с Vertex AI: до 87%
  */
 
-// Конфигурация моделей Kie.ai (из KIE_AI_API_GUIDE.md)
+// Конфигурация моделей Kie.ai (ИСПРАВЛЕНО: правильные model IDs)
 export const KIE_AI_MODELS = {
-  'veo-3-fast': {
+  'veo3_fast': {
     name: 'Veo 3 Fast',
     description: 'Быстрая генерация',
     pricePerSecond: 0.05, // $0.05/сек (87% экономия против $0.40 Vertex AI)
     maxDuration: 10,
     supportedFormats: ['16:9', '9:16', '1:1']
   },
-  'veo-3': {
+  'veo3': {
     name: 'Veo 3 Quality', 
     description: 'Премиум качество',
     pricePerSecond: 0.25, // $0.25/сек (37% экономия против $0.40 Vertex AI)
@@ -33,7 +33,7 @@ export const KIE_AI_MODELS = {
 };
 
 interface KieAiGenerationOptions {
-  model: 'veo-3-fast' | 'veo-3' | 'runway-aleph';
+  model: 'veo3_fast' | 'veo3' | 'runway-aleph';
   prompt: string;
   duration: number; // 2-10 секунд
   aspectRatio?: '16:9' | '9:16' | '1:1';
@@ -176,7 +176,7 @@ export class KieAiService {
         ...(projectId && { projectId })
       };
 
-      const response = await axios.post(`${this.baseUrl}/video/generate`, requestBody, {
+      const response = await axios.post(`${this.baseUrl}/veo/generate`, requestBody, {
         headers: {
           'Authorization': `Bearer ${this.apiKey}`,
           'Content-Type': 'application/json'

@@ -1,0 +1,20 @@
+---
+description:
+globs:
+alwaysApply: false
+---
+# Robokassa Callback Parameter Names (`paymentSuccess.controller.ts`)
+
+**Дата:** 2025-04-24
+
+**ВАЖНОЕ ПРАВИЛО! НЕ ИЗМЕНЯТЬ!**
+
+При обработке ответа от Robokassa в контроллере [src/controllers/paymentSuccess.controller.ts](mdc:src/controllers/paymentSuccess.controller.ts), при деструктуризации `req.body` **ВСЕГДА** используйте следующие имена переменных:
+
+```typescript
+const { inv_id, IncSum } = req.body;
+```
+
+**Обоснование:** Гуру установил, что именно эти имена (`inv_id` и `IncSum`) должны использоваться, независимо от того, какие имена (`InvId`, `OutSum`) могут появляться в логах или документации Robokassa для Result URL. Вся последующая логика в `PaymentService` должна быть адаптирована для работы с этими именами.
+
+**НЕ МЕНЯЙТЕ ЭТИ ИМЕНА ПЕРЕМЕННЫХ (`inv_id`, `IncSum`) В ЭТОМ ФАЙЛЕ!**

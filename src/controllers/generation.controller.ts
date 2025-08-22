@@ -45,7 +45,12 @@ export class GenerationController {
       }
 
       validateUserParams(req)
-      res.status(200).json({ message: 'Processing Veo 3 video generation' })
+      const jobId = `veo3_${telegram_id}_${Date.now()}`
+      res.status(200).json({ 
+        success: true,
+        jobId,
+        message: 'Processing Veo 3 video generation' 
+      })
 
       // Используем существующую функцию generateTextToVideo с моделью veo3-fast
       await generateTextToVideo(
@@ -92,7 +97,12 @@ export class GenerationController {
       }
 
       validateUserParams(req)
-      res.status(200).json({ message: 'Processing started' })
+      const jobId = `text_to_image_${telegram_id}_${Date.now()}`
+      res.status(200).json({ 
+        success: true,
+        jobId,
+        message: 'Processing started' 
+      })
 
       const { bot } = getBotByName(bot_name)
 
@@ -141,7 +151,12 @@ export class GenerationController {
       }
       validateUserParams(req)
       // Отправляем предварительный ответ клиенту, что обработка началась
-      res.status(200).json({ message: 'Processing started' })
+      const jobId = `neuro_photo_${telegram_id}_${Date.now()}`
+      res.status(200).json({ 
+        success: true,
+        jobId,
+        message: 'Processing started' 
+      })
 
       try {
         // ПЛАН А: Попытка отправить задачу в Inngest
@@ -219,7 +234,12 @@ export class GenerationController {
         return
       }
 
-      res.status(200).json({ message: 'Processing started' })
+      const jobId = `neuro_photo_v2_${telegram_id}_${Date.now()}`
+      res.status(200).json({ 
+        success: true,
+        jobId,
+        message: 'Processing started' 
+      })
 
       generateNeuroImageV2(
         prompt,
@@ -251,7 +271,12 @@ export class GenerationController {
 
       validateUserParams(req)
 
-      res.status(200).json({ message: 'Voice creation started' })
+      const jobId = `voice_avatar_${telegram_id}_${Date.now()}`
+      res.status(200).json({ 
+        success: true,
+        jobId,
+        message: 'Voice creation started' 
+      })
 
       const { bot } = getBotByName(bot_name)
       createVoiceAvatar(fileUrl, telegram_id, username, is_ru, bot)
@@ -284,7 +309,12 @@ export class GenerationController {
         res.status(400).json({ message: 'Is_ru is required' })
         return
       }
-      res.status(200).json({ message: 'Processing started' })
+      const jobId = `text_to_speech_${telegram_id}_${Date.now()}`
+      res.status(200).json({ 
+        success: true,
+        jobId,
+        message: 'Processing started' 
+      })
 
       const { bot } = getBotByName(bot_name)
       await generateSpeech({
@@ -320,7 +350,12 @@ export class GenerationController {
       }
 
       validateUserParams(req)
-      res.status(200).json({ message: 'Processing started' })
+      const jobId = `text_to_video_${telegram_id}_${Date.now()}`
+      res.status(200).json({ 
+        success: true,
+        jobId,
+        message: 'Processing started' 
+      })
 
       await generateTextToVideo(
         prompt,
@@ -483,7 +518,12 @@ export class GenerationController {
         return
       }
       validateUserParams(req)
-      res.status(200).json({ message: 'Processing started' })
+      const jobId = `image_to_prompt_${telegram_id}_${Date.now()}`
+      res.status(200).json({ 
+        success: true,
+        jobId,
+        message: 'Processing started' 
+      })
       const { bot } = getBotByName(bot_name)
 
       generateImageToPrompt(image, telegram_id, username, is_ru, bot, bot_name)
