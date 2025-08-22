@@ -15,6 +15,7 @@ import { NexrenderRoute } from './nexrender.route'
 import { ReplicateWebhookRoute } from './replicateWebhook.route'
 import { DownloadRoute } from './download.route'
 import { CompetitorSubscriptionsRoute } from './competitor-subscriptions.route'
+import { UniversalWebhookRoute } from './universalWebhook.route'
 
 export const routes = [
   new UploadRoute(),
@@ -34,4 +35,5 @@ export const routes = [
   new ReplicateWebhookRoute(),
   new DownloadRoute(),
   new CompetitorSubscriptionsRoute(),
+  new UniversalWebhookRoute(), // Универсальный webhook для всех AI провайдеров
 ]
