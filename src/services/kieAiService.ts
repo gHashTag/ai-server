@@ -1,5 +1,7 @@
 import axios from 'axios';
 import { errorMessage, errorMessageAdmin } from '@/helpers';
+import { supabase } from '@/core/supabase';
+import { logger } from '@/utils/logger';
 
 /**
  * Сервис для работы с Kie.ai API
@@ -198,9 +200,48 @@ export class KieAiService {
       const taskId = response.data.data.taskId;
       console.log(`📋 Task created with ID: ${taskId}`);
       
+      // Сохраняем задачу в базу данных
+      if (options.userId || options.projectId) {
+        try {
+          const taskRecord = {
+            task_id: taskId,
+            provider: 'kie-ai',
+            telegram_id: options.userId,
+            model: model,
+            prompt: prompt,
+            status: 'processing',
+            metadata: {
+              duration: clampedDuration,
+              aspectRatio: aspectRatio,
+              cost: costUSD,
+              projectId: options.projectId
+            }
+          };
+          
+          const { error: insertError } = await supabase
+            .from('video_tasks')
+            .insert(taskRecord);
+          
+          if (insertError) {
+            // Если таблица не существует, создадим её
+            if (insertError.code === '42P01') {
+              await this.createVideoTasksTable();
+              // Повторная попытка вставки
+              await supabase.from('video_tasks').insert(taskRecord);
+            } else {
+              logger.warn('Failed to save task to database:', insertError);
+            }
+          }
+          
+          logger.info(`✅ Task ${taskId} saved to database`);
+        } catch (dbError) {
+          logger.error('Error saving task to database:', dbError);
+          // Не прерываем выполнение, так как задача уже создана
+        }
+      }
+      
       // ВАЖНО: Kie.ai работает полностью асинхронно
-      // Видео генерируется в фоне, результат нужно получать отдельно
-      // или через webhook (если настроен)
+      // Видео генерируется в фоне, результат нужно получать через webhook
       console.log('⚠️ Kie.ai генерирует видео асинхронно');
       console.log('📌 Сохраняем taskId для последующей проверки');
       
@@ -311,13 +352,66 @@ export class KieAiService {
   }> {
     console.log(`📋 Checking status for task: ${taskId}`);
     
-    // Временное решение: всегда возвращаем processing
-    // В будущем здесь должна быть реальная проверка через Kie.ai API
-    // или через webhook callback
+    // Проверяем статус в базе данных
+    try {
+      const { data, error } = await supabase
+        .from('video_tasks')
+        .select('status, video_url, error_message')
+        .eq('task_id', taskId)
+        .single();
+      
+      if (error || !data) {
+        return {
+          status: 'processing',
+          error: 'Task not found in database'
+        };
+      }
+      
+      return {
+        status: data.status as 'processing' | 'completed' | 'failed',
+        videoUrl: data.video_url,
+        error: data.error_message
+      };
+    } catch (err) {
+      logger.error('Error checking video status:', err);
+      return {
+        status: 'processing',
+        error: 'Failed to check status'
+      };
+    }
+  }
+  
+  /**
+   * Создает таблицу для хранения задач видео генерации
+   */
+  private async createVideoTasksTable(): Promise<void> {
+    const createTableQuery = `
+      CREATE TABLE IF NOT EXISTS video_tasks (
+        id SERIAL PRIMARY KEY,
+        task_id VARCHAR(255) UNIQUE NOT NULL,
+        provider VARCHAR(50) NOT NULL,
+        telegram_id VARCHAR(255),
+        bot_name VARCHAR(100),
+        model VARCHAR(100),
+        prompt TEXT,
+        status VARCHAR(50) DEFAULT 'processing',
+        video_url TEXT,
+        error_message TEXT,
+        is_ru BOOLEAN DEFAULT false,
+        metadata JSONB,
+        created_at TIMESTAMP DEFAULT NOW(),
+        completed_at TIMESTAMP
+      );
+      
+      CREATE INDEX IF NOT EXISTS idx_video_tasks_telegram_id ON video_tasks(telegram_id);
+      CREATE INDEX IF NOT EXISTS idx_video_tasks_status ON video_tasks(status);
+    `;
     
-    return {
-      status: 'processing',
-      error: 'Status check not implemented. Kie.ai requires webhook or manual check.'
-    };
+    try {
+      await supabase.rpc('exec_sql', { sql: createTableQuery });
+      logger.info('✅ video_tasks table created successfully');
+    } catch (error) {
+      logger.error('Failed to create video_tasks table:', error);
+    }
   }
 }
