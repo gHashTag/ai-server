@@ -35,10 +35,13 @@ export const InstagramContentAgentConfig = {
   ssl: {
     rejectUnauthorized: false,
   },
-  // Connection pool settings
-  max: 20,
-  connectionTimeoutMillis: 30000,
-  idleTimeoutMillis: 30000,
+  // Optimized connection pool settings for Supabase
+  max: 5, // Reduced pool size for better resource management
+  min: 1, // Keep at least one connection alive
+  connectionTimeoutMillis: 60000, // Increased to 60s for Supabase
+  idleTimeoutMillis: 300000, // 5 minutes idle timeout
+  query_timeout: 30000, // 30s query timeout
+  keepAlive: true,
 }
 
 // Connection pool instance
@@ -114,23 +117,34 @@ export interface TelegramMemoryData {
 
 export class InstagramContentAgentDB {
   private pool: typeof dbPool
+  private _isInitialized: boolean = false
 
   constructor() {
     this.pool = dbPool
-    this.initializeConnection()
+    // Removed immediate connection test for truly lazy initialization
   }
 
   /**
-   * Initialize database connection
+   * Ensure database connection is available (lazy initialization)
    */
-  private async initializeConnection(): Promise<void> {
+  private async ensureConnection(): Promise<void> {
+    if (this._isInitialized) return
+
+    const connectionString = getConnectionString()
+    if (!connectionString) {
+      logger.warn('⚠️ No database connection available. Skipping database operations.')
+      return
+    }
+
     try {
       const client = await this.pool.connect()
       logger.info('✅ Instagram Content Agent DB connected successfully')
       client.release()
+      this._isInitialized = true
     } catch (error) {
       logger.error('❌ Instagram Content Agent DB connection failed:', error)
-      throw error
+      logger.warn('⚠️ Database operations will be skipped due to connection failure.')
+      // Don't throw error - allow app to continue without database
     }
   }
 
@@ -144,6 +158,13 @@ export class InstagramContentAgentDB {
   async saveCompetitors(
     competitors: CompetitorData[]
   ): Promise<{ saved: number; duplicates: number }> {
+    await this.ensureConnection()
+    
+    if (!this._isInitialized) {
+      logger.warn('⚠️ Database not available, skipping competitor save')
+      return { saved: 0, duplicates: 0 }
+    }
+
     const client = await this.pool.connect()
     let saved = 0
     let duplicates = 0
@@ -497,17 +518,23 @@ export class InstagramContentAgentDB {
    * Test database connection
    */
   async testConnection(): Promise<boolean> {
-    const client = await this.pool.connect()
+    const connectionString = getConnectionString()
+    if (!connectionString) {
+      logger.warn('⚠️ No database connection string available')
+      return false
+    }
 
     try {
+      const client = await this.pool.connect()
       await client.query('SELECT 1')
+      client.release()
+      
       logger.info('✅ Database connection test successful')
+      this._isInitialized = true
       return true
     } catch (error) {
       logger.error('❌ Database connection test failed:', error)
       return false
-    } finally {
-      client.release()
     }
   }
 
