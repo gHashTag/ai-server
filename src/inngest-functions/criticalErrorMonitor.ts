@@ -4,7 +4,7 @@ import { Telegraf as Bot } from 'telegraf'
 import { OpenAI } from 'openai'
 
 // Константы
-const BOT_TOKEN = '7667727700:AAEJIvtBWxgy_cj_Le_dGMpqA_dz7Pwhj0c'
+const BOT_TOKEN = process.env.MONITORING_BOT_TOKEN || process.env.BOT_TOKEN_1
 const ADMIN_TELEGRAM_ID = process.env.ADMIN_TELEGRAM_ID || '144022504'
 const GROUP_CHAT_ID = ADMIN_TELEGRAM_ID // Временно используем ID админа
 

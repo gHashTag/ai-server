@@ -6,7 +6,7 @@ import { OpenAI } from 'openai'
 import { Telegraf as Bot } from 'telegraf'
 
 // Константы для бота и группы
-const BOT_TOKEN = '7667727700:AAEJIvtBWxgy_cj_Le_dGMpqA_dz7Pwhj0c' // @neuro_blogger_bot
+const BOT_TOKEN = process.env.MONITORING_BOT_TOKEN || process.env.BOT_TOKEN_1 // @neuro_blogger_bot
 // Временно отправляем админу, пока бот не добавлен в группу
 const ADMIN_TELEGRAM_ID = process.env.ADMIN_TELEGRAM_ID || '144022504'
 const GROUP_CHAT_ID = ADMIN_TELEGRAM_ID // Используем ID админа вместо группы
