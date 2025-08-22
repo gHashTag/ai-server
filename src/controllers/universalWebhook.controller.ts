@@ -168,6 +168,13 @@ export class UniversalWebhookController {
         if (taskData?.telegram_id && taskData?.bot_name) {
           const { bot } = getBotByName(taskData.bot_name);
           
+          // Проверяем bot перед отправкой
+          if (!bot || !bot.telegram) {
+            console.error('❌ Bot instance is invalid in universalWebhook');
+            logger.error(`[universalWebhook] Bot instance is invalid for ${taskData.bot_name}`);
+            return res.status(500).json({ error: 'Bot instance is invalid' });
+          }
+          
           // Формируем сообщение с дополнительной информацией
           let caption = taskData.is_ru 
             ? `🎬 Ваше видео готово!\n⚡ Сгенерировано через Kie.ai (экономия 87%)\n📹 Модель: ${taskData.model || 'veo-3-fast'}`
