@@ -8,13 +8,18 @@ function getLogDir(): string {
   const envLogDir = process.env.LOG_DIR
   const isProduction = process.env.NODE_ENV === 'production'
   
-  // Only use LOG_DIR if it's an absolute path (starts with /)
-  if (envLogDir && envLogDir.startsWith('/')) {
-    return envLogDir
+  // If LOG_DIR is provided, use it (handle both relative and absolute)
+  if (envLogDir) {
+    if (envLogDir.startsWith('/')) {
+      return envLogDir
+    } else {
+      // Convert relative path to absolute
+      return require('path').resolve(process.cwd(), envLogDir)
+    }
   }
   
-  // Use safe defaults for relative paths or missing LOG_DIR
-  return isProduction ? '/app/logs' : '/tmp/logs'
+  // Use safe defaults
+  return isProduction ? '/tmp/logs' : '/tmp/logs'
 }
 
 const logDir = getLogDir()
