@@ -167,6 +167,17 @@ export const systemHealthCheck = inngest.createFunction(
         const { getBotByName } = await import('@/core/bot')
         const { bot } = getBotByName('neuro_blogger_bot')
 
+        // Проверяем что bot существует и имеет telegram API
+        if (!bot || !bot.telegram) {
+          return {
+            service: 'Telegram Bot API',
+            status: 'critical' as const,
+            response_time: Date.now() - startTime,
+            message: 'Bot instance is invalid or missing telegram API',
+            details: { error: 'Invalid bot instance' },
+          }
+        }
+
         // Проверяем API через getMe
         const botInfo = await bot.telegram.getMe()
 
@@ -325,6 +336,12 @@ export const systemHealthCheck = inngest.createFunction(
         try {
           const { getBotByName } = await import('@/core/bot')
           const { bot } = getBotByName('neuro_blogger_bot')
+
+          // Проверяем что bot существует и имеет telegram API для отправки алертов
+          if (!bot || !bot.telegram) {
+            log.error('❌ Bot instance is invalid for health check alerts');
+            return; // Пропускаем отправку алертов, но не ломаем healthcheck
+          }
 
           // Формируем сообщение в зависимости от статуса
           let message = ''
