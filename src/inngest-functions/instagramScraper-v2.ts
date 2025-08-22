@@ -4,7 +4,6 @@
  */
 
 import { slugify } from 'inngest'
-import axios from 'axios'
 import pkg from 'pg'
 const { Pool } = pkg
 import * as XLSX from 'xlsx'
@@ -14,6 +13,7 @@ import path from 'path'
 
 // Используем основной Inngest клиент
 import { inngest } from '@/core/inngest/clients'
+
 
 // Импортируем Apify функцию для замены RapidAPI
 import { triggerApifyInstagramScraping } from './instagramApifyScraper'
@@ -72,9 +72,6 @@ function getDbPool(): Pool {
   
   return dbPool
 }
-
-// УДАЛЁН: Instagram API класс заменён на Apify integration
-// Вся логика теперь работает через triggerApifyInstagramScraping в Step 3
 
 // Database operations with Zod validation
 class InstagramDatabase {
@@ -931,6 +928,7 @@ export const instagramScraperV2 = inngest.createFunction(
       APIFY_TOKEN: process.env.APIFY_TOKEN
         ? `${process.env.APIFY_TOKEN.substring(0, 10)}...`
         : 'НЕ НАЙДЕН',
+      SUPABASE_URL: process.env.SUPABASE_URL ? 'НАЙДЕН' : 'НЕ НАЙДЕН',
       NODE_ENV: process.env.NODE_ENV || 'НЕ НАЙДЕН',
     })
 
@@ -1002,7 +1000,7 @@ export const instagramScraperV2 = inngest.createFunction(
         throw new Error('Database URL is not configured. Please set SUPABASE_URL environment variable.')
       }
       
-      // Log API configuration (without exposing full key)
+      // Log API configuration (without exposing full token)
       log.info('🔧 API Configuration:', {
         apifyTokenPresent: !!process.env.APIFY_TOKEN,
         apifyTokenLength: process.env.APIFY_TOKEN?.length || 0,
@@ -1087,56 +1085,48 @@ export const instagramScraperV2 = inngest.createFunction(
         message: 'Apify scraping initiated successfully',
         apifyEventId: result.eventId
       }
-    })
 
-    // Step 4: Process and validate users with Zod
+
+    // Step 4: Apify processing (данные обрабатываются асинхронно)
     const processedUsers = await step.run(
-      'process-users-with-zod',
+      'apify-processing-status',
       async () => {
-        const userValidationResult = validateInstagramUsers(
-          apiResult.users,
-          project_id
-        )
+        log.info('🤖 Apify processing initiated. Data will be processed asynchronously.')
+        log.info(`📋 Apify Event ID: ${apiResult.apifyEventId}`)
 
-        if (userValidationResult.errors.length > 0) {
-          log.warn('Some users failed validation:', userValidationResult.errors)
-        }
-
-        log.info(
-          `✅ Zod processing complete: ${userValidationResult.validUsers.length} valid, ${userValidationResult.invalidUsers.length} invalid`
-        )
-
+        // Возвращаем статус, что обработка запущена
         return {
-          validUsers: userValidationResult.validUsers,
-          invalidUsers: userValidationResult.invalidUsers,
-          validCount: userValidationResult.validUsers.length,
-          invalidCount: userValidationResult.invalidUsers.length,
-          validationErrors: userValidationResult.errors,
+          validUsers: [],
+          invalidUsers: [],
+          validCount: 0,
+          invalidCount: 0,
+          validationErrors: [],
+          apifyEventId: apiResult.apifyEventId,
+          status: 'processing',
+          message: 'Data processing via Apify initiated successfully'
         }
       }
     )
 
-    // Step 5: REAL DATABASE SAVE with Zod validation
+    // Step 5: Database status (данные сохраняются через Apify)
     const saveResult = (await step.run(
-      'save-to-neon-database-zod',
+      'database-save-status',
       async () => {
-        const db = new InstagramDatabase()
-        const result = await db.saveUsers(
-          username_or_id,
-          processedUsers.validUsers,
-          project_id
-        )
+        log.info('💾 Database save will be handled by Apify scraper asynchronously')
 
-        log.info(
-          `💾 REAL Database save with Zod: ${result.saved} saved, ${result.duplicatesSkipped} duplicates`
-        )
-
-        return result
+        // Возвращаем статус что сохранение будет через Apify
+        return {
+          saved: 0,
+          duplicatesSkipped: 0,
+          totalProcessed: 0,
+          status: 'pending_apify',
+          message: 'Data will be saved by Apify scraper'
+        }
       }
     )) as DatabaseSaveResult
 
-    // Step 6: CONDITIONALLY SCRAPE REELS for each user
-    const reelsResults: ReelsSaveResult[] = []
+    // Step 6: Reels processing (выполняется через Apify автоматически)
+    const reelsResults: any[] = []
     let totalReelsSaved = 0
     let totalReelsDuplicates = 0
 
@@ -1218,8 +1208,9 @@ export const instagramScraperV2 = inngest.createFunction(
       log.info(
         `🎯 Reels scraping complete: ${totalReelsSaved} reels saved, ${totalReelsDuplicates} duplicates across ${reelsResults.length} users`
       )
+
     } else {
-      log.info('⏭️ Reels scraping skipped (not enabled or no users found)')
+      log.info('⏭️ Reels scraping disabled')
     }
 
     // Step 7: Generate reports and archive
