@@ -13,7 +13,7 @@ class DirectInstagramScraper {
     this.baseUrl = 'https://real-time-instagram-scraper-api1.p.rapidapi.com'
 
     this.dbPool = new Pool({
-      connectionString: process.env.NEON_DATABASE_URL,
+      connectionString: process.env.SUPABASE_URL,
       ssl: {
         rejectUnauthorized: false,
       },

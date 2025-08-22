@@ -62,7 +62,7 @@ export async function createInstagramScraping(input: {
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Unknown error',
-      hint: 'Check if all required environment variables are set (RAPIDAPI_INSTAGRAM_KEY, NEON_DATABASE_URL)',
+      hint: 'Check if all required environment variables are set (RAPIDAPI_INSTAGRAM_KEY, SUPABASE_URL)',
     }
   }
 }

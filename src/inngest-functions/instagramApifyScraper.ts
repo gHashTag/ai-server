@@ -50,7 +50,7 @@ interface ApifyReelItem {
 
 // База данных
 const dbPool = new Pool({
-  connectionString: process.env.NEON_DATABASE_URL || '',
+  connectionString: process.env.SUPABASE_URL || '',
   ssl: { rejectUnauthorized: false },
 })
 

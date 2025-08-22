@@ -8,7 +8,7 @@ const { Pool } = require('pg')
 async function checkSupabaseHistory() {
   console.log('🔍 Проверка истории парсинга в Supabase...')
   
-  const connectionString = process.env.NEON_DATABASE_URL || process.env.DATABASE_URL
+  const connectionString = process.env.SUPABASE_URL
   console.log('🔗 Подключение к БД:', connectionString ? 'настроено' : 'НЕ НАСТРОЕНО')
   
   const pool = new Pool({

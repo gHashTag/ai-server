@@ -9,11 +9,11 @@ const { Pool } = pkg
 async function showTableStructure() {
   console.log('🔍 === ИССЛЕДОВАНИЕ СТРУКТУРЫ БАЗЫ ДАННЫХ ===\n')
 
-  const connectionString = process.env.NEON_DATABASE_URL || process.env.DATABASE_URL
+  const connectionString = process.env.SUPABASE_URL
   
   if (!connectionString) {
     console.error('❌ Database connection string is required')
-    console.error('Please set NEON_DATABASE_URL or DATABASE_URL in your .env file')
+    console.error('Please set SUPABASE_URL in your .env file')
     process.exit(1)
   }
   

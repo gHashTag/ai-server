@@ -22,7 +22,7 @@ const log = {
 
 // Database connection pool
 const dbPool = new Pool({
-  connectionString: process.env.NEON_DATABASE_URL,
+  connectionString: process.env.SUPABASE_URL,
   ssl: {
     rejectUnauthorized: false,
   },
@@ -172,7 +172,7 @@ export const instagramScraperV2Test = inngest.createFunction(
     const validation = await step.run('validate-input-test', async () => {
       const { username_or_id, project_id } = event.data
 
-      if (!process.env.NEON_DATABASE_URL) {
+      if (!process.env.SUPABASE_URL) {
         throw new Error('Database URL is not configured')
       }
 

@@ -23,15 +23,15 @@ import {
 
 // Database configuration
 const dbConfig: PoolConfig = {
-  connectionString: process.env.NEON_DATABASE_URL,
+  connectionString: process.env.SUPABASE_URL,
   ssl: { rejectUnauthorized: false },
   max: 20,
   idleTimeoutMillis: 30000,
   connectionTimeoutMillis: 2000,
 }
 
-if (!process.env.NEON_DATABASE_URL) {
-  throw new Error('NEON_DATABASE_URL environment variable is required')
+if (!process.env.SUPABASE_URL) {
+  throw new Error('SUPABASE_URL environment variable is required')
 }
 
 export const neonDB = new Pool(dbConfig)

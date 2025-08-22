@@ -15,9 +15,9 @@ console.log('🔍 КРИТИЧЕСКАЯ ПРОВЕРКА PROJECT_ID')
 console.log('===================================')
 console.log('')
 
-// Подключение к Neon базе данных
+// Подключение к Supabase базе данных
 const dbPool = new Pool({
-  connectionString: process.env.NEON_DATABASE_URL,
+  connectionString: process.env.SUPABASE_URL,
   ssl: { rejectUnauthorized: false },
 })
 
