@@ -39,30 +39,53 @@ if (!existsSync(logDir)) {
 // Установите уровень логирования через переменную окружения
 const logLevel = process.env.LOG_LEVEL || (isDev ? 'info' : 'warn')
 
+// Настройки из переменных окружения
+const showHealthChecks = process.env.SHOW_HEALTH_CHECKS === 'true'
+const showOptionsRequests = process.env.SHOW_OPTIONS_REQUESTS === 'true'
+const minimalLogs = process.env.MINIMAL_LOGS === 'true'
+const showTimestamps = process.env.SHOW_TIMESTAMPS !== 'false'
+
 // Создаем кастомный формат для фильтрации 
 const customFormat = winston.format.combine(
   winston.format.timestamp(),
   winston.format.printf(({ level, message, timestamp }) => {
     // Фильтруем избыточные сообщения
     if (typeof message === 'string') {
-      // Скрываем служебные HTTP запросы в development
-      if (isDev && message.includes('GET /health')) return ''
-      if (isDev && message.includes('OPTIONS /')) return ''
       
-      // Показываем только важные HTTP запросы
+      // Минимальный режим - показываем только ошибки и важные события
+      if (minimalLogs) {
+        if (level === 'error' || 
+            message.includes('🚀') || 
+            message.includes('listening') ||
+            message.includes('started')) {
+          const ts = showTimestamps ? `${timestamp} ` : ''
+          return `${ts}[${level.toUpperCase()}]: ${message}`
+        }
+        return ''
+      }
+      
+      // Скрываем служебные HTTP запросы если не включены
+      if (!showHealthChecks && message.includes('GET /health')) return ''
+      if (!showOptionsRequests && message.includes('OPTIONS /')) return ''
+      
+      // Приоритет для API запросов
       if (message.includes('POST /api/') || 
           message.includes('GET /api/') || 
           message.includes('PUT /api/') || 
           message.includes('DELETE /api/')) {
-        return `${timestamp} [${level.toUpperCase()}]: ${message}`
+        const ts = showTimestamps ? `${timestamp} ` : ''
+        return `${ts}[${level.toUpperCase()}]: ${message}`
       }
       
       // Показываем все остальные сообщения для info и выше
       if (level !== 'debug') {
-        return `${timestamp} [${level.toUpperCase()}]: ${message}`
+        const ts = showTimestamps ? `${timestamp} ` : ''
+        return `${ts}[${level.toUpperCase()}]: ${message}`
       }
     }
-    return `${timestamp} [${level.toUpperCase()}]: ${message}`
+    
+    const ts = showTimestamps ? `${timestamp} ` : ''
+    return `${ts}[${level.toUpperCase()}]: ${message}`
   })
 )
 
