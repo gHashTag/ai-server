@@ -8,7 +8,7 @@ process.env.PORT = '4000'
 process.env.SUPABASE_URL = 'dummy_url'
 process.env.SUPABASE_ANON_KEY = 'dummy_key'
 process.env.SUPABASE_SERVICE_KEY = 'dummy_service_key'
-process.env.NEON_DATABASE_URL = 'postgresql://neondb_owner:npg_5RWzh7CwrXxE@ep-delicate-block-a1l1lt0p-pooler.ap-southeast-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require'
+process.env.NEON_DATABASE_URL = process.env.NEON_DATABASE_URL || 'postgresql://user:password@localhost:5432/testdb'
 
 console.log('🚀 Запуск сервера с минимальными настройками...')
 
