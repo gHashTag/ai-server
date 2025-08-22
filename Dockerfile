@@ -28,6 +28,9 @@ RUN npm install --omit=dev
 # Copy built assets from builder
 COPY --from=builder /app/dist ./dist
 
+# Set log directory environment variable
+ENV LOG_DIR=/app/logs
+
 # Create logs, uploads, and temp directories with proper permissions
 RUN mkdir -p /app/logs && \
     mkdir -p /app/dist/uploads && \
