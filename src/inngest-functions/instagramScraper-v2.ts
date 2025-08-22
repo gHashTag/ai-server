@@ -82,6 +82,11 @@ class InstagramAPI {
       process.env.RAPIDAPI_INSTAGRAM_HOST ||
       'real-time-instagram-scraper-api1.p.rapidapi.com'
     this.baseUrl = 'https://real-time-instagram-scraper-api1.p.rapidapi.com'
+    
+    // Validate API key is present
+    if (!this.apiKey || this.apiKey.trim() === '') {
+      throw new Error('RAPIDAPI_INSTAGRAM_KEY environment variable is required and cannot be empty. Please check your environment configuration.')
+    }
   }
 
   async getSimilarUsers(username: string, count = 50) {
@@ -181,12 +186,32 @@ class InstagramAPI {
           // Продолжаем цикл для следующей попытки
           continue
         }
+        
+        // Особая обработка для 403 (Forbidden/Unauthorized)
+        if (error.response?.status === 403) {
+          log.error(`🔐 API Authentication Error (403):`, {
+            message: error.message,
+            response: error.response?.data,
+            apiKey: this.apiKey ? `${this.apiKey.substring(0, 10)}...` : 'MISSING',
+            host: this.host
+          })
+          return {
+            success: false,
+            error: `Instagram API authentication failed (403). Please check your RAPIDAPI_INSTAGRAM_KEY environment variable. Make sure the API key is valid and has proper permissions for Instagram data access.`,
+            users: [],
+            total: 0,
+          }
+        }
 
         // Для других ошибок - немедленный возврат
-        log.error(`❌ API Error on attempt ${attempt}:`, error.message)
+        log.error(`❌ API Error on attempt ${attempt}:`, {
+          status: error.response?.status,
+          message: error.message,
+          response: error.response?.data
+        })
         return {
           success: false,
-          error: error.message,
+          error: `API call failed: ${error.message} (Status: ${error.response?.status || 'unknown'})`,
           users: [],
           total: 0,
         }
@@ -336,12 +361,36 @@ class InstagramAPI {
           // Продолжаем цикл для следующей попытки
           continue
         }
+        
+        // Особая обработка для 403 (Forbidden/Unauthorized)
+        if (error.response?.status === 403) {
+          log.error(`🔐 Reels API Authentication Error (403):`, {
+            message: error.message,
+            response: error.response?.data,
+            apiKey: this.apiKey ? `${this.apiKey.substring(0, 10)}...` : 'MISSING',
+            host: this.host,
+            username: username
+          })
+          return {
+            success: false,
+            error: `Instagram Reels API authentication failed (403). Please check your RAPIDAPI_INSTAGRAM_KEY environment variable. Make sure the API key is valid and has proper permissions for Instagram Reels access.`,
+            reels: [],
+            total: 0,
+            userId: '',
+            username: username,
+          }
+        }
 
         // Для других ошибок - немедленный возврат
-        log.error(`❌ Reels API Error on attempt ${attempt}:`, error.message)
+        log.error(`❌ Reels API Error on attempt ${attempt}:`, {
+          status: error.response?.status,
+          message: error.message,
+          response: error.response?.data,
+          username: username
+        })
         return {
           success: false,
-          error: error.message,
+          error: `Reels API call failed: ${error.message} (Status: ${error.response?.status || 'unknown'})`,
           reels: [],
           total: 0,
           userId: '',
@@ -1280,17 +1329,25 @@ export const instagramScraperV2 = inngest.createFunction(
       botName: bot_name,
     })
 
-    // Step 1: Validate input
+    // Step 1: Validate input and environment
     const validation = await step.run('validate-input', async () => {
-      if (!process.env.RAPIDAPI_INSTAGRAM_KEY) {
-        throw new Error('Instagram API key is not configured')
+      if (!process.env.RAPIDAPI_INSTAGRAM_KEY || process.env.RAPIDAPI_INSTAGRAM_KEY.trim() === '') {
+        throw new Error('Instagram API key is not configured. Please set RAPIDAPI_INSTAGRAM_KEY environment variable with a valid RapidAPI key.')
       }
 
       if (!process.env.SUPABASE_URL) {
-        throw new Error('Database URL is not configured')
+        throw new Error('Database URL is not configured. Please set SUPABASE_URL environment variable.')
       }
+      
+      // Log API configuration (without exposing full key)
+      log.info('🔧 API Configuration:', {
+        apiKeyPresent: !!process.env.RAPIDAPI_INSTAGRAM_KEY,
+        apiKeyLength: process.env.RAPIDAPI_INSTAGRAM_KEY?.length || 0,
+        apiKeyPrefix: process.env.RAPIDAPI_INSTAGRAM_KEY?.substring(0, 10) + '...',
+        host: process.env.RAPIDAPI_INSTAGRAM_HOST || 'default'
+      })
 
-      log.info(`✅ Input validated with Zod: ${username_or_id}`)
+      log.info(`✅ Input validated: ${username_or_id}`)
       return { valid: true, target: username_or_id }
     })
 
