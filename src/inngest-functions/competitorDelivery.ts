@@ -107,9 +107,13 @@ export const competitorDelivery = inngest.createFunction(
       for (const subscriber of subscribers) {
         try {
           const { getBotByName } = await import('@/core/bot')
-          const { bot } = getBotByName(subscriber.bot_name)
+          const botResult = getBotByName(subscriber.bot_name)
+          if (!botResult || !botResult.bot) {
+            throw new Error(`Bot not found: ${subscriber.bot_name}`)
+          }
+          const { bot } = botResult
 
-          await bot.api.sendMessage(
+          await bot.telegram.sendMessage(
             subscriber.user_telegram_id,
             `📭 Нет новых рилсов от @${competitor_username} за последние 24 часа`
           )
@@ -154,7 +158,11 @@ export const competitorDelivery = inngest.createFunction(
             }
 
             const { getBotByName } = await import('@/core/bot')
-            const { bot } = getBotByName(subscriber.bot_name)
+            const botResult = getBotByName(subscriber.bot_name)
+            if (!botResult || !botResult.bot) {
+              throw new Error(`Bot not found: ${subscriber.bot_name}`)
+            }
+            const { bot } = botResult
 
             // Определяем формат доставки
             const format = subscriber.delivery_format || 'digest'
@@ -277,7 +285,7 @@ ${topReel.caption ? topReel.caption.substring(0, 100) + '...' : 'Без опис
 ${reels.length > 1 ? `\n📋 Еще ${reels.length - 1} рилсов в списке` : ''}
   `
 
-  await bot.api.sendMessage(subscriber.user_telegram_id, message)
+  await bot.telegram.sendMessage(subscriber.user_telegram_id, message)
 }
 
 /**
@@ -298,7 +306,7 @@ ${reel.caption ? reel.caption.substring(0, 200) + '...' : 'Без описани
 🔗 ${reel.url}
     `
 
-    await bot.api.sendMessage(subscriber.user_telegram_id, message)
+    await bot.telegram.sendMessage(subscriber.user_telegram_id, message)
     await new Promise(resolve => setTimeout(resolve, 500))
   }
 }
@@ -334,7 +342,7 @@ async function sendArchive(
 
   XLSX.writeFile(wb, filePath)
 
-  await bot.api.sendDocument(
+  await bot.telegram.sendDocument(
     subscriber.user_telegram_id,
     new InputFile(filePath, fileName),
     {
