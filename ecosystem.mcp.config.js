@@ -16,6 +16,8 @@ module.exports = {
       output: './logs/main-server-out.log',
       error: './logs/main-server-error.log',
       log: './logs/main-server.log',
+      log_date_format: 'YYYY-MM-DD HH:mm:ss Z',
+      combine_logs: true,
       env: {
         NODE_ENV: 'development',
         PORT: 4000,
@@ -33,6 +35,8 @@ module.exports = {
       output: './logs/mcp-out.log',
       error: './logs/mcp-error.log',
       log: './logs/mcp.log',
+      log_date_format: 'YYYY-MM-DD HH:mm:ss Z',
+      combine_logs: true,
       env: {
         NODE_ENV: 'development',
         SERVER_URL: 'http://localhost:4000',
@@ -56,6 +60,8 @@ module.exports = {
       output: './logs/inngest-out.log',
       error: './logs/inngest-error.log',
       log: './logs/inngest.log',
+      log_date_format: 'YYYY-MM-DD HH:mm:ss Z',
+      combine_logs: true,
       env: {
         NODE_ENV: 'development',
       },
