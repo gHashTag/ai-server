@@ -18,7 +18,9 @@ export const InstagramContentAgentConfig = {
   // Using provided connection string from user
   connectionString:
     process.env.NEON_DATABASE_URL ||
-    'postgresql://neondb_owner:npg_5RWzh7CwrXxE@ep-delicate-block-a1l1lt0p-pooler.ap-southeast-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require',
+    process.env.DATABASE_URL || process.env.NEON_DATABASE_URL || (() => {
+      throw new Error('Database connection string is required. Please set DATABASE_URL or NEON_DATABASE_URL environment variable.')
+    })(),
   ssl: {
     rejectUnauthorized: false,
   },

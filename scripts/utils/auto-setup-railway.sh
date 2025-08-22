@@ -67,9 +67,9 @@ setup_environment() {
     # Дополнительные переменные для Railway
     local base_url
     if [ "$env_name" = "staging" ]; then
-        base_url="https://ai-server-express-staging.railway.app"
+        base_url="https://ai-server-production-production-8e2d.up.railway.app"
     else
-        base_url="https://ai-server-express.railway.app"  
+        base_url="https://ai-server-production-production-8e2d.up.railway.app"  
     fi
     
     set_railway_var "BASE_URL" "$base_url" "$env_name"

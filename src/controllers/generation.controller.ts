@@ -46,6 +46,11 @@ export class GenerationController {
 
       validateUserParams(req)
       const jobId = `veo3_${telegram_id}_${Date.now()}`
+      
+      // Создаем job в tracker
+      const { createVideoJob } = await import('@/services/videoJobTracker')
+      createVideoJob(jobId, 'veo3-video', telegram_id, bot_name, prompt, 'veo3-fast')
+      
       res.status(200).json({ 
         success: true,
         jobId,
@@ -53,15 +58,22 @@ export class GenerationController {
       })
 
       // Используем существующую функцию generateTextToVideo с моделью veo3-fast
-      await generateTextToVideo(
+      generateTextToVideo(
         prompt,
         'veo3-fast', // используем нашу новую модель
         telegram_id,
         username,
         is_ru,
         bot_name,
-        duration // передаем duration из запроса
-      )
+        duration, // передаем duration из запроса
+        jobId // передаем jobId для отслеживания
+      ).catch(error => {
+        // Обновляем статус в случае ошибки
+        import('@/services/videoJobTracker').then(({ setVideoJobError }) => {
+          setVideoJobError(jobId, error.message)
+        })
+        logger.error(`Veo3 video generation failed for job ${jobId}:`, error)
+      })
     } catch (error) {
       next(error)
     }
@@ -351,21 +363,34 @@ export class GenerationController {
 
       validateUserParams(req)
       const jobId = `text_to_video_${telegram_id}_${Date.now()}`
+      
+      // Создаем job в tracker
+      const { createVideoJob } = await import('@/services/videoJobTracker')
+      createVideoJob(jobId, 'text-to-video', telegram_id, bot_name, prompt, videoModel)
+      
       res.status(200).json({ 
         success: true,
         jobId,
         message: 'Processing started' 
       })
 
-      await generateTextToVideo(
+      // Запускаем генерацию асинхронно
+      generateTextToVideo(
         prompt,
         videoModel,
         telegram_id,
         username,
         is_ru,
         bot_name,
-        duration
-      )
+        duration,
+        jobId // передаем jobId для отслеживания
+      ).catch(error => {
+        // Обновляем статус в случае ошибки
+        import('@/services/videoJobTracker').then(({ setVideoJobError }) => {
+          setVideoJobError(jobId, error.message)
+        })
+        logger.error(`Video generation failed for job ${jobId}:`, error)
+      })
     } catch (error) {
       next(error)
     }
@@ -1181,6 +1206,105 @@ export class GenerationController {
       })
     } catch (error) {
       console.error('❌ Ошибка в getMorphingQueueStats:', error)
+      next(error)
+    }
+  }
+
+  /**
+   * 📹 API для получения статуса видео задания
+   */
+  public getVideoJobStatus = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> => {
+    try {
+      const { job_id } = req.params
+      
+      if (!job_id) {
+        res.status(400).json({
+          message: 'job_id is required',
+          status: 'error',
+        })
+        return
+      }
+
+      const { getVideoJobStatus } = await import('@/services/videoJobTracker')
+      const job = getVideoJobStatus(job_id)
+
+      if (!job) {
+        res.status(404).json({
+          message: 'Video job not found',
+          status: 'error',
+          job_id,
+        })
+        return
+      }
+
+      res.status(200).json({
+        success: true,
+        job,
+        timestamp: new Date().toISOString(),
+      })
+    } catch (error) {
+      console.error('❌ Ошибка в getVideoJobStatus:', error)
+      next(error)
+    }
+  }
+
+  /**
+   * 📹 API для получения всех видео заданий пользователя
+   */
+  public getUserVideoJobs = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> => {
+    try {
+      const { telegram_id } = req.params
+      
+      if (!telegram_id) {
+        res.status(400).json({
+          message: 'telegram_id is required',
+          status: 'error',
+        })
+        return
+      }
+
+      const { getUserVideoJobs } = await import('@/services/videoJobTracker')
+      const jobs = getUserVideoJobs(telegram_id)
+
+      res.status(200).json({
+        success: true,
+        jobs,
+        count: jobs.length,
+        timestamp: new Date().toISOString(),
+      })
+    } catch (error) {
+      console.error('❌ Ошибка в getUserVideoJobs:', error)
+      next(error)
+    }
+  }
+
+  /**
+   * 📹 API для получения статистики видео заданий
+   */
+  public getVideoJobsStats = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> => {
+    try {
+      const { getVideoJobsStats } = await import('@/services/videoJobTracker')
+      const stats = getVideoJobsStats()
+
+      res.status(200).json({
+        success: true,
+        video_stats: stats,
+        timestamp: new Date().toISOString(),
+      })
+    } catch (error) {
+      console.error('❌ Ошибка в getVideoJobsStats:', error)
       next(error)
     }
   }
