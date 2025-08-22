@@ -45,15 +45,27 @@ const log = {
     console.warn(`[IG-WARN] ${msg}`, data || ''),
 }
 
-// Database connection pool
-const dbPool = new Pool({
-  connectionString:
-    process.env.NEON_DATABASE_URL ||
-    'postgresql://neondb_owner:npg_vXnxbypES56V@ep-proud-grass-aegoipez-pooler.c-2.us-east-2.aws.neon.tech/neondb?sslmode=require',
-  ssl: {
-    rejectUnauthorized: false,
-  },
-})
+// Database connection pool - ленивая инициализация
+let dbPool: Pool | null = null
+
+function getDbPool(): Pool {
+  if (!dbPool) {
+    const connectionString = process.env.SUPABASE_URL
+    
+    if (!connectionString) {
+      throw new Error('Database connection string is required for Instagram scraping. Please set SUPABASE_URL environment variable.')
+    }
+    
+    dbPool = new Pool({
+      connectionString,
+      ssl: {
+        rejectUnauthorized: false,
+      },
+    })
+  }
+  
+  return dbPool
+}
 
 // Instagram API Integration with Zod validation
 class InstagramAPI {
@@ -375,7 +387,7 @@ class InstagramDatabase {
     users: ValidatedInstagramUser[],
     projectId?: number
   ): Promise<DatabaseSaveResult> {
-    const client = await dbPool.connect()
+    const client = await getDbPool().connect()
     let saved = 0
     let duplicatesSkipped = 0
 
@@ -441,7 +453,7 @@ class InstagramDatabase {
   async createSingleUser(
     userData: CreateInstagramUserEvent
   ): Promise<CreateUserResult> {
-    const client = await dbPool.connect()
+    const client = await getDbPool().connect()
 
     try {
       // Ensure table exists
@@ -630,7 +642,7 @@ class InstagramDatabase {
     reels: ValidatedInstagramReel[],
     projectId?: number
   ): Promise<ReelsSaveResult> {
-    const client = await dbPool.connect()
+    const client = await getDbPool().connect()
     let saved = 0
     let duplicatesSkipped = 0
     let userId = ''
@@ -1264,7 +1276,7 @@ export const instagramScraperV2 = inngest.createFunction(
         throw new Error('Instagram API key is not configured')
       }
 
-      if (!process.env.NEON_DATABASE_URL) {
+      if (!process.env.SUPABASE_URL) {
         throw new Error('Database URL is not configured')
       }
 
@@ -1480,7 +1492,7 @@ export const instagramScraperV2 = inngest.createFunction(
           let allReelsData: any[] = []
           if (scrape_reels && reelsResults.length > 0) {
             // Собираем все рилсы из результатов
-            const client = await dbPool.connect()
+            const client = await getDbPool().connect()
             try {
               const reelsQuery = `
               SELECT * FROM instagram_user_reels 
@@ -1880,7 +1892,7 @@ export const createInstagramUser = inngest.createFunction(
 
     // Step 1: Validate database connection
     const dbValidation = await step.run('validate-database', async () => {
-      if (!process.env.NEON_DATABASE_URL) {
+      if (!process.env.SUPABASE_URL) {
         throw new Error('Database URL is not configured')
       }
 
