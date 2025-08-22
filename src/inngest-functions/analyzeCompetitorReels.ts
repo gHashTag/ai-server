@@ -237,7 +237,7 @@ export const analyzeCompetitorReels = inngest.createFunction(
         throw new Error('Instagram API key is not configured')
       }
 
-      if (!process.env.NEON_DATABASE_URL) {
+      if (!process.env.SUPABASE_URL) {
         throw new Error('Database URL is not configured')
       }
 

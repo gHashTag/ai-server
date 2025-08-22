@@ -23,12 +23,12 @@ let dbPool: Pool | null = null
  */
 function initializeDbPool(): Pool {
   if (!dbPool) {
-    if (!process.env.NEON_DATABASE_URL) {
-      throw new Error('NEON_DATABASE_URL environment variable is not set')
+    if (!process.env.SUPABASE_URL) {
+      throw new Error('SUPABASE_URL environment variable is not set')
     }
 
     dbPool = new Pool({
-      connectionString: process.env.NEON_DATABASE_URL,
+      connectionString: process.env.SUPABASE_URL,
       ssl: {
         rejectUnauthorized: false,
       },

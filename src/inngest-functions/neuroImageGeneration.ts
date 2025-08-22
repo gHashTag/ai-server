@@ -50,7 +50,7 @@ export const neuroImageGeneration = inngest.createFunction(
         model_url,
       })
 
-      const botData = (await step.run('get-bot', async () => {
+      const botData = await step.run('get-bot', async () => {
         logger.info({
           message: '🤖 Getting bot instance',
           botName: bot_name,
@@ -58,16 +58,18 @@ export const neuroImageGeneration = inngest.createFunction(
         })
 
         return getBotByName(bot_name)
-      })) as { bot: any }
+      })
       console.log('botData', botData)
       const bot = botData.bot
 
-      if (!bot) {
+      if (!bot || botData.error) {
         logger.error({
           message: '❌ Bot instance not found',
           bot_name,
           telegram_id,
+          error: botData.error,
         })
+        throw new Error(`Bot instance not found: ${botData.error || 'Unknown error'}`)
       } else {
         logger.info({
           message: '✅ Bot instance found',

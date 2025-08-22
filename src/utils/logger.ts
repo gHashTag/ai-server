@@ -53,15 +53,62 @@ if (!existsSync(logDir)) {
 }
 
 // Установите уровень логирования через переменную окружения
-const logLevel = process.env.LOG_LEVEL || (isDev ? 'debug' : 'info')
+const logLevel = process.env.LOG_LEVEL || (isDev ? 'info' : 'warn')
+
+// Настройки из переменных окружения
+const showHealthChecks = process.env.SHOW_HEALTH_CHECKS === 'true'
+const showOptionsRequests = process.env.SHOW_OPTIONS_REQUESTS === 'true'
+const minimalLogs = process.env.MINIMAL_LOGS === 'true'
+const showTimestamps = process.env.SHOW_TIMESTAMPS !== 'false'
+
+// Создаем кастомный формат для фильтрации 
+const customFormat = winston.format.combine(
+  winston.format.timestamp(),
+  winston.format.printf(({ level, message, timestamp }) => {
+    // Фильтруем избыточные сообщения
+    if (typeof message === 'string') {
+      
+      // Минимальный режим - показываем только ошибки и важные события
+      if (minimalLogs) {
+        if (level === 'error' || 
+            message.includes('🚀') || 
+            message.includes('listening') ||
+            message.includes('started')) {
+          const ts = showTimestamps ? `${timestamp} ` : ''
+          return `${ts}[${level.toUpperCase()}]: ${message}`
+        }
+        return ''
+      }
+      
+      // Скрываем служебные HTTP запросы если не включены
+      if (!showHealthChecks && message.includes('GET /health')) return ''
+      if (!showOptionsRequests && message.includes('OPTIONS /')) return ''
+      
+      // Приоритет для API запросов
+      if (message.includes('POST /api/') || 
+          message.includes('GET /api/') || 
+          message.includes('PUT /api/') || 
+          message.includes('DELETE /api/')) {
+        const ts = showTimestamps ? `${timestamp} ` : ''
+        return `${ts}[${level.toUpperCase()}]: ${message}`
+      }
+      
+      // Показываем все остальные сообщения для info и выше
+      if (level !== 'debug') {
+        const ts = showTimestamps ? `${timestamp} ` : ''
+        return `${ts}[${level.toUpperCase()}]: ${message}`
+      }
+    }
+    
+    const ts = showTimestamps ? `${timestamp} ` : ''
+    return `${ts}[${level.toUpperCase()}]: ${message}`
+  })
+)
 
 // Создаем базовые транспорты
 const transports: winston.transport[] = [
   new winston.transports.Console({
-    format: winston.format.combine(
-      winston.format.colorize(),
-      winston.format.simple()
-    )
+    format: customFormat
   })
 ]
 
@@ -87,10 +134,7 @@ if (logDirAvailable) {
 // Создаем логгер
 const logger = winston.createLogger({
   level: logLevel,
-  format: winston.format.combine(
-    winston.format.timestamp(),
-    winston.format.json()
-  ),
+  format: customFormat,
   transports,
   exitOnError: false
 })
