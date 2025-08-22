@@ -174,9 +174,19 @@ export class KieAiService {
     }
 
     // Валидация длительности
-    const clampedDuration = Math.max(2, Math.min(modelConfig.maxDuration, duration));
-    if (clampedDuration !== duration) {
-      console.log(`⚠️ Duration adjusted from ${duration}s to ${clampedDuration}s for ${model}`);
+    let clampedDuration: number;
+    
+    // ВАЖНО: Veo 3 Fast поддерживает ТОЛЬКО 8 секунд!
+    if (model === 'veo3_fast') {
+      clampedDuration = 8;
+      if (duration !== 8) {
+        console.log(`🚨 CRITICAL: Veo 3 Fast supports ONLY 8 seconds! Forced duration from ${duration}s to 8s`);
+      }
+    } else {
+      clampedDuration = Math.max(2, Math.min(modelConfig.maxDuration, duration));
+      if (clampedDuration !== duration) {
+        console.log(`⚠️ Duration adjusted from ${duration}s to ${clampedDuration}s for ${model}`);
+      }
     }
 
     // Расчет стоимости
@@ -300,40 +310,76 @@ export class KieAiService {
         }
       }
       
-      // ВАЖНО: Kie.ai работает полностью асинхронно
-      // Видео генерируется в фоне, результат нужно получать через webhook
-      console.log('⚠️ Kie.ai генерирует видео асинхронно');
-      console.log('📌 Сохраняем taskId для последующей проверки');
+      // ИСПРАВЛЕНО: Ждем завершения генерации видео
+      console.log('⏳ Ожидаем завершения генерации видео...');
+      console.log(`📋 Task ID: ${taskId}`);
       
-      // Временное решение: возвращаем специальный URL с taskId
-      // В production нужно настроить webhook или периодическую проверку
-      const videoUrl = `https://kie.ai/task/${taskId}`;
+      // Ждем завершения генерации (максимум 5 минут)
+      const maxWaitTime = 300000; // 5 минут
+      const pollInterval = 15000; // проверяем каждые 15 секунд
+      const maxAttempts = Math.floor(maxWaitTime / pollInterval);
       
-      // Для тестирования: делаем несколько попыток получить результат
-      // В реальности видео может генерироваться 1-3 минуты
-      console.log('⏳ Ждем 30 секунд для генерации видео...');
-      await new Promise(resolve => setTimeout(resolve, 30000));
+      let videoUrl: string | null = null;
+      let attempts = 0;
       
-      // После ожидания возвращаем результат с taskId
-      // Frontend или telegram bot должен будет проверять статус отдельно
+      while (attempts < maxAttempts && !videoUrl) {
+        attempts++;
+        console.log(`🔍 Проверка статуса (попытка ${attempts}/${maxAttempts})...`);
+        
+        try {
+          // Проверяем статус задачи в Kie.ai
+          const statusResponse = await axios.get(`${this.baseUrl}/veo/task/${taskId}`, {
+            headers: {
+              'Authorization': `Bearer ${this.apiKey}`,
+              'Content-Type': 'application/json'
+            },
+            timeout: 10000
+          });
+          
+          if (statusResponse.data.code === 200 && statusResponse.data.data) {
+            const taskData = statusResponse.data.data;
+            console.log(`📊 Статус: ${taskData.status}`);
+            
+            if (taskData.status === 'completed' && taskData.videoUrl) {
+              videoUrl = taskData.videoUrl;
+              console.log(`✅ Видео готово! URL: ${videoUrl}`);
+              break;
+            } else if (taskData.status === 'failed') {
+              throw new Error(`Video generation failed: ${taskData.error || 'Unknown error'}`);
+            }
+            // Если статус processing, продолжаем ждать
+          }
+        } catch (statusError: any) {
+          console.log(`⚠️ Ошибка проверки статуса: ${statusError.message}`);
+          // Продолжаем ждать, возможно API временно недоступен
+        }
+        
+        if (!videoUrl && attempts < maxAttempts) {
+          console.log(`⏳ Ждем ${pollInterval/1000} секунд...`);
+          await new Promise(resolve => setTimeout(resolve, pollInterval));
+        }
+      }
+      
+      if (!videoUrl) {
+        console.log('⚠️ Timeout: генерация заняла слишком много времени');
+        throw new Error(`Video generation timeout after ${maxWaitTime/1000} seconds. Task ID: ${taskId}`);
+      }
 
       const processingTime = Date.now() - startTime;
 
-      console.log(`⏱️ Task created in ${processingTime}ms`);
+      console.log(`⏱️ Генерация завершена за ${processingTime}ms`);
       console.log(`   • Task ID: ${taskId}`);
-      console.log(`   • Status URL: ${videoUrl}`);
-      console.log(`   • Estimated cost: $${costUSD.toFixed(3)}`);
-      console.log('   • ⚠️ Видео генерируется асинхронно (1-3 минуты)');
+      console.log(`   • Video URL: ${videoUrl}`);
+      console.log(`   • Cost: $${costUSD.toFixed(3)}`);
+      console.log(`   • Attempts: ${attempts}/${maxAttempts}`);
 
-      // Возвращаем информацию о задаче
-      // В реальном использовании нужно будет проверять статус отдельно
       return {
-        videoUrl: videoUrl, // Временный URL с taskId
+        videoUrl: videoUrl,
         cost: costUSD,
         duration: clampedDuration,
         processingTime,
-        taskId: taskId, // Добавляем taskId для отслеживания
-        status: 'processing' // Указываем что видео в процессе генерации
+        taskId: taskId,
+        status: 'completed'
       };
 
     } catch (error: any) {
