@@ -202,15 +202,48 @@ export class GenerationController {
 
       res.status(200).json({ message: 'Processing started' })
 
-      generateNeuroImageV2(
-        prompt,
-        num_images,
-        telegram_id,
-        is_ru,
-        bot_name
-      ).catch(error => {
-        console.error('Ошибка при генерации изображения:', error)
-      })
+      // Выбор между планом А (Inngest) и планом Б (Оригинальный сервис)
+      if (shouldUseInngest()) {
+        // План А - Inngest
+        logger.info({
+          message: 'План А - Inngest для генерации нейро-изображения V2',
+          telegram_id,
+          prompt: prompt.substring(0, 100),
+          num_images,
+          bot_name
+        })
+
+        await inngest.send({
+          name: 'image/neuro-image-v2.start',
+          data: {
+            prompt,
+            num_images,
+            telegram_id,
+            is_ru,
+            bot_name,
+            idempotencyKey: `neuro-v2:${telegram_id}:${Date.now()}`,
+          },
+        })
+      } else {
+        // План Б - Оригинальный сервис
+        logger.info({
+          message: 'План Б - Оригинальный сервис для генерации нейро-изображения V2',
+          telegram_id,
+          prompt: prompt.substring(0, 100),
+          num_images,
+          bot_name
+        })
+
+        generateNeuroImageV2(
+          prompt,
+          num_images,
+          telegram_id,
+          is_ru,
+          bot_name
+        ).catch(error => {
+          console.error('Ошибка при генерации изображения:', error)
+        })
+      }
     } catch (error) {
       next(error)
     }
@@ -497,9 +530,42 @@ export class GenerationController {
       }
       validateUserParams(req)
       res.status(200).json({ message: 'Processing started' })
-      const { bot } = getBotByName(bot_name)
 
-      generateImageToPrompt(image, telegram_id, username, is_ru, bot)
+      // Выбор между планом А (Inngest) и планом Б (Оригинальный сервис)
+      if (shouldUseInngest()) {
+        // План А - Inngest
+        logger.info({
+          message: 'План А - Inngest для генерации промпта из изображения',
+          telegram_id,
+          imageUrl: typeof image === 'string' ? image.substring(0, 100) : 'base64_image',
+          username,
+          bot_name
+        })
+
+        await inngest.send({
+          name: 'image/image-to-prompt.start',
+          data: {
+            imageUrl: image,
+            telegram_id,
+            username,
+            is_ru,
+            bot_name,
+            idempotencyKey: `image-prompt:${telegram_id}:${Date.now()}`,
+          },
+        })
+      } else {
+        // План Б - Оригинальный сервис
+        logger.info({
+          message: 'План Б - Оригинальный сервис для генерации промпта из изображения',
+          telegram_id,
+          imageUrl: typeof image === 'string' ? image.substring(0, 100) : 'base64_image',
+          username,
+          bot_name
+        })
+
+        const { bot } = getBotByName(bot_name)
+        generateImageToPrompt(image, telegram_id, username, is_ru, bot)
+      }
     } catch (error) {
       next(error)
     }
@@ -644,7 +710,7 @@ export class GenerationController {
   ): Promise<void> => {
     console.log('CASE: createLipSync')
     try {
-      const { type, telegram_id, is_ru } = req.body
+      const { type, telegram_id, is_ru, bot_name } = req.body
       console.log(req.body, 'req.body')
       console.log(type, telegram_id, is_ru, 'type, telegram_id, is_ru')
       console.log(req.files, 'req.files')
@@ -670,32 +736,85 @@ export class GenerationController {
       const audio = `${API_URL}/uploads/${req.body.telegram_id}/lip-sync/${audioFile.filename}`
       console.log(audio, 'audio')
 
-      const lipSyncResponse = await generateLipSync(
-        req.body.telegram_id,
-        video,
-        audio,
-        is_ru
-      )
+      // Выбор между планом А (Inngest) и планом Б (Оригинальный сервис)  
+      if (shouldUseInngest()) {
+        // План А - Inngest (асинхронная обработка)
+        logger.info({
+          message: 'План А - Inngest для генерации лип-синка',
+          telegram_id,
+          video: video.substring(0, 100),
+          audio: audio.substring(0, 100),
+          bot_name
+        })
 
-      const videoLocalPath = path.join(
-        __dirname,
-        '../uploads',
-        req.body.telegram_id,
-        'lip-sync',
-        videoFile.filename
-      )
-      const audioLocalPath = path.join(
-        __dirname,
-        '../uploads',
-        req.body.telegram_id,
-        'lip-sync',
-        audioFile.filename
-      )
+        await inngest.send({
+          name: 'video/lip-sync.start',
+          data: {
+            telegram_id,
+            video,
+            audio,
+            is_ru,
+            bot_name,
+            idempotencyKey: `lip-sync:${telegram_id}:${Date.now()}`,
+          },
+        })
 
-      await deleteFile(videoLocalPath)
-      await deleteFile(audioLocalPath)
+        // Удаляем временные файлы
+        const videoLocalPath = path.join(
+          __dirname,
+          '../uploads',
+          req.body.telegram_id,
+          'lip-sync',
+          videoFile.filename
+        )
+        const audioLocalPath = path.join(
+          __dirname,
+          '../uploads',
+          req.body.telegram_id,
+          'lip-sync',
+          audioFile.filename
+        )
 
-      res.status(200).json(lipSyncResponse)
+        await deleteFile(videoLocalPath)
+        await deleteFile(audioLocalPath)
+
+        res.status(200).json({ message: 'Lip sync processing started' })
+      } else {
+        // План Б - Оригинальный сервис (синхронная обработка)
+        logger.info({
+          message: 'План Б - Оригинальный сервис для генерации лип-синка',
+          telegram_id,
+          video: video.substring(0, 100),
+          audio: audio.substring(0, 100)
+        })
+
+        const lipSyncResponse = await generateLipSync(
+          req.body.telegram_id,
+          video,
+          audio,
+          is_ru
+        )
+
+        const videoLocalPath = path.join(
+          __dirname,
+          '../uploads',
+          req.body.telegram_id,
+          'lip-sync',
+          videoFile.filename
+        )
+        const audioLocalPath = path.join(
+          __dirname,
+          '../uploads',
+          req.body.telegram_id,
+          'lip-sync',
+          audioFile.filename
+        )
+
+        await deleteFile(videoLocalPath)
+        await deleteFile(audioLocalPath)
+
+        res.status(200).json(lipSyncResponse)
+      }
     } catch (error) {
       console.error('Ошибка при обработке запроса:', error)
       next(error)

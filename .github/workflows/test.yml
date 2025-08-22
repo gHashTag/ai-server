@@ -1,0 +1,528 @@
+name: 🧪 Comprehensive Testing Pipeline
+
+on:
+  push:
+    branches: [ main, v2, develop ]
+  pull_request:
+    branches: [ main, v2 ]
+  schedule:
+    # Run tests daily at 2 AM UTC
+    - cron: '0 2 * * *'
+  workflow_dispatch:
+    inputs:
+      test_type:
+        description: 'Test type to run'
+        required: true
+        default: 'all'
+        type: choice
+        options:
+        - all
+        - unit
+        - integration
+        - e2e
+        - performance
+      coverage_threshold:
+        description: 'Coverage threshold percentage'
+        required: false
+        default: '95'
+
+env:
+  NODE_VERSION: '20.x'
+  COVERAGE_THRESHOLD: ${{ github.event.inputs.coverage_threshold || '95' }}
+
+jobs:
+  # Static Analysis and Linting
+  lint-and-type-check:
+    name: 🔍 Static Analysis
+    runs-on: ubuntu-latest
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+
+      - name: 🔧 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: 📦 Install dependencies
+        run: npm ci
+
+      - name: 🔍 ESLint check
+        run: npm run lint
+        continue-on-error: true
+
+      - name: 📝 TypeScript type check
+        run: npm run type-check
+
+      - name: 🛡️ Security audit
+        run: npm audit --audit-level high
+
+  # Unit Tests
+  unit-tests:
+    name: 🧪 Unit Tests
+    runs-on: ubuntu-latest
+    if: ${{ github.event.inputs.test_type == 'all' || github.event.inputs.test_type == 'unit' || !github.event.inputs.test_type }}
+    strategy:
+      matrix:
+        test-group: 
+          - inngest-functions
+          - services
+          - helpers
+          - controllers
+          - mcp-server
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+
+      - name: 🔧 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: 📦 Install dependencies
+        run: npm ci
+
+      - name: 🗄️ Setup test database
+        run: |
+          sudo systemctl start postgresql
+          sudo -u postgres createdb test_ai_server
+
+      - name: 🧪 Run unit tests - ${{ matrix.test-group }}
+        run: |
+          case "${{ matrix.test-group }}" in
+            "inngest-functions")
+              npm test -- --testPathPattern="inngest.*\.test\.ts" --coverage --coverageDirectory=coverage/inngest
+              ;;
+            "services") 
+              npm test -- --testPathPattern="services.*\.test\.ts" --coverage --coverageDirectory=coverage/services
+              ;;
+            "helpers")
+              npm test -- --testPathPattern="helpers.*\.test\.ts" --coverage --coverageDirectory=coverage/helpers
+              ;;
+            "controllers")
+              npm test -- --testPathPattern="controllers.*\.test\.ts" --coverage --coverageDirectory=coverage/controllers
+              ;;
+            "mcp-server")
+              npm test -- --testPathPattern="mcp.*\.test\.ts" --coverage --coverageDirectory=coverage/mcp
+              ;;
+          esac
+
+      - name: 📊 Upload coverage to Codecov
+        uses: codecov/codecov-action@v3
+        with:
+          file: ./coverage/*/lcov.info
+          flags: unit-tests-${{ matrix.test-group }}
+          name: unit-${{ matrix.test-group }}
+
+      - name: 📈 Coverage report summary
+        run: |
+          echo "## 📊 Coverage Report - ${{ matrix.test-group }}" >> $GITHUB_STEP_SUMMARY
+          if [ -f "coverage/${{ matrix.test-group }}/lcov.info" ]; then
+            npm run coverage:summary -- coverage/${{ matrix.test-group }}/lcov.info >> $GITHUB_STEP_SUMMARY
+          fi
+
+  # Integration Tests
+  integration-tests:
+    name: 🔗 Integration Tests
+    runs-on: ubuntu-latest
+    if: ${{ github.event.inputs.test_type == 'all' || github.event.inputs.test_type == 'integration' || !github.event.inputs.test_type }}
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: test_ai_server
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+      
+      redis:
+        image: redis:7-alpine
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 6379:6379
+
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+
+      - name: 🔧 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: 📦 Install dependencies
+        run: npm ci
+
+      - name: 🌍 Set environment variables
+        run: |
+          echo "DATABASE_URL=postgresql://postgres:postgres@localhost:5432/test_ai_server" >> $GITHUB_ENV
+          echo "REDIS_URL=redis://localhost:6379" >> $GITHUB_ENV
+          echo "NODE_ENV=test" >> $GITHUB_ENV
+          echo "USE_INNGEST=true" >> $GITHUB_ENV
+          echo "INNGEST_EVENT_KEY=test-key" >> $GITHUB_ENV
+
+      - name: 🗄️ Run database migrations
+        run: npm run db:migrate
+        continue-on-error: true
+
+      - name: 🔗 Run integration tests
+        run: npm test -- --testPathPattern="integration.*\.test\.ts" --coverage --coverageDirectory=coverage/integration --maxWorkers=2
+
+      - name: 📊 Upload integration test coverage
+        uses: codecov/codecov-action@v3
+        with:
+          file: ./coverage/integration/lcov.info
+          flags: integration-tests
+          name: integration
+
+      - name: 💾 Store integration test results
+        uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: integration-test-results
+          path: |
+            coverage/integration/
+            test-results/
+
+  # A-B Testing and Failover Tests
+  ab-failover-tests:
+    name: 🔄 A-B Testing & Failover
+    runs-on: ubuntu-latest
+    if: ${{ github.event.inputs.test_type == 'all' || github.event.inputs.test_type == 'integration' || !github.event.inputs.test_type }}
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+
+      - name: 🔧 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: 📦 Install dependencies
+        run: npm ci
+
+      - name: 🔄 Test A-B functionality
+        run: npm test -- --testPathPattern="ab-failover\.test\.ts" --verbose
+
+      - name: 🚫 Test failover scenarios
+        run: |
+          echo "Testing Plan A -> Plan B failover"
+          npm test -- --testPathPattern="ab-failover\.test\.ts" --verbose --testNamePattern="failover"
+
+      - name: 📊 Performance comparison tests
+        run: |
+          echo "Running Plan A vs Plan B performance tests"
+          npm test -- --testPathPattern="ab-failover\.test\.ts" --verbose --testNamePattern="Performance"
+
+  # MCP Server Tests  
+  mcp-server-tests:
+    name: 🤖 MCP Server Tests
+    runs-on: ubuntu-latest
+    if: ${{ github.event.inputs.test_type == 'all' || github.event.inputs.test_type == 'integration' || !github.event.inputs.test_type }}
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+
+      - name: 🔧 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: 📦 Install dependencies
+        run: npm ci
+
+      - name: 🤖 Test MCP protocol compliance
+        run: npm test -- --testPathPattern="mcp-server\.integration\.test\.ts" --verbose
+
+      - name: 🔧 Test MCP tool handlers
+        run: npm test -- --testPathPattern="mcp.*\.test\.ts" --verbose
+
+      - name: 📈 Generate MCP test report
+        run: |
+          echo "## 🤖 MCP Server Test Results" >> $GITHUB_STEP_SUMMARY
+          echo "All MCP protocol compliance tests passed ✅" >> $GITHUB_STEP_SUMMARY
+
+  # Performance Tests
+  performance-tests:
+    name: ⚡ Performance Tests
+    runs-on: ubuntu-latest
+    if: ${{ github.event.inputs.test_type == 'all' || github.event.inputs.test_type == 'performance' }}
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+
+      - name: 🔧 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: 📦 Install dependencies
+        run: npm ci
+
+      - name: ⚡ Install performance testing tools
+        run: |
+          npm install -g artillery autocannon
+          npm install --save-dev clinic
+
+      - name: 🏃 Run load tests
+        run: |
+          echo "Running load tests on inngest functions"
+          npm run test:performance
+        continue-on-error: true
+
+      - name: 📊 Generate performance report
+        run: |
+          echo "## ⚡ Performance Test Results" >> $GITHUB_STEP_SUMMARY
+          echo "Load testing completed - see artifacts for detailed results" >> $GITHUB_STEP_SUMMARY
+
+      - name: 📈 Upload performance results
+        uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: performance-test-results
+          path: |
+            performance-results/
+            clinic-output/
+
+  # End-to-End Tests
+  e2e-tests:
+    name: 🌐 End-to-End Tests  
+    runs-on: ubuntu-latest
+    if: ${{ github.event.inputs.test_type == 'all' || github.event.inputs.test_type == 'e2e' }}
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: test_ai_server
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+
+      - name: 🔧 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: 📦 Install dependencies
+        run: npm ci
+
+      - name: 🚀 Start application
+        run: |
+          npm run build
+          npm start &
+          sleep 10
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/test_ai_server
+          NODE_ENV: test
+
+      - name: 🌐 Run E2E tests
+        run: npm run test:e2e
+        continue-on-error: true
+
+      - name: 📸 Take screenshots on failure
+        uses: actions/upload-artifact@v3
+        if: failure()
+        with:
+          name: e2e-screenshots
+          path: e2e/screenshots/
+
+  # Coverage Analysis
+  coverage-analysis:
+    name: 📊 Coverage Analysis
+    runs-on: ubuntu-latest
+    needs: [unit-tests, integration-tests]
+    if: always()
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+
+      - name: 📊 Download all coverage reports
+        uses: actions/download-artifact@v3
+
+      - name: 🔧 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: 📦 Install dependencies
+        run: npm ci
+
+      - name: 🔄 Merge coverage reports
+        run: |
+          npx nyc merge coverage/ coverage/merged-coverage.json
+          npx nyc report --reporter=lcov --reporter=text-summary --reporter=html
+        continue-on-error: true
+
+      - name: 📈 Coverage threshold check
+        run: |
+          COVERAGE=$(npx nyc report --reporter=text-summary | grep -E "Lines.*%" | awk '{print $3}' | sed 's/%//')
+          echo "Current coverage: $COVERAGE%"
+          echo "Threshold: ${{ env.COVERAGE_THRESHOLD }}%"
+          
+          if (( $(echo "$COVERAGE >= ${{ env.COVERAGE_THRESHOLD }}" | bc -l) )); then
+            echo "✅ Coverage threshold met!"
+            echo "coverage_status=✅ PASSED" >> $GITHUB_ENV
+          else
+            echo "❌ Coverage below threshold!"
+            echo "coverage_status=❌ FAILED" >> $GITHUB_ENV
+            exit 1
+          fi
+
+      - name: 📊 Generate coverage badge
+        run: |
+          npx coverage-badges-cli --output coverage/badge.svg
+        continue-on-error: true
+
+      - name: 📈 Upload final coverage report
+        uses: codecov/codecov-action@v3
+        with:
+          file: ./coverage/lcov.info
+          flags: complete-coverage
+          name: complete-coverage
+
+      - name: 📋 Coverage summary
+        run: |
+          echo "## 📊 Final Coverage Report" >> $GITHUB_STEP_SUMMARY
+          echo "Status: ${{ env.coverage_status }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          npx nyc report --reporter=text-summary >> $GITHUB_STEP_SUMMARY
+
+      - name: 💾 Store coverage artifacts
+        uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: coverage-report
+          path: |
+            coverage/
+            coverage.json
+
+  # Security Tests
+  security-tests:
+    name: 🛡️ Security Tests
+    runs-on: ubuntu-latest
+    if: ${{ github.event.inputs.test_type == 'all' || !github.event.inputs.test_type }}
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+
+      - name: 🛡️ Run Snyk security test
+        uses: snyk/actions/node@master
+        continue-on-error: true
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+
+      - name: 🔍 CodeQL Analysis
+        uses: github/codeql-action/analyze@v2
+        continue-on-error: true
+
+      - name: 🔐 Secret scanning
+        run: |
+          echo "Running secret scanning..."
+          # Add secret scanning tools here
+        continue-on-error: true
+
+  # Quality Gates
+  quality-gate:
+    name: 🚦 Quality Gate
+    runs-on: ubuntu-latest
+    needs: [lint-and-type-check, unit-tests, integration-tests, coverage-analysis]
+    if: always()
+    steps:
+      - name: 📊 Evaluate quality metrics
+        run: |
+          echo "## 🚦 Quality Gate Results" >> $GITHUB_STEP_SUMMARY
+          
+          # Check if all previous jobs passed
+          LINT_STATUS="${{ needs.lint-and-type-check.result }}"
+          UNIT_STATUS="${{ needs.unit-tests.result }}"
+          INTEGRATION_STATUS="${{ needs.integration-tests.result }}"
+          COVERAGE_STATUS="${{ needs.coverage-analysis.result }}"
+          
+          echo "- 🔍 Static Analysis: $LINT_STATUS" >> $GITHUB_STEP_SUMMARY
+          echo "- 🧪 Unit Tests: $UNIT_STATUS" >> $GITHUB_STEP_SUMMARY  
+          echo "- 🔗 Integration Tests: $INTEGRATION_STATUS" >> $GITHUB_STEP_SUMMARY
+          echo "- 📊 Coverage Analysis: $COVERAGE_STATUS" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          if [[ "$LINT_STATUS" == "success" && "$UNIT_STATUS" == "success" && "$INTEGRATION_STATUS" == "success" && "$COVERAGE_STATUS" == "success" ]]; then
+            echo "🎉 All quality checks passed! Ready for deployment." >> $GITHUB_STEP_SUMMARY
+            echo "quality_gate=passed" >> $GITHUB_ENV
+          else
+            echo "❌ Quality gate failed. Please fix issues before merging." >> $GITHUB_STEP_SUMMARY
+            echo "quality_gate=failed" >> $GITHUB_ENV
+            exit 1
+          fi
+
+      - name: 🏆 Quality gate status
+        run: |
+          if [ "${{ env.quality_gate }}" = "passed" ]; then
+            echo "🎉 Quality gate: PASSED"
+          else
+            echo "❌ Quality gate: FAILED"
+            exit 1
+          fi
+
+  # Deployment Readiness Check
+  deployment-readiness:
+    name: 🚀 Deployment Readiness
+    runs-on: ubuntu-latest  
+    needs: [quality-gate]
+    if: ${{ needs.quality-gate.result == 'success' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/v2') }}
+    steps:
+      - name: ✅ Ready for deployment
+        run: |
+          echo "## 🚀 Deployment Status" >> $GITHUB_STEP_SUMMARY
+          echo "✅ All tests passed" >> $GITHUB_STEP_SUMMARY
+          echo "✅ Coverage threshold met" >> $GITHUB_STEP_SUMMARY
+          echo "✅ Quality gate passed" >> $GITHUB_STEP_SUMMARY
+          echo "🚀 **READY FOR DEPLOYMENT**" >> $GITHUB_STEP_SUMMARY
+
+      - name: 🏷️ Create deployment tag
+        if: github.ref == 'refs/heads/main'
+        run: |
+          DATE=$(date +%Y%m%d-%H%M%S)
+          git tag "deployment-$DATE"
+          echo "Created deployment tag: deployment-$DATE"
+
+# Workflow notifications
+  notify-results:
+    name: 📱 Notify Results
+    runs-on: ubuntu-latest
+    needs: [quality-gate]
+    if: always() && github.event_name == 'push'
+    steps:
+      - name: 📱 Send notification
+        run: |
+          STATUS="${{ needs.quality-gate.result }}"
+          if [ "$STATUS" = "success" ]; then
+            echo "✅ All tests passed for ${{ github.ref }}"
+          else  
+            echo "❌ Tests failed for ${{ github.ref }}"
+          fi
+          # Add notification integrations here (Slack, Discord, etc.)

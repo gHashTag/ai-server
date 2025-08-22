@@ -47,7 +47,7 @@ export const generateModelTrainingV2Inngest = inngest.createFunction(
           message: 'Inngest: Обучение модели V2 успешно запущено',
           telegram_id,
           success: result.success,
-          message: result.message
+          result_message: result.message
         })
 
         return {

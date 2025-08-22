@@ -28,6 +28,7 @@ import { fileUpload } from './utils/fileUpload'
 import { inngestRouter } from './routes/inngest.route'
 import { UploadRoute } from './routes/upload.route'
 import { inngest } from './core/inngest-client/clients'
+import { mcpServer } from './core/mcp-server'
 // const nexrenderPort = NEXRENDER_PORT
 // const secret = process.env.NEXRENDER_SECRET
 
@@ -53,11 +54,21 @@ export class App {
   }
 
   public listen() {
-    this.server = this.app.listen(this.port, () => {
+    this.server = this.app.listen(this.port, async () => {
       logger.info(`=================================`)
       logger.info(`======= ENV: ${this.env} =======`)
       logger.info(`🚀 App listening on the port ${this.port}`)
       logger.info(`http://localhost:${this.port}`)
+      
+      // Запуск MCP-сервера
+      try {
+        await mcpServer.start()
+        logger.info(`🔌 MCP Server started successfully`)
+        logger.info(`📊 A/B Testing: ${process.env.AB_TESTING_ENABLED === 'true' ? 'enabled' : 'disabled'}`)
+      } catch (error) {
+        logger.error(`❌ Failed to start MCP Server:`, error)
+      }
+      
       logger.info(`=================================`)
     })
     return this.server
@@ -69,7 +80,19 @@ export class App {
 
   public close(callback?: () => void) {
     if (this.server) {
-      this.server.close(callback)
+      this.server.close(async () => {
+        try {
+          // Graceful shutdown MCP-сервера
+          await mcpServer.close()
+          logger.info(`🔌 MCP Server closed successfully`)
+        } catch (error) {
+          logger.error(`❌ Error closing MCP Server:`, error)
+        }
+        
+        if (callback) {
+          callback()
+        }
+      })
     }
   }
 

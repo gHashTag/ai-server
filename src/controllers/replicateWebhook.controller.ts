@@ -3,6 +3,7 @@ import { inngest } from '@/core/inngest-client/clients'
 import { updateLatestModelTrainingQuick } from '@/core/supabase'
 import { NotificationService } from '@/services'
 import { getTrainingWithUser } from '@/core/supabase/getTrainingWithUser'
+import { shouldUseInngest } from '@/config'
 import { logger } from '@utils/logger'
 
 export class ReplicateWebhookController {
@@ -84,11 +85,40 @@ export class ReplicateWebhookController {
         // 🚨 Отправка ошибок только для реальных сбоев
         if (['failed', 'canceled'].includes(event.status)) {
           try {
-            await this.notificationService.sendTrainingError(
-              training.users.telegram_id.toString(),
-              training.users.bot_name,
-              event.error || 'Unknown error'
-            )
+            // Выбор между планом А (Inngest) и планом Б (Оригинальный сервис)
+            if (shouldUseInngest()) {
+              // План А - Inngest
+              logger.info({
+                message: 'План А - Inngest для уведомления об ошибке обучения',
+                predictionId: event.id,
+                telegram_id: training.users.telegram_id
+              })
+
+              await inngest.send({
+                name: 'notification/training-error.start',
+                data: {
+                  telegramId: training.users.telegram_id.toString(),
+                  botName: training.users.bot_name,
+                  error: event.error || 'Unknown error',
+                  options: { truncateError: true, maxLength: 2000 },
+                  idempotencyKey: `training-error:${event.id}:${Date.now()}`,
+                },
+              })
+            } else {
+              // План Б - Оригинальный сервис
+              logger.info({
+                message: 'План Б - Оригинальный сервис для уведомления об ошибке обучения',
+                predictionId: event.id,
+                telegram_id: training.users.telegram_id
+              })
+
+              await this.notificationService.sendTrainingError(
+                training.users.telegram_id.toString(),
+                training.users.bot_name,
+                event.error || 'Unknown error'
+              )
+            }
+
             logger.info({
               message: '🚨 Отправлено уведомление об ошибке',
               predictionId: event.id,
@@ -105,11 +135,44 @@ export class ReplicateWebhookController {
 
         if (event.status === 'succeeded') {
           try {
-            await this.notificationService.sendSuccessNotification(
-              training.users.telegram_id.toString(),
-              training.users.bot_name,
-              training.users.language_code === 'ru'
-            )
+            // Выбор между планом А (Inngest) и планом Б (Оригинальный сервис)
+            if (shouldUseInngest()) {
+              // План А - Inngest
+              logger.info({
+                message: 'План А - Inngest для уведомления об успехе обучения',
+                predictionId: event.id,
+                telegram_id: training.users.telegram_id
+              })
+
+              await inngest.send({
+                name: 'notification/success.start',
+                data: {
+                  telegramId: training.users.telegram_id.toString(),
+                  botName: training.users.bot_name,
+                  message: '🎉 Training completed successfully!',
+                  data: {
+                    type: 'training_success',
+                    modelName: training.model_name,
+                    isRu: training.users.language_code === 'ru'
+                  },
+                  idempotencyKey: `training-success:${event.id}:${Date.now()}`,
+                },
+              })
+            } else {
+              // План Б - Оригинальный сервис
+              logger.info({
+                message: 'План Б - Оригинальный сервис для уведомления об успехе обучения',
+                predictionId: event.id,
+                telegram_id: training.users.telegram_id
+              })
+
+              await this.notificationService.sendSuccessNotification(
+                training.users.telegram_id.toString(),
+                training.users.bot_name,
+                training.users.language_code === 'ru'
+              )
+            }
+
             logger.info({
               message: '🎉 Отправлено уведомление об успехе',
               predictionId: event.id,
