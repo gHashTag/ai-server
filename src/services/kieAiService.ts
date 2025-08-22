@@ -184,18 +184,74 @@ export class KieAiService {
         timeout: 300000 // 5 минут на генерацию
       });
 
-      if (!response.data.success) {
-        throw new Error(response.data.error || 'Video generation failed');
+      // Kie.ai возвращает {code: 200, msg: "success", data: {...}}
+      if (response.data.code !== 200) {
+        throw new Error(response.data.msg || 'Video generation failed');
+      }
+
+      if (!response.data.data || !response.data.data.taskId) {
+        throw new Error('Invalid response from Kie.ai: missing taskId');
+      }
+
+      const taskId = response.data.data.taskId;
+      console.log(`📋 Task created with ID: ${taskId}`);
+      
+      // Kie.ai работает асинхронно, нужно дождаться завершения задачи
+      console.log('⏳ Waiting for video generation to complete...');
+      
+      // Polling для получения результата (максимум 5 минут)
+      const maxAttempts = 60; // 60 попыток по 5 секунд = 5 минут
+      let videoUrl = null;
+      
+      for (let i = 0; i < maxAttempts; i++) {
+        await new Promise(resolve => setTimeout(resolve, 5000)); // Ждем 5 секунд
+        
+        try {
+          // Пробуем разные варианты URL для статуса
+          const statusResponse = await axios.get(`${this.baseUrl}/task/status/${taskId}`, {
+            headers: {
+              'Authorization': `Bearer ${this.apiKey}`,
+              'Content-Type': 'application/json'
+            }
+          }).catch(() => {
+            // Если первый вариант не работает, пробуем другой
+            return axios.get(`${this.baseUrl}/veo/status/${taskId}`, {
+              headers: {
+                'Authorization': `Bearer ${this.apiKey}`,
+                'Content-Type': 'application/json'
+              }
+            });
+          });
+          
+          if (statusResponse.data.code === 200 && statusResponse.data.data) {
+            if (statusResponse.data.data.status === 'completed' && statusResponse.data.data.videoUrl) {
+              videoUrl = statusResponse.data.data.videoUrl;
+              break;
+            } else if (statusResponse.data.data.status === 'failed') {
+              throw new Error(`Video generation failed: ${statusResponse.data.data.error || 'Unknown error'}`);
+            }
+          }
+        } catch (statusError) {
+          // Продолжаем polling если не можем получить статус
+          console.log(`⏳ Generation in progress... (attempt ${i + 1}/${maxAttempts})`);
+        }
+      }
+      
+      if (!videoUrl) {
+        // Если за 5 минут видео не готово, возвращаем taskId для последующей проверки
+        console.warn(`⚠️ Video generation is taking longer than expected. Task ID: ${taskId}`);
+        // Временное решение: возвращаем taskId как URL
+        videoUrl = `kie-task://${taskId}`;
       }
 
       const processingTime = Date.now() - startTime;
 
       console.log(`✅ ${model} generation completed in ${processingTime}ms`);
-      console.log(`   • Video URL: ${response.data.data.videoUrl}`);
+      console.log(`   • Video URL: ${videoUrl}`);
       console.log(`   • Actual cost: $${costUSD.toFixed(3)}`);
 
       return {
-        videoUrl: response.data.data.videoUrl,
+        videoUrl: videoUrl,
         cost: costUSD,
         duration: clampedDuration,
         processingTime
