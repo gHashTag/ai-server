@@ -41,13 +41,14 @@ interface DailyStats {
  */
 async function collectDailyStats(): Promise<DailyStats> {
   const client = await dbPool.connect()
-  
+
   try {
     const yesterday = new Date()
     yesterday.setHours(yesterday.getHours() - 24)
 
     // Статистика network checks
-    const networkStats = await client.query(`
+    const networkStats = await client.query(
+      `
       SELECT 
         endpoint,
         COUNT(*) as total_checks,
@@ -56,20 +57,26 @@ async function collectDailyStats(): Promise<DailyStats> {
       FROM network_check_history 
       WHERE checked_at >= $1
       GROUP BY endpoint
-    `, [yesterday])
+    `,
+      [yesterday]
+    )
 
     // Статистика системных логов (если есть)
-    const systemStats = await client.query(`
+    const systemStats = await client.query(
+      `
       SELECT 
         COUNT(*) as total_logs,
         COUNT(CASE WHEN level = 'error' THEN 1 END) as error_logs,
         COUNT(CASE WHEN level = 'warn' THEN 1 END) as warn_logs
       FROM system_logs 
       WHERE created_at >= $1
-    `, [yesterday])
+    `,
+      [yesterday]
+    )
 
     // Топ ошибок
-    const topErrors = await client.query(`
+    const topErrors = await client.query(
+      `
       SELECT 
         data->>'error' as error,
         COUNT(*) as count
@@ -78,41 +85,46 @@ async function collectDailyStats(): Promise<DailyStats> {
       GROUP BY data->>'error'
       ORDER BY count DESC
       LIMIT 5
-    `, [yesterday])
+    `,
+      [yesterday]
+    )
 
     client.release()
 
     return {
       totalRequests: parseInt(systemStats.rows[0]?.total_logs || '0'),
-      successfulRequests: parseInt(systemStats.rows[0]?.total_logs || '0') - parseInt(systemStats.rows[0]?.error_logs || '0'),
+      successfulRequests:
+        parseInt(systemStats.rows[0]?.total_logs || '0') -
+        parseInt(systemStats.rows[0]?.error_logs || '0'),
       failedRequests: parseInt(systemStats.rows[0]?.error_logs || '0'),
       avgResponseTime: 0, // Будет рассчитано отдельно
       topErrors: topErrors.rows.map(row => ({
         error: row.error || 'Unknown error',
-        count: parseInt(row.count)
+        count: parseInt(row.count),
       })),
       networkCheckResults: networkStats.rows.map(row => ({
         endpoint: row.endpoint,
-        successRate: (parseInt(row.successful_checks) / parseInt(row.total_checks)) * 100,
-        avgResponseTime: parseFloat(row.avg_response_time || '0')
+        successRate:
+          (parseInt(row.successful_checks) / parseInt(row.total_checks)) * 100,
+        avgResponseTime: parseFloat(row.avg_response_time || '0'),
       })),
       deploymentsCount: 0, // Будет обновлено если есть данные о деплоях
-      criticalIssues: parseInt(systemStats.rows[0]?.error_logs || '0')
+      criticalIssues: parseInt(systemStats.rows[0]?.error_logs || '0'),
     }
   } catch (error) {
     client.release()
     logger.error('Error collecting daily stats:', error)
-    
+
     // Fallback статистика
     return {
       totalRequests: 0,
-      successfulRequests: 0, 
+      successfulRequests: 0,
       failedRequests: 0,
       avgResponseTime: 0,
       topErrors: [],
       networkCheckResults: [],
       deploymentsCount: 0,
-      criticalIssues: 0
+      criticalIssues: 0,
     }
   }
 }
@@ -123,22 +135,23 @@ async function collectDailyStats(): Promise<DailyStats> {
 async function getSystemContext(): Promise<string> {
   try {
     const client = await dbPool.connect()
-    
+
     // Собираем информацию о системе
     const systemInfo = []
-    
+
     // Информация о процессе
     const uptimeHours = Math.floor(process.uptime() / 3600)
     const memoryUsage = process.memoryUsage()
     const memoryMB = Math.round(memoryUsage.rss / 1024 / 1024)
-    
+
     systemInfo.push(`Аптайм: ${uptimeHours} часов, память: ${memoryMB}MB`)
-    
+
     // Версия и среда
-    const version = process.env.RAILWAY_DEPLOYMENT_ID?.substring(0, 8) || 'unknown'
+    const version =
+      process.env.RAILWAY_DEPLOYMENT_ID?.substring(0, 8) || 'unknown'
     const env = process.env.NODE_ENV || 'development'
     systemInfo.push(`Версия: ${version}, среда: ${env}`)
-    
+
     // Последние деплои
     try {
       const lastDeploy = await client.query(`
@@ -148,25 +161,34 @@ async function getSystemContext(): Promise<string> {
         ORDER BY created_at DESC 
         LIMIT 1
       `)
-      
+
       if (lastDeploy.rows.length > 0) {
-        const deployAge = Math.round((Date.now() - new Date(lastDeploy.rows[0].created_at).getTime()) / 1000 / 3600)
+        const deployAge = Math.round(
+          (Date.now() - new Date(lastDeploy.rows[0].created_at).getTime()) /
+            1000 /
+            3600
+        )
         systemInfo.push(`Последний деплой: ${deployAge} часов назад`)
       }
     } catch (e) {
       // Игнорируем если таблица не существует
     }
-    
+
     // База данных
     const dbResult = await client.query('SELECT version()')
-    systemInfo.push(`БД: ${dbResult.rows[0].version.split(' ')[0]} ${dbResult.rows[0].version.split(' ')[1]}`)
-    
+    systemInfo.push(
+      `БД: ${dbResult.rows[0].version.split(' ')[0]} ${
+        dbResult.rows[0].version.split(' ')[1]
+      }`
+    )
+
     client.release()
     return systemInfo.join(', ')
-    
   } catch (error) {
     logger.warn('Could not get system context:', error)
-    return `Аптайм: ${Math.floor(process.uptime() / 3600)} часов, память: ${Math.round(process.memoryUsage().rss / 1024 / 1024)}MB`
+    return `Аптайм: ${Math.floor(
+      process.uptime() / 3600
+    )} часов, память: ${Math.round(process.memoryUsage().rss / 1024 / 1024)}MB`
   }
 }
 
@@ -191,35 +213,69 @@ async function analyzeSystemWithAI(stats: DailyStats): Promise<{
     isWeekend: [0, 6].includes(now.getDay()),
     isBusinessHours: now.getHours() >= 9 && now.getHours() <= 18,
     isLateEvening: now.getHours() >= 22 || now.getHours() <= 6,
-    season: ['зима', 'зима', 'весна', 'весна', 'весна', 'лето', 'лето', 'лето', 'осень', 'осень', 'осень', 'зима'][now.getMonth()]
+    season: [
+      'зима',
+      'зима',
+      'весна',
+      'весна',
+      'весна',
+      'лето',
+      'лето',
+      'лето',
+      'осень',
+      'осень',
+      'осень',
+      'зима',
+    ][now.getMonth()],
   }
 
   // Получаем дополнительные данные о системе
   const systemContext = await getSystemContext()
-  
-  const prompt = `Ты Алексей, опытный DevOps-инженер с 10+ лет опыта. Анализируешь production систему как живой организм.
+
+  const prompt = `Ты Любовь, опытный DevOps-инженер с 10+ лет опыта. Анализируешь production систему как живой организм, заботливо и с пониманием.
 
 КОНТЕКСТ ВРЕМЕНИ:
 - Сейчас: ${dayOfWeek}, ${now.toLocaleString('ru-RU')} (${timeContext.season})
-- ${timeContext.isWeekend ? 'Выходной' : 'Рабочий день'}, ${timeContext.isBusinessHours ? 'рабочие часы' : timeContext.isLateEvening ? 'поздний вечер/ночь' : 'внерабочее время'}
+- ${timeContext.isWeekend ? 'Выходной' : 'Рабочий день'}, ${
+    timeContext.isBusinessHours
+      ? 'рабочие часы'
+      : timeContext.isLateEvening
+      ? 'поздний вечер/ночь'
+      : 'внерабочее время'
+  }
 
 СИСТЕМНЫЕ ДАННЫЕ ЗА 24 ЧАСА:
-- Активность: ${stats.totalRequests.toLocaleString()} запросов (${stats.totalRequests > 0 ? ((stats.successfulRequests / stats.totalRequests) * 100).toFixed(1) : '100'}% успех)
+- Активность: ${stats.totalRequests.toLocaleString()} запросов (${
+    stats.totalRequests > 0
+      ? ((stats.successfulRequests / stats.totalRequests) * 100).toFixed(1)
+      : '100'
+  }% успех)
 - Инциденты: ${stats.criticalIssues} критичных проблем
 - Деплои: ${stats.deploymentsCount}
 - Система: ${systemContext}
 
 ЗДОРОВЬЕ ЭНДПОИНТОВ:
-${stats.networkCheckResults.length > 0 
-  ? stats.networkCheckResults.map(r => 
-      `- ${r.endpoint}: ${r.successRate.toFixed(1)}% доступность (${r.avgResponseTime.toFixed(0)}ms отклик)`
-    ).join('\n')
-  : 'Данные о проверках эндпоинтов отсутствуют'}
+${
+  stats.networkCheckResults.length > 0
+    ? stats.networkCheckResults
+        .map(
+          r =>
+            `- ${r.endpoint}: ${r.successRate.toFixed(
+              1
+            )}% доступность (${r.avgResponseTime.toFixed(0)}ms отклик)`
+        )
+        .join('\n')
+    : 'Данные о проверках эндпоинтов отсутствуют'
+}
 
 КАРТИНА ОШИБОК:
-${stats.topErrors.length > 0 
-  ? stats.topErrors.map((e, i) => `${i + 1}. "${e.error}": ${e.count} раз`).join('\n')
-  : 'Критичных ошибок не зафиксировано'}
+${
+  stats.topErrors.length > 0
+    ? stats.topErrors
+        .map((e, i) => `${i + 1}. "${e.error}": ${e.count} раз`)
+        .join('\n')
+    : 'Критичных ошибок не зафиксировано'
+}
 
 Проанализируй как настоящий эксперт. Говори прямо, с пониманием дела. Каждый отчет должен быть уникальным!
 
@@ -236,13 +292,16 @@ ${stats.topErrors.length > 0
 
   try {
     const response = await openai.chat.completions.create({
-      model: process.env.DEEPSEEK_API_KEY ? 'deepseek-chat' : 'gpt-4-turbo-preview',
+      model: process.env.DEEPSEEK_API_KEY
+        ? 'deepseek-chat'
+        : 'gpt-4-turbo-preview',
       messages: [
         {
           role: 'system',
-          content: 'Ты Алексей, DevOps с большим опытом. Говоришь живо, по делу, с пониманием. Каждый анализ уникален. Не используешь шаблоны. Понимаешь систему как живой организм.'
+          content:
+            'Ты Любовь, DevOps с большим опытом. Говоришь тепло, заботливо, с пониманием и душой. Каждый анализ уникален. Не используешь шаблоны. Понимаешь систему как живой организм, который нуждается в заботе.',
         },
-        { role: 'user', content: prompt }
+        { role: 'user', content: prompt },
       ],
       response_format: { type: 'json_object' },
       temperature: 0.8, // Высокая креативность для уникальности
@@ -250,30 +309,42 @@ ${stats.topErrors.length > 0
     })
 
     const result = JSON.parse(response.choices[0].message.content || '{}')
-    
+
     // Добавляем контекстные данные в анализ
     return {
       ...result,
       // Обеспечиваем наличие всех полей с fallback'ами
-      analysis: result.analysis || `Система сегодня показывает себя неплохо - ${stats.totalRequests.toLocaleString()} запросов обработано`,
+      analysis:
+        result.analysis ||
+        `Система сегодня показывает себя неплохо - ${stats.totalRequests.toLocaleString()} запросов обработано`,
       insights: result.insights || ['Активность в норме для времени'],
-      concerns: result.concerns || (stats.criticalIssues > 0 ? ['Есть критичные ошибки'] : ['Пока всё спокойно']),
+      concerns:
+        result.concerns ||
+        (stats.criticalIssues > 0
+          ? ['Есть критичные ошибки']
+          : ['Пока всё спокойно']),
       healthScore: result.healthScore || calculateHealthScore(stats),
       personality: result.personality || 'стабильная рабочая лошадка',
       actionItems: result.actionItems || ['Мониторить как обычно'],
-      mood: result.mood || (stats.criticalIssues > 5 ? 'беспокойство' : 'спокойствие')
+      mood:
+        result.mood ||
+        (stats.criticalIssues > 5 ? 'беспокойство' : 'спокойствие'),
     }
-    
   } catch (error) {
     logger.error('Error in AI analysis:', error)
-    
-    // Интеллектуальный fallback с контекстом
-    const successRate = stats.totalRequests > 0 
-      ? (stats.successfulRequests / stats.totalRequests) * 100 
-      : 100
 
-    const contextualAnalysis = generateContextualFallback(stats, timeContext, successRate)
-    
+    // Интеллектуальный fallback с контекстом
+    const successRate =
+      stats.totalRequests > 0
+        ? (stats.successfulRequests / stats.totalRequests) * 100
+        : 100
+
+    const contextualAnalysis = generateContextualFallback(
+      stats,
+      timeContext,
+      successRate
+    )
+
     return contextualAnalysis
   }
 }
@@ -282,59 +353,87 @@ ${stats.topErrors.length > 0
  * Расчет оценки здоровья системы
  */
 function calculateHealthScore(stats: DailyStats): number {
-  const successRate = stats.totalRequests > 0 
-    ? (stats.successfulRequests / stats.totalRequests) * 100 
-    : 100
-  
+  const successRate =
+    stats.totalRequests > 0
+      ? (stats.successfulRequests / stats.totalRequests) * 100
+      : 100
+
   let score = successRate
-  
+
   // Штрафы за критичные проблемы
   score -= stats.criticalIssues * 5
-  
+
   // Учитываем производительность эндпоинтов
   if (stats.networkCheckResults.length > 0) {
-    const avgEndpointHealth = stats.networkCheckResults.reduce((sum, r) => sum + r.successRate, 0) / stats.networkCheckResults.length
+    const avgEndpointHealth =
+      stats.networkCheckResults.reduce((sum, r) => sum + r.successRate, 0) /
+      stats.networkCheckResults.length
     score = (score + avgEndpointHealth) / 2
   }
-  
+
   return Math.max(0, Math.min(100, Math.round(score)))
 }
 
 /**
  * Контекстный fallback анализ
  */
-function generateContextualFallback(stats: DailyStats, timeContext: any, successRate: number) {
-  const timeGreeting = timeContext.isLateEvening 
-    ? 'Ночная смена подходит к концу' 
-    : timeContext.isBusinessHours 
+function generateContextualFallback(
+  stats: DailyStats,
+  timeContext: any,
+  successRate: number
+) {
+  const timeGreeting = timeContext.isLateEvening
+    ? 'Ночная смена подходит к концу'
+    : timeContext.isBusinessHours
     ? 'День в самом разгаре'
     : 'Спокойное внерабочее время'
-  
-  const systemMood = successRate > 95 
-    ? 'Система чувствует себя отлично' 
-    : successRate > 85 
-    ? 'Система работает с небольшими капризами'
-    : 'Системе нужно внимание'
-  
+
+  const systemMood =
+    successRate > 95
+      ? 'Система чувствует себя отлично'
+      : successRate > 85
+      ? 'Система работает с небольшими капризами'
+      : 'Системе нужно внимание'
+
   return {
-    analysis: `${timeGreeting}. ${systemMood} - за сутки обработано ${stats.totalRequests.toLocaleString()} запросов с результатом ${successRate.toFixed(1)}%. ${stats.criticalIssues > 0 ? `Зафиксировано ${stats.criticalIssues} критичных инцидентов, требующих разбора.` : 'Критичных проблем не обнаружено.'}`,
+    analysis: `${timeGreeting}. ${systemMood} - за сутки обработано ${stats.totalRequests.toLocaleString()} запросов с результатом ${successRate.toFixed(
+      1
+    )}%. ${
+      stats.criticalIssues > 0
+        ? `Зафиксировано ${stats.criticalIssues} критичных инцидентов, требующих разбора.`
+        : 'Критичных проблем не обнаружено.'
+    }`,
     insights: [
-      stats.topErrors.length > 0 
+      stats.topErrors.length > 0
         ? `Основная головная боль: "${stats.topErrors[0].error}" (${stats.topErrors[0].count} раз)`
         : 'В логах тишина - это хороший знак',
-      timeContext.isWeekend ? 'Выходные проходят спокойно' : 'Рабочий день без сюрпризов'
+      timeContext.isWeekend
+        ? 'Выходные проходят спокойно'
+        : 'Рабочий день без сюрпризов',
     ],
-    concerns: stats.criticalIssues > 3 
-      ? ['Многовато ошибок для одного дня', 'Стоит проверить что происходит']
-      : stats.criticalIssues > 0
-      ? ['Есть над чем поработать, но не критично']
-      : ['Всё под контролем'],
+    concerns:
+      stats.criticalIssues > 3
+        ? ['Многовато ошибок для одного дня', 'Стоит проверить что происходит']
+        : stats.criticalIssues > 0
+        ? ['Есть над чем поработать, но не критично']
+        : ['Всё под контролем'],
     healthScore: calculateHealthScore(stats),
-    personality: successRate > 95 ? 'послушная и надежная' : successRate > 85 ? 'иногда капризничает' : 'требует присмотра',
-    actionItems: stats.criticalIssues > 0 
-      ? ['Разобраться с критичными ошибками', 'Проверить мониторинг алертов']
-      : ['Профилактический чек систем', 'Можно заняться планами на завтра'],
-    mood: stats.criticalIssues > 5 ? 'тревога' : stats.criticalIssues > 0 ? 'легкое беспокойство' : 'спокойствие'
+    personality:
+      successRate > 95
+        ? 'послушная и надежная'
+        : successRate > 85
+        ? 'иногда капризничает'
+        : 'требует присмотра',
+    actionItems:
+      stats.criticalIssues > 0
+        ? ['Разобраться с критичными ошибками', 'Проверить мониторинг алертов']
+        : ['Профилактический чек систем', 'Можно заняться планами на завтра'],
+    mood:
+      stats.criticalIssues > 5
+        ? 'тревога'
+        : stats.criticalIssues > 0
+        ? 'легкое беспокойство'
+        : 'спокойствие',
   }
 }
 
@@ -346,17 +445,17 @@ function createInlineKeyboard() {
     inline_keyboard: [
       [
         { text: '📊 Подробные логи', callback_data: 'show_detailed_logs' },
-        { text: '🔍 Network Check', callback_data: 'run_network_check' }
+        { text: '🔍 Network Check', callback_data: 'run_network_check' },
       ],
       [
         { text: '🚀 Статус деплоев', callback_data: 'deployment_status' },
-        { text: '⚠️ Только ошибки', callback_data: 'show_errors_only' }
+        { text: '⚠️ Только ошибки', callback_data: 'show_errors_only' },
       ],
       [
         { text: '📈 Тренды', callback_data: 'show_trends' },
-        { text: '🛠 Исправить проблемы', callback_data: 'auto_fix' }
-      ]
-    ]
+        { text: '🛠 Исправить проблемы', callback_data: 'auto_fix' },
+      ],
+    ],
   }
 }
 
@@ -389,22 +488,28 @@ export const dailyHealthReport = inngest.createFunction(
 
       // Определяем emoji и настроение на основе AI анализа
       const moodEmojis = {
-        'спокойствие': '💚',
-        'удовлетворение': '😌', 
-        'беспокойство': '😟',
-        'тревога': '🚨',
-        'легкое беспокойство': '⚠️'
+        спокойствие: '💚',
+        удовлетворение: '😌',
+        беспокойство: '😟',
+        тревога: '🚨',
+        'легкое беспокойство': '⚠️',
       }
-      const statusEmoji = moodEmojis[analysis.mood] || (analysis.healthScore < 50 ? '🚨' : analysis.healthScore < 80 ? '⚠️' : '💚')
+      const statusEmoji =
+        moodEmojis[analysis.mood] ||
+        (analysis.healthScore < 50
+          ? '🚨'
+          : analysis.healthScore < 80
+          ? '⚠️'
+          : '💚')
 
       // Формируем живое сообщение от AI
-      let message = `${statusEmoji} ОТЧЕТ АЛЕКСЕЯ (DevOps)\n\n`
-      
-      message += `📅 ${new Date().toLocaleDateString('ru-RU', { 
-        weekday: 'long', 
-        year: 'numeric', 
-        month: 'long', 
-        day: 'numeric' 
+      let message = `${statusEmoji} ОТЧЕТ ЛЮБОВИ (DevOps)\n\n`
+
+      message += `📅 ${new Date().toLocaleDateString('ru-RU', {
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
       })}\n`
       message += `💭 Настроение: ${analysis.mood}\n`
       message += `🎯 Здоровье системы: ${analysis.healthScore}/100\n\n`
@@ -444,42 +549,46 @@ export const dailyHealthReport = inngest.createFunction(
       }
 
       // Краткая техническая сводка (компактно)
-      const successRate = stats.totalRequests > 0 ? ((stats.successfulRequests / stats.totalRequests) * 100).toFixed(1) : '100.0'
+      const successRate =
+        stats.totalRequests > 0
+          ? ((stats.successfulRequests / stats.totalRequests) * 100).toFixed(1)
+          : '100.0'
       message += `📊 Техническая сводка: ${stats.totalRequests.toLocaleString()} запросов (${successRate}% успех)`
-      if (stats.criticalIssues > 0) message += `, ${stats.criticalIssues} критичных проблем`
-      if (stats.deploymentsCount > 0) message += `, ${stats.deploymentsCount} деплоев`
+      if (stats.criticalIssues > 0)
+        message += `, ${stats.criticalIssues} критичных проблем`
+      if (stats.deploymentsCount > 0)
+        message += `, ${stats.deploymentsCount} деплоев`
       message += '\n\n'
 
       message += `⬇️ Используйте кнопки для дополнительных данных:`
 
       // Отправляем с интерактивными кнопками
-      await bot.api.sendMessage(
-        process.env.ADMIN_CHAT_ID!,
-        message,
-        {
-          reply_markup: createInlineKeyboard(),
-          parse_mode: 'HTML'
-        }
-      )
+      await bot.api.sendMessage(process.env.ADMIN_CHAT_ID!, message, {
+        reply_markup: createInlineKeyboard(),
+        parse_mode: 'HTML',
+      })
 
       // Если критические проблемы - дублируем админу с контекстом
       if (analysis.healthScore < 50 || analysis.mood === 'тревога') {
-        const criticalMessage = `🚨 КРИТИЧЕСКАЯ СИТУАЦИЯ!\n\n` +
-          `💭 Алексей (DevOps): ${analysis.mood}\n` +
+        const criticalMessage =
+          `🚨 КРИТИЧЕСКАЯ СИТУАЦИЯ!\n\n` +
+          `💭 Любовь (DevOps): ${analysis.mood}\n` +
           `🎯 Здоровье системы: ${analysis.healthScore}/100\n\n` +
           `❗ Основная проблема:\n${analysis.analysis.split('.')[0]}.\n\n` +
-          (analysis.concerns.length > 0 ? `⚠️ Критичные беспокойства:\n• ${analysis.concerns[0]}\n\n` : '') +
+          (analysis.concerns.length > 0
+            ? `⚠️ Критичные беспокойства:\n• ${analysis.concerns[0]}\n\n`
+            : '') +
           `📞 Требуется НЕМЕДЛЕННОЕ вмешательство!`
-        
+
         await bot.api.sendMessage(
           process.env.ADMIN_TELEGRAM_ID!,
           criticalMessage
         )
       }
 
-      logger.info('📊 Daily report sent', { 
+      logger.info('📊 Daily report sent', {
         healthScore: analysis.healthScore,
-        criticalIssues: stats.criticalIssues
+        criticalIssues: stats.criticalIssues,
       })
     })
 
@@ -489,7 +598,7 @@ export const dailyHealthReport = inngest.createFunction(
       criticalIssues: stats.criticalIssues,
       stats,
       analysis,
-      timestamp: new Date()
+      timestamp: new Date(),
     }
   }
 )
@@ -511,7 +620,7 @@ export const triggerDailyReport = inngest.createFunction(
       data: {
         function_id: 'daily-health-report',
         trigger: 'manual',
-        userId: event.data.userId
+        userId: event.data.userId,
       },
     })
 
@@ -542,8 +651,8 @@ export const handleTelegramCallbacks = inngest.createFunction(
         await bot.api.sendMessage(
           chatId,
           '📋 Подробные логи за 24 часа:\n\n' +
-          'Используйте команду для просмотра:\n' +
-          '```bash\ntail -n 100 /tmp/logs/combined.log\n```',
+            'Используйте команду для просмотра:\n' +
+            '```bash\ntail -n 100 /tmp/logs/combined.log\n```',
           { parse_mode: 'Markdown' }
         )
         break
@@ -552,19 +661,26 @@ export const handleTelegramCallbacks = inngest.createFunction(
         // Запускаем network check
         await inngest.send({
           name: 'network/trigger-check',
-          data: { userId, source: 'telegram_button' }
+          data: { userId, source: 'telegram_button' },
         })
-        await bot.api.sendMessage(chatId, '🌐 Network Check запущен! Результат придет через минуту.')
+        await bot.api.sendMessage(
+          chatId,
+          '🌐 Network Check запущен! Результат придет через минуту.'
+        )
         break
 
       case 'deployment_status':
         await bot.api.sendMessage(
           chatId,
           '🚀 Статус деплоев:\n\n' +
-          `Текущая версия: ${process.env.RAILWAY_DEPLOYMENT_ID || 'unknown'}\n` +
-          `Ветка: ${process.env.RAILWAY_GIT_BRANCH || 'unknown'}\n` +
-          `Коммит: ${process.env.RAILWAY_GIT_COMMIT_SHA?.substring(0, 8) || 'unknown'}\n\n` +
-          'Последние деплои отслеживаются автоматически.'
+            `Текущая версия: ${
+              process.env.RAILWAY_DEPLOYMENT_ID || 'unknown'
+            }\n` +
+            `Ветка: ${process.env.RAILWAY_GIT_BRANCH || 'unknown'}\n` +
+            `Коммит: ${
+              process.env.RAILWAY_GIT_COMMIT_SHA?.substring(0, 8) || 'unknown'
+            }\n\n` +
+            'Последние деплои отслеживаются автоматически.'
         )
         break
 
@@ -580,26 +696,32 @@ export const handleTelegramCallbacks = inngest.createFunction(
         `)
         client.release()
 
-        const errorMessage = errors.rows.length > 0 
-          ? `❌ ОШИБКИ ЗА 24 ЧАСА (${errors.rows.length}):\n\n` +
-            errors.rows.map((row, i) => 
-              `${i + 1}. ${new Date(row.created_at).toLocaleTimeString('ru-RU')}: ${JSON.stringify(row.data).substring(0, 100)}...`
-            ).join('\n')
-          : '✅ Ошибок за последние 24 часа не найдено!'
+        const errorMessage =
+          errors.rows.length > 0
+            ? `❌ ОШИБКИ ЗА 24 ЧАСА (${errors.rows.length}):\n\n` +
+              errors.rows
+                .map(
+                  (row, i) =>
+                    `${i + 1}. ${new Date(row.created_at).toLocaleTimeString(
+                      'ru-RU'
+                    )}: ${JSON.stringify(row.data).substring(0, 100)}...`
+                )
+                .join('\n')
+            : '✅ Ошибок за последние 24 часа не найдено!'
 
         await bot.api.sendMessage(chatId, errorMessage)
         break
 
       case 'show_trends':
         await bot.api.sendMessage(
-          chatId, 
+          chatId,
           '📈 АНАЛИЗ ТРЕНДОВ:\n\n' +
-          'Для подробного анализа трендов используйте дашборды мониторинга.\n\n' +
-          'Доступные метрики:\n' +
-          '• Время отклика эндпоинтов\n' +
-          '• Количество ошибок по времени\n' +
-          '• Успешность network checks\n' +
-          '• Производительность после деплоев'
+            'Для подробного анализа трендов используйте дашборды мониторинга.\n\n' +
+            'Доступные метрики:\n' +
+            '• Время отклика эндпоинтов\n' +
+            '• Количество ошибок по времени\n' +
+            '• Успешность network checks\n' +
+            '• Производительность после деплоев'
         )
         break
 
@@ -607,11 +729,11 @@ export const handleTelegramCallbacks = inngest.createFunction(
         await bot.api.sendMessage(
           chatId,
           '🛠 АВТОМАТИЧЕСКОЕ ИСПРАВЛЕНИЕ:\n\n' +
-          'Доступные действия:\n' +
-          '1. Перезапуск сервисов\n' +
-          '2. Очистка кэшей\n' +
-          '3. Проверка сетевых соединений\n\n' +
-          '⚠️ Критические операции требуют подтверждения администратора.'
+            'Доступные действия:\n' +
+            '1. Перезапуск сервисов\n' +
+            '2. Очистка кэшей\n' +
+            '3. Проверка сетевых соединений\n\n' +
+            '⚠️ Критические операции требуют подтверждения администратора.'
         )
         break
     }
@@ -620,7 +742,7 @@ export const handleTelegramCallbacks = inngest.createFunction(
       success: true,
       callbackData,
       chatId,
-      processed: true
+      processed: true,
     }
   }
 )

@@ -3,6 +3,7 @@
 ## 🎯 Обзор
 
 Instagram Scraper V2 - это улучшенная версия парсера Instagram, которая:
+
 - Автоматически создает и управляет проектами
 - Парсит конкурентов и их рилсы
 - Сохраняет данные в PostgreSQL с привязкой к проектам
@@ -65,6 +66,7 @@ inngest/functions/instagram/
 ## 🔧 Схемы данных (Zod)
 
 ### InstagramScrapingEventSchema
+
 ```typescript
 {
   username_or_id: string,              // Instagram username или ID (обязательно)
@@ -80,6 +82,7 @@ inngest/functions/instagram/
 ```
 
 ### SingleUserScrapingEventSchema
+
 ```typescript
 {
   username: string,                    // Instagram username (обязательно)
@@ -95,71 +98,76 @@ inngest/functions/instagram/
 ## 🚀 Примеры запуска через Inngest
 
 ### 1. Минимальный запрос (автосоздание проекта)
+
 ```javascript
 await inngest.send({
-  name: "instagram-scraping-v2",
+  name: 'instagram-scraping-v2',
   data: {
-    username_or_id: "cristiano",
-    requester_telegram_id: "123456789",
-    telegram_username: "john_doe"
-  }
-});
+    username_or_id: 'cristiano',
+    requester_telegram_id: '123456789',
+    telegram_username: 'john_doe',
+  },
+})
 ```
 
 ### 2. С указанием количества конкурентов
+
 ```javascript
 await inngest.send({
-  name: "instagram-scraping-v2",
+  name: 'instagram-scraping-v2',
   data: {
-    username_or_id: "nike",
-    requester_telegram_id: "123456789",
-    telegram_username: "marketing_team",
+    username_or_id: 'nike',
+    requester_telegram_id: '123456789',
+    telegram_username: 'marketing_team',
     max_users: 100,
-    scrape_reels: false
-  }
-});
+    scrape_reels: false,
+  },
+})
 ```
 
 ### 3. Полный парсинг с рилсами
+
 ```javascript
 await inngest.send({
-  name: "instagram-scraping-v2",
+  name: 'instagram-scraping-v2',
   data: {
-    username_or_id: "adidas",
-    requester_telegram_id: "987654321",
-    telegram_username: "content_manager",
-    bot_name: "analytics_bot",
+    username_or_id: 'adidas',
+    requester_telegram_id: '987654321',
+    telegram_username: 'content_manager',
+    bot_name: 'analytics_bot',
     max_users: 75,
     scrape_reels: true,
     max_reels_per_user: 15,
-    language: "ru"
-  }
-});
+    language: 'ru',
+  },
+})
 ```
 
 ### 4. С существующим project_id
+
 ```javascript
 await inngest.send({
-  name: "instagram-scraping-v2",
+  name: 'instagram-scraping-v2',
   data: {
-    username_or_id: "messi",
+    username_or_id: 'messi',
     project_id: 42,
     max_users: 50,
-    scrape_reels: true
-  }
-});
+    scrape_reels: true,
+  },
+})
 ```
 
 ### 5. Парсинг одного пользователя
+
 ```javascript
 await inngest.send({
-  name: "instagram-single-user",
+  name: 'instagram-single-user',
   data: {
-    username: "ronaldo",
-    telegram_user_id: "123456789",
-    telegram_username: "sports_analyst"
-  }
-});
+    username: 'ronaldo',
+    telegram_user_id: '123456789',
+    telegram_username: 'sports_analyst',
+  },
+})
 ```
 
 ---
@@ -167,6 +175,7 @@ await inngest.send({
 ## 💾 Структура базы данных
 
 ### Таблица `projects`
+
 ```sql
 CREATE TABLE projects (
   id SERIAL PRIMARY KEY,
@@ -184,6 +193,7 @@ CREATE TABLE projects (
 ```
 
 ### Таблица `instagram_similar_users`
+
 ```sql
 CREATE TABLE instagram_similar_users (
   id SERIAL PRIMARY KEY,
@@ -218,6 +228,7 @@ CREATE TABLE instagram_similar_users (
 ```
 
 ### Таблица `instagram_user_reels`
+
 ```sql
 CREATE TABLE instagram_user_reels (
   id SERIAL PRIMARY KEY,
@@ -255,6 +266,7 @@ CREATE TABLE instagram_user_reels (
 ## 📊 Формат отчетов
 
 ### HTML отчет содержит:
+
 - 📈 Сводную статистику
 - 👥 Топ конкурентов по подписчикам
 - 💎 Топ по engagement rate
@@ -262,6 +274,7 @@ CREATE TABLE instagram_user_reels (
 - 📱 Детальная информация о каждом аккаунте
 
 ### Excel отчет содержит листы:
+
 1. **Summary** - общая статистика
 2. **Users** - все спарсенные пользователи
 3. **Reels** - все рилсы (если парсились)
@@ -275,18 +288,21 @@ CREATE TABLE instagram_user_reels (
 ### Endpoints используемые:
 
 1. **GET /user_info** - информация о пользователе
+
 ```javascript
-const userInfo = await instagramAPI.getUserInfo(username);
+const userInfo = await instagramAPI.getUserInfo(username)
 ```
 
 2. **GET /user_similar_accounts** - похожие аккаунты
+
 ```javascript
-const similarUsers = await instagramAPI.getSimilarAccounts(userId, count);
+const similarUsers = await instagramAPI.getSimilarAccounts(userId, count)
 ```
 
 3. **GET /user_reels** - рилсы пользователя
+
 ```javascript
-const reels = await instagramAPI.getUserReels(userId, count);
+const reels = await instagramAPI.getUserReels(userId, count)
 ```
 
 ---
@@ -294,6 +310,7 @@ const reels = await instagramAPI.getUserReels(userId, count);
 ## 🤖 Telegram интеграция
 
 ### Формат сообщения в Telegram:
+
 ```
 ✅ Instagram Scraping Complete!
 
@@ -315,6 +332,7 @@ The report includes:
 ```
 
 ### Поддерживаемые боты:
+
 - `neuro_blogger_bot` (по умолчанию)
 - `analytics_bot`
 - Любой кастомный бот с токеном в ENV
@@ -351,6 +369,7 @@ INNGEST_SIGNING_KEY=your_signing_key
 ## 🧪 Тестирование
 
 ### Локальный запуск с Inngest Dev Server:
+
 ```bash
 # 1. Запустить Inngest Dev Server
 npx inngest-cli@latest dev
@@ -363,6 +382,7 @@ npm run dev
 ```
 
 ### Пример теста через curl:
+
 ```bash
 curl -X POST http://localhost:8288/e/instagram-scraping-v2 \
   -H "Content-Type: application/json" \
@@ -383,17 +403,20 @@ curl -X POST http://localhost:8288/e/instagram-scraping-v2 \
 ## ⚠️ Ограничения и лимиты
 
 ### Instagram API:
+
 - **Rate limit**: 100 запросов в минуту
 - **Max users per request**: 200
 - **Max reels per user**: 50
 - **Retry attempts**: 3 с exponential backoff
 
 ### База данных:
+
 - **Max connections**: 100
 - **Query timeout**: 30 секунд
 - **Batch insert size**: 1000 записей
 
 ### Отчеты:
+
 - **Max HTML size**: 50 MB
 - **Max Excel rows**: 1,048,576
 - **Archive max size**: 100 MB
@@ -403,26 +426,28 @@ curl -X POST http://localhost:8288/e/instagram-scraping-v2 \
 ## 🐛 Обработка ошибок
 
 ### Стратегия retry:
+
 ```typescript
 // Автоматический retry для Instagram API
 const retryConfig = {
   attempts: 3,
-  delay: (attempt) => Math.pow(2, attempt) * 1000, // 2s, 4s, 8s
+  delay: attempt => Math.pow(2, attempt) * 1000, // 2s, 4s, 8s
   onRetry: (error, attempt) => {
-    logger.warn(`Retry attempt ${attempt}:`, error);
-  }
-};
+    logger.warn(`Retry attempt ${attempt}:`, error)
+  },
+}
 ```
 
 ### Типичные ошибки:
 
 1. **Invalid project_id**
    - Автоматически создается новый проект
-   
 2. **Instagram user not found**
+
    - Возвращается ошибка с предложением проверить username
 
 3. **Rate limit exceeded**
+
    - Автоматический retry с задержкой
 
 4. **Database connection error**
@@ -433,12 +458,14 @@ const retryConfig = {
 ## 📈 Мониторинг и логирование
 
 ### Inngest Dashboard метрики:
+
 - Количество успешных парсингов
 - Среднее время выполнения
 - Количество ошибок
 - Размер обработанных данных
 
 ### Структура логов:
+
 ```typescript
 {
   timestamp: "2024-01-15T10:30:00Z",
@@ -462,6 +489,7 @@ const retryConfig = {
 - **v1.0.0** - Legacy версия с обязательным project_id
 
 ### Миграция с v1 на v2:
+
 1. project_id теперь опциональный
 2. Добавлены поля telegram_username, bot_name
 3. Автоматическое создание проектов
@@ -472,6 +500,7 @@ const retryConfig = {
 ## 📞 Поддержка
 
 При возникновении проблем:
+
 1. Проверьте логи в Inngest Dashboard
 2. Убедитесь в правильности ENV переменных
 3. Проверьте лимиты API

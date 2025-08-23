@@ -25,7 +25,9 @@ class InstagramReelsAnalyzerDirect {
 
   constructor() {
     this.apiKey = process.env.RAPIDAPI_INSTAGRAM_KEY || ''
-    this.host = process.env.RAPIDAPI_INSTAGRAM_HOST || 'real-time-instagram-scraper-api1.p.rapidapi.com'
+    this.host =
+      process.env.RAPIDAPI_INSTAGRAM_HOST ||
+      'real-time-instagram-scraper-api1.p.rapidapi.com'
     this.baseUrl = 'https://real-time-instagram-scraper-api1.p.rapidapi.com'
   }
 
@@ -37,11 +39,17 @@ class InstagramReelsAnalyzerDirect {
       try {
         if (attempt > 0) {
           const delay = Math.pow(2, attempt) * 1000
-          console.log(`⏳ Rate limited, waiting ${delay / 1000}s before retry ${attempt + 1}/${maxRetries}`)
+          console.log(
+            `⏳ Rate limited, waiting ${delay / 1000}s before retry ${
+              attempt + 1
+            }/${maxRetries}`
+          )
           await new Promise(resolve => setTimeout(resolve, delay))
         }
 
-        console.log(`🎬 API call attempt ${attempt + 1}/${maxRetries} for: ${username}`)
+        console.log(
+          `🎬 API call attempt ${attempt + 1}/${maxRetries} for: ${username}`
+        )
 
         const response = await axios.get(`${this.baseUrl}/v1/user_reels`, {
           params: {
@@ -68,7 +76,11 @@ class InstagramReelsAnalyzerDirect {
           }
         }
 
-        console.log(`✅ API Success: Found ${response.data?.data?.items?.length || 0} reels`)
+        console.log(
+          `✅ API Success: Found ${
+            response.data?.data?.items?.length || 0
+          } reels`
+        )
 
         return {
           success: true,
@@ -79,7 +91,10 @@ class InstagramReelsAnalyzerDirect {
         }
       } catch (error: any) {
         attempt++
-        console.error(`❌ API attempt ${attempt}/${maxRetries} failed:`, error.message)
+        console.error(
+          `❌ API attempt ${attempt}/${maxRetries} failed:`,
+          error.message
+        )
 
         if (attempt >= maxRetries) {
           return {
@@ -107,16 +122,28 @@ class InstagramReelsAnalyzerDirect {
 
 // Функция расчета метрик
 function calculateEngagementMetrics(reels: any[]) {
-  const totalViews = reels.reduce((sum, reel) => sum + (reel.play_count || 0), 0)
-  const totalLikes = reels.reduce((sum, reel) => sum + (reel.like_count || 0), 0)
-  const totalComments = reels.reduce((sum, reel) => sum + (reel.comment_count || 0), 0)
+  const totalViews = reels.reduce(
+    (sum, reel) => sum + (reel.play_count || 0),
+    0
+  )
+  const totalLikes = reels.reduce(
+    (sum, reel) => sum + (reel.like_count || 0),
+    0
+  )
+  const totalComments = reels.reduce(
+    (sum, reel) => sum + (reel.comment_count || 0),
+    0
+  )
 
-  const avgEngagement = reels.length > 0
-    ? reels.reduce((sum, reel) => {
-        const engagement = ((reel.like_count || 0) + (reel.comment_count || 0)) / Math.max(reel.play_count || 1, 1)
-        return sum + engagement
-      }, 0) / reels.length
-    : 0
+  const avgEngagement =
+    reels.length > 0
+      ? reels.reduce((sum, reel) => {
+          const engagement =
+            ((reel.like_count || 0) + (reel.comment_count || 0)) /
+            Math.max(reel.play_count || 1, 1)
+          return sum + engagement
+        }, 0) / reels.length
+      : 0
 
   return { totalViews, totalLikes, totalComments, avgEngagement }
 }
@@ -143,8 +170,8 @@ async function testAnalyzeCompetitorReelsDirect() {
       requester_telegram_id: '144022504',
       metadata: {
         test: 'direct-test',
-        timestamp: new Date().toISOString()
-      }
+        timestamp: new Date().toISOString(),
+      },
     }
 
     const validationResult = AnalyzeReelsEventSchema.safeParse(testData)
@@ -157,7 +184,10 @@ async function testAnalyzeCompetitorReelsDirect() {
     // Тест Instagram API
     console.log('\n🎬 Шаг 3: Тест Instagram Reels API...')
     const api = new InstagramReelsAnalyzerDirect()
-    const apiResult = await api.getUserReels(testData.username, testData.max_reels)
+    const apiResult = await api.getUserReels(
+      testData.username,
+      testData.max_reels
+    )
 
     if (!apiResult.success) {
       console.error('❌ Instagram API call failed:', apiResult.error)
@@ -177,10 +207,25 @@ async function testAnalyzeCompetitorReelsDirect() {
         console.log(`   👍 Лайки: ${reel.like_count || 0}`)
         console.log(`   💬 Коменты: ${reel.comment_count || 0}`)
         console.log(`   👀 Просмотры: ${reel.play_count || 0}`)
-        console.log(`   📅 Дата: ${reel.taken_at_timestamp ? new Date(reel.taken_at_timestamp * 1000).toLocaleDateString() : 'N/A'}`)
-        console.log(`   🔗 URL: ${reel.shortcode ? `https://instagram.com/p/${reel.shortcode}/` : 'N/A'}`)
+        console.log(
+          `   📅 Дата: ${
+            reel.taken_at_timestamp
+              ? new Date(reel.taken_at_timestamp * 1000).toLocaleDateString()
+              : 'N/A'
+          }`
+        )
+        console.log(
+          `   🔗 URL: ${
+            reel.shortcode
+              ? `https://instagram.com/p/${reel.shortcode}/`
+              : 'N/A'
+          }`
+        )
         if (reel.caption) {
-          const shortCaption = reel.caption.length > 100 ? reel.caption.substring(0, 100) + '...' : reel.caption
+          const shortCaption =
+            reel.caption.length > 100
+              ? reel.caption.substring(0, 100) + '...'
+              : reel.caption
           console.log(`   📝 Описание: ${shortCaption}`)
         }
       })
@@ -189,15 +234,19 @@ async function testAnalyzeCompetitorReelsDirect() {
     // Тест фильтрации по датам
     console.log('\n📅 Шаг 4: Тест фильтрации по датам...')
     const now = new Date()
-    const cutoffDate = new Date(now.getTime() - testData.days_back * 24 * 60 * 60 * 1000)
-    
+    const cutoffDate = new Date(
+      now.getTime() - testData.days_back * 24 * 60 * 60 * 1000
+    )
+
     const filteredReels = apiResult.reels.filter(reel => {
       if (!reel.taken_at_timestamp) return false
       const reelDate = new Date(reel.taken_at_timestamp * 1000)
       return reelDate >= cutoffDate
     })
 
-    console.log(`✅ Фильтрация по датам (последние ${testData.days_back} дней):`)
+    console.log(
+      `✅ Фильтрация по датам (последние ${testData.days_back} дней):`
+    )
     console.log(`   📊 Всего рилз: ${apiResult.reels.length}`)
     console.log(`   📅 После фильтрации: ${filteredReels.length}`)
     console.log(`   🗓️ Cutoff date: ${cutoffDate.toLocaleDateString()}`)
@@ -205,12 +254,16 @@ async function testAnalyzeCompetitorReelsDirect() {
     // Тест расчета метрик
     console.log('\n📈 Шаг 5: Тест расчета метрик...')
     const metrics = calculateEngagementMetrics(filteredReels)
-    
+
     console.log('✅ Метрики рассчитаны:')
     console.log(`   👀 Общие просмотры: ${metrics.totalViews.toLocaleString()}`)
     console.log(`   👍 Общие лайки: ${metrics.totalLikes.toLocaleString()}`)
-    console.log(`   💬 Общие коменты: ${metrics.totalComments.toLocaleString()}`)
-    console.log(`   📊 Средний engagement: ${(metrics.avgEngagement * 100).toFixed(4)}%`)
+    console.log(
+      `   💬 Общие коменты: ${metrics.totalComments.toLocaleString()}`
+    )
+    console.log(
+      `   📊 Средний engagement: ${(metrics.avgEngagement * 100).toFixed(4)}%`
+    )
 
     // Тест сортировки по engagement
     console.log('\n🏆 Шаг 6: Тест сортировки по engagement...')
@@ -223,13 +276,26 @@ async function testAnalyzeCompetitorReelsDirect() {
     console.log('✅ Топ рилз по engagement:')
     sortedReels.slice(0, 3).forEach((reel, index) => {
       const engagement = (reel.like_count || 0) + (reel.comment_count || 0)
-      const engagementRate = ((engagement / Math.max(reel.play_count || 1, 1)) * 100).toFixed(2)
-      
-      console.log(`\n${index + 1}. Engagement: ${engagement.toLocaleString()} (${engagementRate}%)`)
+      const engagementRate = (
+        (engagement / Math.max(reel.play_count || 1, 1)) *
+        100
+      ).toFixed(2)
+
+      console.log(
+        `\n${
+          index + 1
+        }. Engagement: ${engagement.toLocaleString()} (${engagementRate}%)`
+      )
       console.log(`   👍 Лайки: ${(reel.like_count || 0).toLocaleString()}`)
-      console.log(`   💬 Коменты: ${(reel.comment_count || 0).toLocaleString()}`)
+      console.log(
+        `   💬 Коменты: ${(reel.comment_count || 0).toLocaleString()}`
+      )
       console.log(`   👀 Просмотры: ${(reel.play_count || 0).toLocaleString()}`)
-      console.log(`   🔗 URL: ${reel.shortcode ? `https://instagram.com/p/${reel.shortcode}/` : 'N/A'}`)
+      console.log(
+        `   🔗 URL: ${
+          reel.shortcode ? `https://instagram.com/p/${reel.shortcode}/` : 'N/A'
+        }`
+      )
     })
 
     // Финальный результат
@@ -245,7 +311,9 @@ async function testAnalyzeCompetitorReelsDirect() {
         comments: reel.comment_count || 0,
         views: reel.play_count || 0,
         engagement: (reel.like_count || 0) + (reel.comment_count || 0),
-        ig_url: reel.shortcode ? `https://instagram.com/p/${reel.shortcode}/` : '',
+        ig_url: reel.shortcode
+          ? `https://instagram.com/p/${reel.shortcode}/`
+          : '',
       })),
       metrics: {
         totalViews: metrics.totalViews,
@@ -261,20 +329,25 @@ async function testAnalyzeCompetitorReelsDirect() {
     console.log(JSON.stringify(finalResult, null, 2))
 
     return finalResult
-
   } catch (error) {
     console.error('\n❌ Ошибка в тестировании:', error)
-    
+
     if (error.message.includes('RAPIDAPI_INSTAGRAM_KEY')) {
-      console.log('\n🔧 РЕШЕНИЕ: Добавь переменную RAPIDAPI_INSTAGRAM_KEY в .env файл')
+      console.log(
+        '\n🔧 РЕШЕНИЕ: Добавь переменную RAPIDAPI_INSTAGRAM_KEY в .env файл'
+      )
     }
-    
+
     if (error.message.includes('timeout')) {
-      console.log('\n🔧 РЕШЕНИЕ: Увеличь timeout или проверь интернет соединение')
+      console.log(
+        '\n🔧 РЕШЕНИЕ: Увеличь timeout или проверь интернет соединение'
+      )
     }
-    
+
     if (error.message.includes('rate limit')) {
-      console.log('\n🔧 РЕШЕНИЕ: Подожди несколько минут перед следующим запросом')
+      console.log(
+        '\n🔧 РЕШЕНИЕ: Подожди несколько минут перед следующим запросом'
+      )
     }
 
     throw error
@@ -286,7 +359,9 @@ testAnalyzeCompetitorReelsDirect()
   .then(result => {
     console.log('\n🚀 === ТЕСТИРОВАНИЕ ЗАВЕРШЕНО ===')
     console.log('✅ Функция анализа рилз конкурентов работает корректно!')
-    console.log('📈 Все компоненты протестированы и функционируют как ожидается')
+    console.log(
+      '📈 Все компоненты протестированы и функционируют как ожидается'
+    )
     process.exit(0)
   })
   .catch(error => {

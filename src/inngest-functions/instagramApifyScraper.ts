@@ -574,7 +574,9 @@ ${processedReels
         const { bot } = getBotByName(validatedData.bot_name)
 
         if (!bot) {
-          log.error(`❌ Admin notification failed: Bot not found - ${validatedData.bot_name}`)
+          log.error(
+            `❌ Admin notification failed: Bot not found - ${validatedData.bot_name}`
+          )
           return
         }
 

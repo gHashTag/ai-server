@@ -1,14 +1,17 @@
 # ✅ РЕШЕНИЕ ЗАВЕРШЕНО: URL подход для отправки Instagram архивов
 
 ## 🎯 **ПРОБЛЕМА РЕШЕНА:**
+
 **Instagram архивы теперь отправляются как DOWNLOADABLE URLS вместо прямых файлов!**
 
 ---
 
 ## 🚨 **КОРЕНЬ ПРОБЛЕМЫ:**
+
 **`bot.telegram.sendDocument()` с `fs.createReadStream()` НЕ РАБОТАЛ!**
 
 ### **Почему файлы не приходили:**
+
 - ❌ Telegram API ограничения на отправку файлов
 - ❌ Проблемы с путями к файлам в Docker/production
 - ❌ Ошибки чтения stream'а файлов
@@ -19,7 +22,9 @@
 ## 🔧 **РЕАЛИЗОВАННОЕ РЕШЕНИЕ:**
 
 ### **1. Создан Download Endpoint**
+
 **Файл:** `src/routes/download.route.ts`
+
 ```typescript
 // GET /download/instagram-archive/:filename
 this.router.get(`${this.path}/instagram-archive/:filename`, (req, res) => {
@@ -31,9 +36,11 @@ this.router.get(`${this.path}/instagram-archive/:filename`, (req, res) => {
 ```
 
 ### **2. Изменена логика отправки в Telegram**
+
 **Файл:** `src/inngest-functions/instagramScraper-v2.ts`
 
 **БЫЛО:**
+
 ```typescript
 // Отправляем архив
 await bot.telegram.sendDocument(
@@ -44,10 +51,12 @@ await bot.telegram.sendDocument(
 ```
 
 **СТАЛО:**
+
 ```typescript
 // Создаём URL для скачивания архива
 const archiveFilename = path.basename(reportResult.archivePath)
-const API_URL = process.env.ORIGIN || process.env.API_URL || 'http://localhost:3000'
+const API_URL =
+  process.env.ORIGIN || process.env.API_URL || 'http://localhost:3000'
 const downloadUrl = `${API_URL}/download/instagram-archive/${archiveFilename}`
 
 // Отправляем сообщение с URL для скачивания
@@ -65,7 +74,9 @@ await bot.telegram.sendMessage(
 ```
 
 ### **3. Зарегистрирован роут в приложении**
+
 **Файл:** `src/routes/index.ts`
+
 ```typescript
 import { DownloadRoute } from './download.route'
 
@@ -80,6 +91,7 @@ export const routes = [
 ## 🧪 **ТЕСТИРОВАНИЕ:**
 
 ### **✅ Download Endpoint протестирован:**
+
 ```bash
 curl -I "http://localhost:4000/download/instagram-archive/filename.zip"
 # HTTP/1.1 200 OK
@@ -89,12 +101,14 @@ curl -I "http://localhost:4000/download/instagram-archive/filename.zip"
 ```
 
 ### **✅ Полное скачивание работает:**
+
 ```bash
 curl -o test.zip "http://localhost:4000/download/instagram-archive/filename.zip"
 # Архив успешно скачался (8632 bytes)
 ```
 
 ### **🔄 Inngest функция протестирована:**
+
 ```bash
 node test-url-delivery.js
 # ✅ Event ID: 01K0V5G0T7GB4B366FSREW752N
@@ -106,6 +120,7 @@ node test-url-delivery.js
 ## 📱 **ПОЛЬЗОВАТЕЛЬ ТЕПЕРЬ ПОЛУЧИТ:**
 
 ### **Сообщение в Telegram:**
+
 ```
 🎯 Анализ Instagram конкурентов завершен!
 
@@ -127,6 +142,7 @@ node test-url-delivery.js
 ```
 
 ### **При клике на ссылку:**
+
 - 📦 Автоматическое скачивание ZIP файла
 - 📊 Архив содержит HTML + Excel + README
 - ✅ Работает на всех устройствах
@@ -136,6 +152,7 @@ node test-url-delivery.js
 ## 🛡️ **БЕЗОПАСНОСТЬ:**
 
 ### **Валидация filename:**
+
 ```typescript
 if (!/^instagram_competitors_[a-zA-Z0-9_]+\.zip$/.test(filename)) {
   return res.status(400).json({ error: 'Invalid filename format' })
@@ -143,6 +160,7 @@ if (!/^instagram_competitors_[a-zA-Z0-9_]+\.zip$/.test(filename)) {
 ```
 
 ### **Проверка существования файла:**
+
 ```typescript
 if (!fs.existsSync(filePath)) {
   return res.status(404).json({ error: 'Archive not found' })
@@ -150,6 +168,7 @@ if (!fs.existsSync(filePath)) {
 ```
 
 ### **Правильные headers:**
+
 ```typescript
 res.setHeader('Content-Type', 'application/zip')
 res.setHeader('Content-Disposition', `attachment; filename="${filename}"`)
@@ -165,14 +184,14 @@ res.setHeader('Cache-Control', 'no-cache')
 ✅ **Масштабируемо** - нет ограничений размера файла  
 ✅ **Безопасно** - валидация и проверки  
 ✅ **Удобно** - пользователь может скачать когда удобно  
-✅ **Отслеживаемо** - логирование скачиваний  
+✅ **Отслеживаемо** - логирование скачиваний
 
 ---
 
 ## 📝 **ИЗМЕНЁННЫЕ ФАЙЛЫ:**
 
 1. **`src/routes/download.route.ts`** - новый endpoint для скачивания
-2. **`src/routes/index.ts`** - регистрация нового роута  
+2. **`src/routes/index.ts`** - регистрация нового роута
 3. **`src/inngest-functions/instagramScraper-v2.ts`** - изменена логика отправки
 4. **`test-url-delivery.js`** - тестовый скрипт
 
@@ -191,4 +210,4 @@ res.setHeader('Cache-Control', 'no-cache')
 **Тестовый Event ID:** `01K0V5G0T7GB4B366FSREW752N`  
 **Download endpoint:** `GET /download/instagram-archive/:filename`
 
-🕉️ _"Путь к решению иногда требует смены направления, но цель остаётся неизменной."_ - Древняя мудрость 
+🕉️ _"Путь к решению иногда требует смены направления, но цель остаётся неизменной."_ - Древняя мудрость

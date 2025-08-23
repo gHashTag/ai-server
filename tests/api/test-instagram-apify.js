@@ -10,9 +10,11 @@ async function testInstagramApifyScraper() {
   try {
     // Тест 1: Проверка импорта и инициализации
     console.log('\n1️⃣ Проверка импорта функции...')
-    
-    const { instagramApifyScraper } = require('./dist/inngest-functions/instagramApifyScraper')
-    
+
+    const {
+      instagramApifyScraper,
+    } = require('./dist/inngest-functions/instagramApifyScraper')
+
     if (instagramApifyScraper) {
       console.log('✅ Instagram Apify Scraper функция успешно импортирована')
       console.log(`   • ID: ${instagramApifyScraper.id}`)
@@ -23,10 +25,12 @@ async function testInstagramApifyScraper() {
 
     // Тест 2: Проверка переменных окружения
     console.log('\n2️⃣ Проверка переменных окружения...')
-    
+
     const envVars = {
       APIFY_TOKEN: process.env.APIFY_TOKEN ? '✅ Установлен' : '❌ Отсутствует',
-      NEON_DATABASE_URL: process.env.NEON_DATABASE_URL ? '✅ Установлен' : '❌ Отсутствует'
+      NEON_DATABASE_URL: process.env.NEON_DATABASE_URL
+        ? '✅ Установлен'
+        : '❌ Отсутствует',
     }
 
     console.log('   Переменные окружения:')
@@ -35,16 +39,20 @@ async function testInstagramApifyScraper() {
     })
 
     if (!process.env.APIFY_TOKEN) {
-      console.log('\n⚠️  APIFY_TOKEN не установлен - функция не сможет работать в продакшене')
+      console.log(
+        '\n⚠️  APIFY_TOKEN не установлен - функция не сможет работать в продакшене'
+      )
     }
 
     if (!process.env.NEON_DATABASE_URL) {
-      console.log('\n⚠️  NEON_DATABASE_URL не установлен - функция не сможет сохранять данные')
+      console.log(
+        '\n⚠️  NEON_DATABASE_URL не установлен - функция не сможет сохранять данные'
+      )
     }
 
     // Тест 3: Проверка схемы валидации (без выполнения Apify запроса)
     console.log('\n3️⃣ Проверка валидации входных данных...')
-    
+
     const testCases = [
       {
         name: 'Валидные данные для пользователя',
@@ -54,9 +62,9 @@ async function testInstagramApifyScraper() {
           source_type: 'competitor',
           max_reels: 15,
           min_views: 500,
-          max_age_days: 14
+          max_age_days: 14,
         },
-        shouldPass: true
+        shouldPass: true,
       },
       {
         name: 'Валидные данные для хештега',
@@ -64,27 +72,27 @@ async function testInstagramApifyScraper() {
           username_or_hashtag: '#marketing',
           project_id: 1,
           source_type: 'hashtag',
-          max_reels: 20
+          max_reels: 20,
         },
-        shouldPass: true
+        shouldPass: true,
       },
       {
         name: 'Невалидные данные - отсутствует username',
         data: {
           project_id: 1,
-          source_type: 'competitor'
+          source_type: 'competitor',
         },
-        shouldPass: false
+        shouldPass: false,
       },
       {
         name: 'Невалидные данные - неправильный source_type',
         data: {
           username_or_hashtag: 'test',
           project_id: 1,
-          source_type: 'invalid_type'
+          source_type: 'invalid_type',
         },
-        shouldPass: false
-      }
+        shouldPass: false,
+      },
     ]
 
     // Импортируем zod для тестирования схемы
@@ -103,14 +111,18 @@ async function testInstagramApifyScraper() {
     testCases.forEach(testCase => {
       try {
         const result = ApifyScraperEventSchema.safeParse(testCase.data)
-        
+
         if (testCase.shouldPass && result.success) {
           console.log(`   ✅ ${testCase.name} - PASSED`)
         } else if (!testCase.shouldPass && !result.success) {
           console.log(`   ✅ ${testCase.name} - FAILED AS EXPECTED`)
         } else {
           console.log(`   ❌ ${testCase.name} - UNEXPECTED RESULT`)
-          console.log(`      Ошибки: ${result.success ? 'Нет ошибок' : result.error.message}`)
+          console.log(
+            `      Ошибки: ${
+              result.success ? 'Нет ошибок' : result.error.message
+            }`
+          )
         }
       } catch (error) {
         console.log(`   ❌ ${testCase.name} - ERROR: ${error.message}`)
@@ -120,16 +132,16 @@ async function testInstagramApifyScraper() {
     // Тест 4: Проверка подключения к базе данных (только если есть URL)
     if (process.env.NEON_DATABASE_URL) {
       console.log('\n4️⃣ Тестирование подключения к базе данных...')
-      
+
       try {
         const { Pool } = require('pg')
         const dbPool = new Pool({
           connectionString: process.env.NEON_DATABASE_URL,
-          ssl: { rejectUnauthorized: false }
+          ssl: { rejectUnauthorized: false },
         })
 
         const client = await dbPool.connect()
-        
+
         try {
           // Простой запрос для проверки подключения
           const result = await client.query('SELECT NOW()')
@@ -149,17 +161,19 @@ async function testInstagramApifyScraper() {
     // Тест 5: Проверка Apify клиента (только если есть токен)
     if (process.env.APIFY_TOKEN) {
       console.log('\n5️⃣ Тестирование Apify клиента...')
-      
+
       try {
         const { ApifyClient } = require('apify-client')
         const client = new ApifyClient({
           token: process.env.APIFY_TOKEN,
         })
-        
+
         // Получаем информацию о пользователе как тест подключения
         const user = await client.user().get()
         console.log('   ✅ Apify клиент инициализирован успешно')
-        console.log(`      Пользователь: ${user.username || user.email || 'Unknown'}`)
+        console.log(
+          `      Пользователь: ${user.username || user.email || 'Unknown'}`
+        )
       } catch (error) {
         console.log(`   ❌ Ошибка Apify клиента: ${error.message}`)
         console.log('      Проверьте правильность APIFY_TOKEN')
@@ -171,17 +185,17 @@ async function testInstagramApifyScraper() {
     // Итоги тестирования
     console.log('\n📋 ИТОГИ ТЕСТИРОВАНИЯ:')
     console.log('=' * 50)
-    
+
     const issues = []
-    
+
     if (!process.env.APIFY_TOKEN) {
       issues.push('🔑 Отсутствует APIFY_TOKEN')
     }
-    
+
     if (!process.env.NEON_DATABASE_URL) {
       issues.push('🗄️ Отсутствует NEON_DATABASE_URL')
     }
-    
+
     if (issues.length === 0) {
       console.log('✅ ВСЕ ТЕСТЫ ПРОШЛИ УСПЕШНО!')
       console.log('   Instagram Apify Scraper готов к работе')
@@ -198,7 +212,6 @@ async function testInstagramApifyScraper() {
     console.log('   • Функция: instagramApifyScraper')
     console.log('   • Параллельность: до 2 задач одновременно')
     console.log('   • Поддержка: пользователи и хештеги')
-
   } catch (error) {
     console.error('\n❌ КРИТИЧЕСКАЯ ОШИБКА ТЕСТИРОВАНИЯ:', error.message)
     console.error('   Стек:', error.stack)

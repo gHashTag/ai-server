@@ -8,33 +8,33 @@
 
 ### Поддерживаемые поля
 
-| Поле | Тип | Описание | Обязательное |
-|------|-----|----------|--------------|
-| `model` | string | Модель генерации (`veo3_fast`, `veo3`, `runway-aleph`) | ✅ |
-| `prompt` | string | Текстовое описание для генерации видео | ✅ |
-| `duration` | number | Длительность видео в секундах (2-10) | ❌ |
-| `aspectRatio` | string | Соотношение сторон (`16:9`, `9:16`, `1:1`) | ❌ |
-| `imageUrls` | string[] | **НОВОЕ**: Массив URL изображений для image-to-video | ❌ |
-| `watermark` | string | **НОВОЕ**: Текст водяного знака на видео | ❌ |
-| `callBackUrl` | string | **НОВОЕ**: URL для webhook уведомлений | ❌ |
-| `seeds` | number | **НОВОЕ**: Seed для воспроизводимой генерации | ❌ |
-| `enableFallback` | boolean | **НОВОЕ**: Автоматический fallback на другие модели | ❌ |
+| Поле             | Тип      | Описание                                               | Обязательное |
+| ---------------- | -------- | ------------------------------------------------------ | ------------ |
+| `model`          | string   | Модель генерации (`veo3_fast`, `veo3`, `runway-aleph`) | ✅           |
+| `prompt`         | string   | Текстовое описание для генерации видео                 | ✅           |
+| `duration`       | number   | Длительность видео в секундах (2-10)                   | ❌           |
+| `aspectRatio`    | string   | Соотношение сторон (`16:9`, `9:16`, `1:1`)             | ❌           |
+| `imageUrls`      | string[] | **НОВОЕ**: Массив URL изображений для image-to-video   | ❌           |
+| `watermark`      | string   | **НОВОЕ**: Текст водяного знака на видео               | ❌           |
+| `callBackUrl`    | string   | **НОВОЕ**: URL для webhook уведомлений                 | ❌           |
+| `seeds`          | number   | **НОВОЕ**: Seed для воспроизводимой генерации          | ❌           |
+| `enableFallback` | boolean  | **НОВОЕ**: Автоматический fallback на другие модели    | ❌           |
 
 ## 📝 Примеры использования
 
 ### Базовая генерация
 
 ```typescript
-import { KieAiService } from '@/services/kieAiService';
+import { KieAiService } from '@/services/kieAiService'
 
-const kieAi = new KieAiService();
+const kieAi = new KieAiService()
 
 const result = await kieAi.generateVideo({
   model: 'veo3_fast',
   prompt: 'A beautiful sunset over mountains',
   duration: 5,
-  aspectRatio: '16:9'
-});
+  aspectRatio: '16:9',
+})
 ```
 
 ### Генерация с массивом изображений
@@ -45,11 +45,11 @@ const result = await kieAi.generateVideo({
   prompt: 'Smooth transition between images',
   imageUrls: [
     'https://example.com/image1.jpg',
-    'https://example.com/image2.jpg'
+    'https://example.com/image2.jpg',
   ],
   duration: 8,
-  aspectRatio: '9:16'
-});
+  aspectRatio: '9:16',
+})
 ```
 
 ### Полная конфигурация с webhook
@@ -68,8 +68,8 @@ const result = await kieAi.generateVideo({
   userId: 'user-123',
   projectId: 1,
   botName: 'ai-bot',
-  isRu: false
-});
+  isRu: false,
+})
 ```
 
 ## 🔔 Webhook интеграция
@@ -81,8 +81,8 @@ const result = await kieAi.generateVideo({
 ```typescript
 const result = await kieAi.generateVideo({
   // ... другие параметры
-  callBackUrl: 'https://your-server.com/webhook/kie-ai'
-});
+  callBackUrl: 'https://your-server.com/webhook/kie-ai',
+})
 ```
 
 ### Обработка webhook
@@ -140,6 +140,7 @@ CREATE TABLE video_tasks (
 ### Метаданные
 
 В поле `metadata` сохраняются:
+
 - `duration` - длительность видео
 - `aspectRatio` - соотношение сторон
 - `cost` - стоимость генерации
@@ -189,15 +190,15 @@ logger.info('📹 Kie.ai webhook received', {
   status,
   videoUrl: videoUrl ? 'present' : 'absent',
   result: result ? 'present' : 'absent',
-  metadata: metadata || null
-});
+  metadata: metadata || null,
+})
 ```
 
 ### Проверка статуса задачи
 
 ```typescript
-const status = await kieAi.checkVideoStatus('task_123456');
-console.log(status);
+const status = await kieAi.checkVideoStatus('task_123456')
+console.log(status)
 // { status: 'completed', videoUrl: '...', error: null }
 ```
 
@@ -210,9 +211,9 @@ console.log(status);
 ```typescript
 if (callBackUrl) {
   try {
-    new URL(callBackUrl);
+    new URL(callBackUrl)
   } catch (error) {
-    throw new Error(`Invalid callback URL: ${callBackUrl}`);
+    throw new Error(`Invalid callback URL: ${callBackUrl}`)
   }
 }
 ```
@@ -220,6 +221,7 @@ if (callBackUrl) {
 ### Обработка ошибок
 
 Все ошибки обрабатываются с соответствующими HTTP кодами:
+
 - `401` - Неверный API ключ
 - `402` - Недостаточно кредитов
 - `429` - Превышен лимит запросов
@@ -262,6 +264,7 @@ CMD ["npm", "start"]
 ## 🆘 Поддержка
 
 При возникновении проблем:
+
 1. Проверьте логи: `tail -f logs/combined.log | grep -i kie`
 2. Убедитесь в наличии API ключа: `echo $KIE_AI_API_KEY`
 3. Проверьте баланс: `curl -H "Authorization: Bearer $KIE_AI_API_KEY" https://api.kie.ai/api/v1/chat/credit`
