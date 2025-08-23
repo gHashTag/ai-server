@@ -61,35 +61,28 @@ build.on('close', (code) => {
     cwd: path.resolve(__dirname, '..')
   })
 
-  // Start N8N Docker Container with delay
+  // Start N8N locally with delay
   console.log('⏳ N8N will start in 3 seconds after AI Server is ready...')
   setTimeout(() => {
-    console.log('🔧 Starting N8N container...')
+    console.log('🔧 Starting N8N locally...')
     
-    // First, clean up any existing n8n-dev container
-    spawn('docker', ['stop', 'n8n-dev'], { stdio: 'ignore' })
-    
-    const n8n = spawn('docker', [
-      'run',
-      '--rm',
-      '--name', 'n8n-dev',
-      '-p', '5678:5678',
-      '-v', 'n8n_dev_data:/home/node/.n8n',
-      '-e', 'N8N_BASIC_AUTH_ACTIVE=true',
-      '-e', 'N8N_BASIC_AUTH_USER=admin',
-      '-e', 'N8N_BASIC_AUTH_PASSWORD=admin123',
-      '-e', 'N8N_HOST=0.0.0.0',
-      '-e', 'N8N_PORT=5678',
-      '-e', 'N8N_PROTOCOL=http',
-      '-e', 'WEBHOOK_URL=http://localhost:5678',
-      '-e', 'GENERIC_TIMEZONE=Europe/Moscow',
-      '-e', 'N8N_METRICS=true',
-      '-e', 'N8N_LOG_LEVEL=info',
-      'docker.n8n.io/n8nio/n8n:latest'
-    ], {
+    const n8n = spawn('npx', ['n8n', 'start'], {
       stdio: ['pipe', 'pipe', 'pipe'],
       shell: true,
-      cwd: path.resolve(__dirname, '..')
+      cwd: path.resolve(__dirname, '..'),
+      env: {
+        ...process.env,
+        N8N_BASIC_AUTH_ACTIVE: 'true',
+        N8N_BASIC_AUTH_USER: 'admin',
+        N8N_BASIC_AUTH_PASSWORD: 'admin123',
+        N8N_HOST: '0.0.0.0',
+        N8N_PORT: '5678',
+        N8N_PROTOCOL: 'http',
+        WEBHOOK_URL: 'http://localhost:5678',
+        GENERIC_TIMEZONE: 'Europe/Moscow',
+        N8N_METRICS: 'true',
+        N8N_LOG_LEVEL: 'info'
+      }
     })
 
     // Handle N8N output
@@ -111,7 +104,6 @@ build.on('close', (code) => {
       server.kill('SIGTERM')
       inngest.kill('SIGTERM')
       n8n.kill('SIGTERM')
-      spawn('docker', ['stop', 'n8n-dev'], { stdio: 'ignore' })
       process.exit(0)
     }
 
@@ -156,7 +148,6 @@ build.on('close', (code) => {
     console.log('\n🛑 Shutting down servers...')
     server.kill('SIGTERM')
     inngest.kill('SIGTERM')
-    spawn('docker', ['stop', 'n8n-dev'], { stdio: 'ignore' })
     process.exit(0)
   }
 

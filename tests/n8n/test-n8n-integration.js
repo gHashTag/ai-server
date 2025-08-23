@@ -8,7 +8,7 @@ const { logger } = require('../../dist/utils/logger');
 
 // Конфигурация для тестирования
 const config = {
-  aiServerUrl: 'http://localhost:3000',
+  aiServerUrl: 'http://localhost:4000', // Обновлен порт для dev окружения
   n8nUrl: 'http://localhost:5678',
   testTimeout: 30000, // 30 секунд
 };

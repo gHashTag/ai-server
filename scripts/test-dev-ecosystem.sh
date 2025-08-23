@@ -32,16 +32,16 @@ check_service() {
     fi
 }
 
-# Функция проверки Docker контейнера
-check_docker_container() {
-    local container_name=$1
-    echo -n "Проверяю Docker контейнер $container_name... "
+# Функция проверки процесса
+check_process() {
+    local process_name=$1
+    echo -n "Проверяю процесс $process_name... "
     
-    if docker ps | grep -q "$container_name"; then
+    if pgrep -f "$process_name" > /dev/null; then
         echo -e "${GREEN}✅ Running${NC}"
         return 0
     else
-        echo -e "${RED}❌ Not running${NC}"
+        echo -e "${YELLOW}⚠️  Not found${NC}"
         return 1
     fi
 }
@@ -67,10 +67,10 @@ else
 fi
 
 echo
-echo -e "${YELLOW}🐳 Проверка Docker контейнеров:${NC}"
+echo -e "${YELLOW}⚙️  Проверка процессов:${NC}"
 
-# Проверка N8N контейнера
-check_docker_container "n8n-dev"
+# Проверка N8N процесса
+check_process "n8n start"
 
 echo
 echo -e "${YELLOW}🔗 Проверка API эндпоинтов:${NC}"
@@ -102,9 +102,9 @@ echo -e "   └─ Логин: ${YELLOW}admin${NC} / Пароль: ${YELLOW}admi
 echo -e "${GREEN}🔧 N8N API:${NC}          http://localhost:4000/api/n8n/*"
 echo
 echo -e "${BLUE}💡 Полезные команды:${NC}"
-echo "  • Логи всех сервисов:     docker logs n8n-dev"
-echo "  • Остановка N8N:          docker stop n8n-dev"
-echo "  • Тест интеграции:        npm run n8n:test"
+echo "  • Запуск N8N отдельно:     npm run n8n:standalone"
+echo "  • Проверка процессов:      ps aux | grep n8n"
+echo "  • Тест интеграции:         npm run n8n:test"
 echo
 echo -e "${GREEN}🎉 Экосистема разработки готова к работе!${NC}"
 echo
