@@ -117,14 +117,20 @@ build.on('close', (code) => {
 
     server.on('close', (code) => {
       console.log(`[SERVER] Process exited with code ${code}`)
-      inngest.kill('SIGTERM')
-      n8n.kill('SIGTERM')
+      if (code !== 0) {
+        console.log('[SERVER] Non-zero exit, shutting down other services')
+        inngest.kill('SIGTERM')
+        n8n.kill('SIGTERM')
+      }
     })
 
     inngest.on('close', (code) => {
       console.log(`[INNGEST] Process exited with code ${code}`)
-      server.kill('SIGTERM')
-      n8n.kill('SIGTERM')
+      if (code !== 0) {
+        console.log('[INNGEST] Non-zero exit, shutting down other services')
+        server.kill('SIGTERM')
+        n8n.kill('SIGTERM')
+      }
     })
 
   }, 3000) // Wait 3 seconds for AI Server to start
@@ -160,11 +166,17 @@ build.on('close', (code) => {
 
   server.on('close', (code) => {
     console.log(`[SERVER] Process exited with code ${code}`)
-    inngest.kill('SIGTERM')
+    if (code !== 0) {
+      console.log('[SERVER] Non-zero exit, shutting down other services')
+      inngest.kill('SIGTERM')
+    }
   })
 
   inngest.on('close', (code) => {
     console.log(`[INNGEST] Process exited with code ${code}`)
-    server.kill('SIGTERM')
+    if (code !== 0) {
+      console.log('[INNGEST] Non-zero exit, shutting down other services')
+      server.kill('SIGTERM')
+    }
   })
 })

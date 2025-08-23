@@ -32,6 +32,7 @@
     "mcp:server:direct": "node dist/mcp/index.js",
     "mcp:dev": "nodemon --exec \"npm run build && node dist/mcp/index.js\" --watch src/mcp --ext ts",
     "n8n:test": "node tests/n8n/test-n8n-integration.js",
+    "n8n:test:neurophoto": "node tests/n8n/test-neurophoto-workflow.js",
     "dev:n8n": "N8N_BASIC_AUTH_ACTIVE=true N8N_BASIC_AUTH_USER=admin N8N_BASIC_AUTH_PASSWORD=admin123 N8N_HOST=localhost N8N_PORT=5678 N8N_PROTOCOL=http N8N_SECURE_COOKIE=false npx n8n start",
     "n8n:standalone": "N8N_BASIC_AUTH_ACTIVE=true N8N_BASIC_AUTH_USER=admin N8N_BASIC_AUTH_PASSWORD=admin123 N8N_HOST=localhost N8N_PORT=5678 N8N_PROTOCOL=http N8N_SECURE_COOKIE=false npx n8n start",
     "test:ecosystem": "./scripts/test-dev-ecosystem.sh"
