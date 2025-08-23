@@ -89,7 +89,10 @@ build.on('close', code => {
         WEBHOOK_URL: process.env.N8N_WEBHOOK_URL || 'http://localhost:5678',
         GENERIC_TIMEZONE: 'Europe/Moscow',
         N8N_METRICS: 'true',
-        N8N_LOG_LEVEL: 'info'
+        N8N_LOG_LEVEL: 'info',
+        // Конфигурация для работы под прокси
+        N8N_PATH: '/n8n',
+        N8N_SERVE_STATIC: 'true'
       }
     })
 
