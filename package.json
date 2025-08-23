@@ -34,6 +34,8 @@
     "n8n:test": "node tests/n8n/test-n8n-integration.js",
     "n8n:test:neurophoto": "node tests/n8n/test-neurophoto-workflow.js",
     "dev:n8n": "N8N_USER_MANAGEMENT_JWT_SECRET=mysecret N8N_USER_MANAGEMENT_DISABLED=true N8N_PERSONALIZATION_ENABLED=false N8N_HOST=localhost N8N_PORT=5678 N8N_PROTOCOL=http N8N_SECURE_COOKIE=false npx n8n start",
+    "claude:fix-pr": "node scripts/claude-pr-fixer.js",
+    "claude:check-prs": "gh pr list --state open --limit 5 && echo '\n=== Checking PR 45 ===' && gh pr checks 45",
     "n8n:standalone": "N8N_BASIC_AUTH_ACTIVE=false N8N_USER_MANAGEMENT_DISABLED=true N8N_PERSONALIZATION_ENABLED=false N8N_HOST=localhost N8N_PORT=5678 N8N_PROTOCOL=http N8N_SECURE_COOKIE=false npx n8n start",
     "test:ecosystem": "./scripts/test-dev-ecosystem.sh"
   },
