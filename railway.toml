@@ -5,7 +5,7 @@ buildCommand = "npm run build"
 [deploy]
 startCommand = "npm start"
 healthcheckPath = "/health"
-healthcheckTimeout = 120
+healthcheckTimeout = 300
 restartPolicyType = "ON_FAILURE"
 restartPolicyMaxRetries = 3
 
@@ -29,6 +29,7 @@ NODE_ENV = "testing"
 APP_ENV = "testing"
 PORT = "${{ PORT }}"
 LOG_DIR = "/tmp/ai-server-logs"
+RAILWAY_HEALTHCHECK_TIMEOUT_SEC = "300"
 
 # Переменные для продакшн окружения (production branch)  
 [environments.production.variables]
@@ -36,3 +37,4 @@ NODE_ENV = "production"
 APP_ENV = "production" 
 PORT = "${{ PORT }}"
 LOG_DIR = "/tmp/ai-server-logs"
+RAILWAY_HEALTHCHECK_TIMEOUT_SEC = "300"
