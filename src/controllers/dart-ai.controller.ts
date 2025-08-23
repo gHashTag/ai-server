@@ -222,19 +222,17 @@ export class DartAIController {
         return
       }
 
-      // Синхронизировать с Dart AI
-      const syncResult = await this.dartAIService.syncGitHubIssueToTask(
-        issueData
-      )
+      // Синхронизировать с Dart AI (симуляция)
+      const syncResult = await this.dartAIService.simulateCreateTaskFromGitHubIssue(issueData)
 
       res.json({
-        success: syncResult.success,
-        message: syncResult.success
-          ? 'Issue synced successfully'
+        success: !!syncResult,
+        message: syncResult
+          ? 'Issue synced successfully (simulated)'
           : 'Sync failed',
         issue_number,
         repository,
-        result: syncResult,
+        dart_task: syncResult,
       })
     } catch (error) {
       logger.error('💥 Manual GitHub Issue sync failed', {
@@ -530,12 +528,13 @@ export class DartAIController {
       updated_at: body.issue.updated_at,
     }
 
-    const syncResult = await this.dartAIService.syncGitHubIssueToTask(issue)
+    const syncResult = await this.dartAIService.simulateCreateTaskFromGitHubIssue(issue)
 
     return {
       action: 'github_issue_synced',
       issue_number: issue.number,
-      success: syncResult.success,
+      success: !!syncResult,
+      dart_task: syncResult?.duid,
     }
   }
 
@@ -555,12 +554,17 @@ export class DartAIController {
       updated_at: body.issue.updated_at,
     }
 
-    const syncResult = await this.dartAIService.syncGitHubIssueToTask(issue)
+    // Для закрытых Issues только логируем, не создаем задачи в Dart AI
+    logger.info('📝 GitHub Issue закрыт, обновление статуса в Dart AI (симуляция)', {
+      issue_number: issue.number,
+      repository: issue.repository
+    })
 
     return {
-      action: 'github_issue_closed_synced',
+      action: 'github_issue_closed_logged',
       issue_number: issue.number,
-      success: syncResult.success,
+      success: true,
+      message: 'Issue closure logged (simulated)',
     }
   }
 
