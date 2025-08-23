@@ -67,8 +67,8 @@ export class WebhookBFLNeurophotoController {
 
         // Проверяем bot перед отправкой
         if (!bot || !bot.telegram) {
-          console.error('❌ Bot instance is invalid in webhook-bfl-neurophoto')
-          throw new Error('Bot instance is required for sending photo')
+          console.error('❌ Bot instance is invalid in webhook-bfl-neurophoto');
+          throw new Error('Bot instance is required for sending photo');
         }
 
         // Отправляем изображение пользователю
@@ -125,12 +125,8 @@ export class WebhookBFLNeurophotoController {
 
         // Проверяем bot перед отправкой
         if (!bot || !bot.telegram) {
-          console.error(
-            '❌ Bot instance is invalid in webhook-bfl-neurophoto (moderated)'
-          )
-          throw new Error(
-            'Bot instance is required for sending moderation message'
-          )
+          console.error('❌ Bot instance is invalid in webhook-bfl-neurophoto (moderated)');
+          throw new Error('Bot instance is required for sending moderation message');
         }
 
         await bot.telegram.sendMessage(
@@ -166,15 +162,13 @@ export class WebhookBFLNeurophotoController {
           result.sample
         )
         const is_ru = language_code === 'ru'
-
+        
         // Проверяем bot перед отправкой
         if (!bot || !bot.telegram) {
-          console.error(
-            '❌ Bot instance is invalid in webhook-bfl-neurophoto (error)'
-          )
-          throw new Error('Bot instance is required for sending error message')
+          console.error('❌ Bot instance is invalid in webhook-bfl-neurophoto (error)');
+          throw new Error('Bot instance is required for sending error message');
         }
-
+        
         await bot.telegram.sendMessage(telegram_id, `🚫 ${status}`, {
           reply_markup: {
             keyboard: [

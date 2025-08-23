@@ -5,7 +5,7 @@ import cookieParser from 'cookie-parser'
 import cors from 'cors'
 import helmet from 'helmet'
 import hpp from 'hpp'
-import { createProxyMiddleware } from 'http-proxy-middleware'
+// import { createProxyMiddleware } from 'http-proxy-middleware' // Временно отключен
 // const server = require('@nexrender/server')
 // const { start } = require('@nexrender/worker')
 import swaggerJSDoc from 'swagger-jsdoc'
@@ -131,6 +131,7 @@ export class App {
     //   res.status(200).end()
     // })
 
+<<<<<<< HEAD
     // N8N Proxy - прокси все запросы /n8n/* на N8N сервер
     const n8nPort = process.env.N8N_PORT || '5678'
     const n8nHost = process.env.N8N_HOST || 'localhost'
@@ -162,6 +163,25 @@ export class App {
         },
       })
     )
+=======
+    // N8N Proxy - временно отключен для стабильности
+    // TODO: Включить после настройки N8N сервера
+    this.app.get('/n8n', (req, res) => {
+      res.status(503).json({
+        error: 'N8N service temporarily unavailable',
+        message: 'N8N is being configured for production deployment',
+        status: 'coming_soon'
+      })
+    })
+    
+    this.app.all('/n8n/*', (req, res) => {
+      res.status(503).json({
+        error: 'N8N service temporarily unavailable', 
+        message: 'N8N is being configured for production deployment',
+        status: 'coming_soon'
+      })
+    })
+>>>>>>> db1a088696d21b59a3333f88c7bfd3050f7edbc6
 
     this.app.use('/api/inngest', inngestRouter)
     this.app.use('/api/upload', new UploadRoute().router)

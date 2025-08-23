@@ -19,32 +19,27 @@ const n8nHost = process.env.N8N_HOST || 'localhost'
 
 console.log(`🔗 Настройка прокси для N8N: http://${n8nHost}:${n8nPort}`)
 
-app.use(
-  '/n8n',
-  createProxyMiddleware({
-    target: `http://${n8nHost}:${n8nPort}`,
-    changeOrigin: true,
-    pathRewrite: {
-      '^/n8n': '', // убираем /n8n из пути при проксировании
-    },
-    ws: true,
-    logLevel: 'info',
-    onProxyReq: (proxyReq, req, res) => {
-      console.log(
-        `📡 N8N Proxy: ${req.method} ${req.url} -> http://${n8nHost}:${n8nPort}${proxyReq.path}`
-      )
-    },
-    onError: (err, req, res) => {
-      console.error(`❌ N8N Proxy Error: ${err.message}`)
-      res.status(503).json({
-        error: 'N8N service unavailable',
-        message: 'N8N server is not responding',
-        hint: 'Make sure N8N is running on port ' + n8nPort,
-        target: `http://${n8nHost}:${n8nPort}`,
-      })
-    },
-  })
-)
+app.use('/n8n', createProxyMiddleware({
+  target: `http://${n8nHost}:${n8nPort}`,
+  changeOrigin: true,
+  pathRewrite: {
+    '^/n8n': '', // убираем /n8n из пути при проксировании
+  },
+  ws: true,
+  logLevel: 'info',
+  onProxyReq: (proxyReq, req, res) => {
+    console.log(`📡 N8N Proxy: ${req.method} ${req.url} -> http://${n8nHost}:${n8nPort}${proxyReq.path}`)
+  },
+  onError: (err, req, res) => {
+    console.error(`❌ N8N Proxy Error: ${err.message}`)
+    res.status(503).json({
+      error: 'N8N service unavailable',
+      message: 'N8N server is not responding',
+      hint: 'Make sure N8N is running on port ' + n8nPort,
+      target: `http://${n8nHost}:${n8nPort}`
+    })
+  }
+}))
 
 // Health check
 app.get('/health', (req, res) => {
@@ -53,7 +48,7 @@ app.get('/health', (req, res) => {
     service: 'N8N Proxy Test Server',
     timestamp: new Date().toISOString(),
     n8n_target: `http://${n8nHost}:${n8nPort}`,
-    proxy_path: '/n8n',
+    proxy_path: '/n8n'
   })
 })
 
@@ -65,13 +60,13 @@ app.get('/', (req, res) => {
     endpoints: {
       'GET /health': 'Health check',
       'GET /n8n': 'N8N Admin Panel (proxied)',
-      'ALL /n8n/*': 'All N8N endpoints (proxied)',
+      'ALL /n8n/*': 'All N8N endpoints (proxied)'
     },
     instructions: [
       '1. Запустите N8N: npm run dev:n8n',
       '2. Откройте http://localhost:4000/n8n',
-      '3. Должна открыться админка N8N',
-    ],
+      '3. Должна открыться админка N8N'
+    ]
   })
 })
 
@@ -101,6 +96,6 @@ process.on('SIGTERM', () => {
 })
 
 process.on('SIGINT', () => {
-  console.log('\n🛑 Proxy test server shutting down gracefully...')
+  console.log('\n🛑 Proxy test server shutting down gracefully...')  
   process.exit(0)
 })

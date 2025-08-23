@@ -14,7 +14,10 @@
       "name": "NeuroPhoto Webhook",
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 1,
-      "position": [240, 340],
+      "position": [
+        240,
+        340
+      ],
       "webhookId": "neurophoto-webhook-id"
     },
     {
@@ -36,7 +39,7 @@
               }
             },
             {
-              "id": "telegram-id-check",
+              "id": "telegram-id-check", 
               "leftValue": "={{$json.body[\"telegram_id\"]}}",
               "rightValue": "",
               "operator": {
@@ -61,7 +64,10 @@
       "name": "Validate Input",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
-      "position": [460, 340]
+      "position": [
+        460,
+        340
+      ]
     },
     {
       "parameters": {
@@ -74,7 +80,7 @@
               "value": "application/json"
             },
             {
-              "name": "User-Agent",
+              "name": "User-Agent", 
               "value": "N8N-NeuroPhoto-Workflow"
             }
           ]
@@ -93,7 +99,10 @@
       "name": "Call NeuroPhoto API",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [680, 300]
+      "position": [
+        680,
+        300
+      ]
     },
     {
       "parameters": {
@@ -121,7 +130,10 @@
       "name": "Check API Success",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
-      "position": [900, 300]
+      "position": [
+        900,
+        300
+      ]
     },
     {
       "parameters": {
@@ -131,7 +143,10 @@
       "name": "Process Success",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [1120, 240]
+      "position": [
+        1120,
+        240
+      ]
     },
     {
       "parameters": {
@@ -141,7 +156,10 @@
       "name": "Process Error",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [1120, 360]
+      "position": [
+        1120,
+        360
+      ]
     },
     {
       "parameters": {
@@ -151,7 +169,10 @@
       "name": "Validation Error",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [680, 400]
+      "position": [
+        680,
+        400
+      ]
     },
     {
       "parameters": {
@@ -162,7 +183,10 @@
       "name": "Success Response",
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1,
-      "position": [1340, 240]
+      "position": [
+        1340,
+        240
+      ]
     },
     {
       "parameters": {
@@ -174,7 +198,10 @@
       "name": "Error Response",
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1,
-      "position": [1340, 380]
+      "position": [
+        1340,
+        380
+      ]
     }
   ],
   "connections": {
@@ -283,7 +310,7 @@
   "tags": [
     {
       "createdAt": "2025-08-23T12:00:00.000Z",
-      "updatedAt": "2025-08-23T12:00:00.000Z",
+      "updatedAt": "2025-08-23T12:00:00.000Z", 
       "id": "neurophoto-tag",
       "name": "AI Generation"
     }

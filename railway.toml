@@ -3,9 +3,9 @@ builder = "NIXPACKS"
 buildCommand = "npm run build"
 
 [deploy]
-startCommand = "./scripts/start-production.sh"
+startCommand = "npm start"
 healthcheckPath = "/health"
-healthcheckTimeout = 120
+healthcheckTimeout = 60
 restartPolicyType = "ON_FAILURE"
 restartPolicyMaxRetries = 3
 
@@ -36,19 +36,3 @@ NODE_ENV = "production"
 APP_ENV = "production" 
 PORT = "${{ PORT }}"
 LOG_DIR = "/tmp/ai-server-logs"
-
-# N8N Configuration
-N8N_PORT = "5678"
-N8N_HOST = "localhost"
-N8N_PROTOCOL = "http"
-N8N_SECURE_COOKIE = "false"
-N8N_BASIC_AUTH_ACTIVE = "true"
-N8N_BASIC_AUTH_USER = "admin"
-N8N_ADMIN_PASSWORD = "admin123"
-N8N_PATH = "/n8n"
-N8N_SERVE_STATIC = "true"
-N8N_USER_MANAGEMENT_DISABLED = "true"
-N8N_PERSONALIZATION_ENABLED = "false"
-GENERIC_TIMEZONE = "Europe/Moscow"
-N8N_METRICS = "true"
-N8N_LOG_LEVEL = "info"

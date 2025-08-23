@@ -23,11 +23,7 @@ const log = (message, data = {}) => {
 
 // Health check endpoint
 app.get('/health', (req, res) => {
-  res.json({
-    status: 'ok',
-    service: 'AI Server Mock',
-    timestamp: new Date().toISOString(),
-  })
+  res.json({ status: 'ok', service: 'AI Server Mock', timestamp: new Date().toISOString() })
 })
 
 // Main endpoint
@@ -37,24 +33,15 @@ app.get('/', (req, res) => {
     message: 'Mock AI Server for N8N Testing',
     endpoints: {
       'GET /health': 'Health check',
-      'POST /api/generate/neuro-photo': 'NeuroPhoto generation (mock)',
-    },
+      'POST /api/generate/neuro-photo': 'NeuroPhoto generation (mock)'
+    }
   })
 })
 
 // Mock NeuroPhoto generation endpoint
 app.post('/api/generate/neuro-photo', async (req, res) => {
-  const {
-    prompt,
-    telegram_id,
-    model_url,
-    username,
-    num_images,
-    is_ru,
-    bot_name,
-    gender,
-  } = req.body
-
+  const { prompt, telegram_id, model_url, username, num_images, is_ru, bot_name, gender } = req.body
+  
   log('NeuroPhoto request received:', {
     prompt: prompt?.substring(0, 50) + '...',
     telegram_id,
@@ -63,7 +50,7 @@ app.post('/api/generate/neuro-photo', async (req, res) => {
     num_images,
     is_ru,
     bot_name,
-    gender,
+    gender
   })
 
   // Simulate validation
@@ -73,11 +60,7 @@ app.post('/api/generate/neuro-photo', async (req, res) => {
       success: false,
       error: 'Missing required fields',
       required: ['prompt', 'telegram_id', 'model_url'],
-      received: {
-        prompt: !!prompt,
-        telegram_id: !!telegram_id,
-        model_url: !!model_url,
-      },
+      received: { prompt: !!prompt, telegram_id: !!telegram_id, model_url: !!model_url }
     })
   }
 
@@ -87,7 +70,7 @@ app.post('/api/generate/neuro-photo', async (req, res) => {
 
   // Simulate success response
   const job_id = `neuro_photo_${telegram_id}_${Date.now()}`
-
+  
   log(`Mock processing completed successfully for job: ${job_id}`)
 
   res.json({
@@ -102,22 +85,22 @@ app.post('/api/generate/neuro-photo', async (req, res) => {
       username,
       processing_status: 'STARTED',
       estimated_completion_time: '2-5 minutes',
-      mock_note: 'This is a mock response for testing N8N integration',
+      mock_note: 'This is a mock response for testing N8N integration'
     },
     api_info: {
       processing_time_ms: Math.round(delay),
       mock_mode: true,
-      real_ai_server_status: 'Not running - this is a test mock',
-    },
+      real_ai_server_status: 'Not running - this is a test mock'
+    }
   })
 })
 
-// Mock N8N health endpoint
+// Mock N8N health endpoint  
 app.get('/api/n8n/health', (req, res) => {
   res.json({
     status: 'ok',
     service: 'N8N Integration Mock',
-    n8n_status: 'Connected to localhost:5678',
+    n8n_status: 'Connected to localhost:5678'
   })
 })
 
@@ -128,10 +111,10 @@ app.use((req, res) => {
     message: `Route ${req.method} ${req.path} not found in Mock AI Server`,
     available_routes: [
       'GET /',
-      'GET /health',
+      'GET /health', 
       'POST /api/generate/neuro-photo',
-      'GET /api/n8n/health',
-    ],
+      'GET /api/n8n/health'
+    ]
   })
 })
 
@@ -141,7 +124,7 @@ app.use((error, req, res, next) => {
   res.status(500).json({
     error: 'Internal Server Error',
     message: error.message,
-    mock_note: 'This error occurred in the mock server',
+    mock_note: 'This error occurred in the mock server'
   })
 })
 
