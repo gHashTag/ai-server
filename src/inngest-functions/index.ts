@@ -29,6 +29,16 @@ import {
   healthTestHandler,
 } from './systemHealthCheck'
 import { generateVeo3Video } from './generateVeo3Video'
+import {
+  networkCheckMonitor,
+  triggerNetworkCheck,
+  postDeployNetworkCheck,
+} from './networkCheckMonitor'
+import {
+  deploymentAutoDetector,
+  deploymentRecoverySystem,
+  railwayDeploymentWebhook,
+} from './deploymentMonitor'
 
 // Export all functions in array (for Inngest registration)
 export const functions = [
@@ -60,6 +70,12 @@ export const functions = [
   triggerHealthCheck, // 🔄 Ручной запуск проверки здоровья
   healthTestHandler, // 🧪 Обработчик тестовых событий для health check
   generateVeo3Video, // 🎬 VEO3 видео генерация через Kie.ai API
+  networkCheckMonitor, // 🌐 Мониторинг network check каждые 10 минут
+  triggerNetworkCheck, // 🔄 Ручной запуск network check
+  postDeployNetworkCheck, // 🚀 Post-deploy network check
+  deploymentAutoDetector, // 🔍 Автоматическое обнаружение деплоев
+  deploymentRecoverySystem, // 🛠 Система автоматического восстановления
+  railwayDeploymentWebhook, // 🚂 Webhook для уведомлений Railway
 ]
 
 // Individual exports for compatibility
@@ -85,6 +101,8 @@ export { competitorDelivery } // 📬 Доставка рилсов конкур
 export { systemMonitor, triggerSystemMonitor } // 📊 Системный мониторинг
 export { systemHealthCheck, triggerHealthCheck, healthTestHandler } // 💚 Проверка здоровья системы
 export { generateVeo3Video } // 🎬 VEO3 видео генерация через Kie.ai API
+export { networkCheckMonitor, triggerNetworkCheck, postDeployNetworkCheck } // 🌐 Network check функции
+export { deploymentAutoDetector, deploymentRecoverySystem, railwayDeploymentWebhook } // 🚀 Deployment мониторинг
 
 // Export everything
 export * from './helloworld'
@@ -108,5 +126,7 @@ export * from './competitorDelivery' // 📬 Доставка рилсов ко�
 export * from './systemMonitor' // 📊 Системный мониторинг
 export * from './systemHealthCheck' // 💚 Проверка здоровья системы
 export * from './generateVeo3Video' // 🎬 VEO3 видео генерация через Kie.ai API
+export * from './networkCheckMonitor' // 🌐 Network check мониторинг
+export * from './deploymentMonitor' // 🚀 Deployment мониторинг
 
 export default functions
