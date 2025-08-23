@@ -225,6 +225,12 @@ export const competitorAutoParser = inngest.createFunction(
           const { getBotByName } = await import('@/core/bot')
           const { bot } = getBotByName('neuro_blogger_bot')
 
+          // Проверяем bot перед отправкой
+          if (!bot || !bot.telegram) {
+            log.error('❌ Bot instance is invalid in competitorAutoParser (admin notification)');
+            return; // Пропускаем отправку уведомления админу, но не ломаем основной процесс
+          }
+
           await bot.telegram.sendMessage(process.env.ADMIN_CHAT_ID, adminMessage)
           log.info('📤 Отчёт отправлен админам')
         }

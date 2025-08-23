@@ -248,6 +248,12 @@ export const systemMonitor = inngest.createFunction(
         const { getBotByName } = await import('@/core/bot')
         const { bot } = getBotByName('neuro_blogger_bot')
 
+        // Проверяем bot перед отправкой
+        if (!bot || !bot.telegram) {
+          log.error('❌ Bot instance is invalid in systemMonitor (daily report)');
+          return; // Пропускаем отправку ежедневного отчета, но не ломаем основной процесс
+        }
+
         // Формируем красивый отчет
         const report = `
 📊 Ежедневный отчет системы Instagram подписок
