@@ -1308,4 +1308,115 @@ export class GenerationController {
       next(error)
     }
   }
+
+  /**
+   * 🔧 Диагностический метод для проверки Kie.ai API
+   */
+  public debugKieAi = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> => {
+    try {
+      const { KieAiService } = await import('@/services/kieAiService')
+      const kieAiService = new KieAiService()
+      
+      // Собираем диагностическую информацию
+      const diagnostics = {
+        timestamp: new Date().toISOString(),
+        environment: {
+          node_env: process.env.NODE_ENV,
+          has_kie_api_key: !!process.env.KIE_AI_API_KEY,
+          api_key_length: process.env.KIE_AI_API_KEY?.length || 0,
+          api_key_preview: process.env.KIE_AI_API_KEY?.substring(0, 8) + '...' || 'не найден'
+        },
+        tests: {}
+      }
+
+      // Тест 1: Проверка здоровья API
+      console.log('🔍 Диагностика Kie.ai: проверяем здоровье API...')
+      try {
+        const isHealthy = await kieAiService.checkHealth()
+        diagnostics.tests.health_check = {
+          success: isHealthy,
+          message: isHealthy ? 'API доступен' : 'API недоступен'
+        }
+      } catch (error) {
+        diagnostics.tests.health_check = {
+          success: false,
+          error: error.message
+        }
+      }
+
+      // Тест 2: Проверка баланса
+      console.log('🔍 Диагностика Kie.ai: проверяем баланс...')
+      try {
+        const balance = await kieAiService.getAccountBalance()
+        diagnostics.tests.balance_check = {
+          success: true,
+          credits: balance.credits,
+          message: `Доступно ${balance.credits} кредитов`
+        }
+      } catch (error) {
+        diagnostics.tests.balance_check = {
+          success: false,
+          error: error.message
+        }
+      }
+
+      // Тест 3: Тестовая генерация (только создание задачи)
+      console.log('🔍 Диагностика Kie.ai: тестируем генерацию...')
+      try {
+        const testResult = await kieAiService.generateVideo({
+          model: 'veo3_fast',
+          prompt: 'diagnostic test - simple scene',
+          duration: 2,
+          aspectRatio: '16:9',
+          userId: 'diagnostic_test',
+          botName: 'diagnostic'
+        })
+        
+        diagnostics.tests.generation_test = {
+          success: true,
+          task_id: testResult.taskId,
+          cost: testResult.cost,
+          message: 'Задача создана успешно'
+        }
+      } catch (error) {
+        diagnostics.tests.generation_test = {
+          success: false,
+          error: error.message
+        }
+      }
+
+      // Тест 4: Проверка моделей
+      const models = kieAiService.getAllModels()
+      diagnostics.tests.models_available = {
+        success: true,
+        count: Object.keys(models).length,
+        models: Object.keys(models)
+      }
+
+      // Определяем общий статус
+      const allTestsPassed = Object.values(diagnostics.tests).every(
+        test => test.success !== false
+      )
+
+      res.status(200).json({
+        success: allTestsPassed,
+        message: allTestsPassed 
+          ? '✅ Все тесты Kie.ai прошли успешно' 
+          : '❌ Обнаружены проблемы с Kie.ai API',
+        diagnostics
+      })
+
+    } catch (error) {
+      console.error('❌ Ошибка в debugKieAi:', error)
+      res.status(500).json({
+        success: false,
+        message: 'Критическая ошибка диагностики',
+        error: error.message
+      })
+    }
+  }
 }

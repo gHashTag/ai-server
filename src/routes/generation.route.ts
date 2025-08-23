@@ -100,5 +100,11 @@ export class GenerationRoute implements Routes {
       `${this.path}/video-jobs/stats`,
       this.generationController.getVideoJobsStats
     )
+
+    // 🔧 Диагностический endpoint для Kie.ai API
+    this.router.get(
+      `${this.path}/debug/kie-ai`,
+      this.generationController.debugKieAi
+    )
   }
 }
