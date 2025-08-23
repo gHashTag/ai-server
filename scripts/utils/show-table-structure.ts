@@ -10,13 +10,13 @@ async function showTableStructure() {
   console.log('🔍 === ИССЛЕДОВАНИЕ СТРУКТУРЫ БАЗЫ ДАННЫХ ===\n')
 
   const connectionString = process.env.SUPABASE_URL
-  
+
   if (!connectionString) {
     console.error('❌ Database connection string is required')
     console.error('Please set SUPABASE_URL in your .env file')
     process.exit(1)
   }
-  
+
   const pool = new Pool({
     connectionString,
     ssl: { rejectUnauthorized: false },
@@ -27,7 +27,7 @@ async function showTableStructure() {
 
   try {
     const client = await pool.connect()
-    
+
     try {
       // Получаем все таблицы
       console.log('📋 Шаг 1: Список всех таблиц...')
@@ -44,69 +44,101 @@ async function showTableStructure() {
       })
 
       // Исследуем структуру каждой таблицы связанной с Instagram
-      const instagramTables = tables.rows.filter(table => 
-        table.table_name.includes('instagram') || 
-        table.table_name.includes('competitors') ||
-        table.table_name.includes('reels')
+      const instagramTables = tables.rows.filter(
+        table =>
+          table.table_name.includes('instagram') ||
+          table.table_name.includes('competitors') ||
+          table.table_name.includes('reels')
       )
 
       console.log('\n🔍 Шаг 2: Структура Instagram-связанных таблиц...')
-      
+
       for (const table of instagramTables) {
         console.log(`\n📊 Таблица: ${table.table_name}`)
-        
+
         // Получаем структуру колонок
-        const columns = await client.query(`
+        const columns = await client.query(
+          `
           SELECT column_name, data_type, is_nullable, column_default
           FROM information_schema.columns 
           WHERE table_name = $1 AND table_schema = 'public'
           ORDER BY ordinal_position
-        `, [table.table_name])
+        `,
+          [table.table_name]
+        )
 
         console.log('📋 Колонки:')
         columns.rows.forEach(col => {
-          console.log(`   • ${col.column_name} (${col.data_type}) ${col.is_nullable === 'YES' ? 'NULL' : 'NOT NULL'}`)
+          console.log(
+            `   • ${col.column_name} (${col.data_type}) ${
+              col.is_nullable === 'YES' ? 'NULL' : 'NOT NULL'
+            }`
+          )
         })
 
         // Получаем количество записей
-        const count = await client.query(`SELECT COUNT(*) FROM ${table.table_name}`)
+        const count = await client.query(
+          `SELECT COUNT(*) FROM ${table.table_name}`
+        )
         console.log(`📊 Записей: ${count.rows[0].count}`)
 
         // Показываем примеры данных (первые 2 записи)
         if (parseInt(count.rows[0].count) > 0) {
-          const sample = await client.query(`SELECT * FROM ${table.table_name} LIMIT 2`)
+          const sample = await client.query(
+            `SELECT * FROM ${table.table_name} LIMIT 2`
+          )
           console.log('🧪 Примеры данных:')
           sample.rows.forEach((row, index) => {
-            console.log(`   Запись ${index + 1}:`, Object.keys(row).slice(0, 5).map(key => `${key}: ${row[key]}`).join(', ') + '...')
+            console.log(
+              `   Запись ${index + 1}:`,
+              Object.keys(row)
+                .slice(0, 5)
+                .map(key => `${key}: ${row[key]}`)
+                .join(', ') + '...'
+            )
           })
         }
       }
 
       // Специальный анализ для таблицы с рилзами
-      const reelsTable = instagramTables.find(t => t.table_name.includes('reels'))
+      const reelsTable = instagramTables.find(t =>
+        t.table_name.includes('reels')
+      )
       if (reelsTable) {
-        console.log(`\n🎬 Шаг 3: Детальный анализ таблицы рилз: ${reelsTable.table_name}`)
-        
+        console.log(
+          `\n🎬 Шаг 3: Детальный анализ таблицы рилз: ${reelsTable.table_name}`
+        )
+
         // Получаем топ записи по популярности (пробуем разные поля)
-        const columns = await client.query(`
+        const columns = await client.query(
+          `
           SELECT column_name 
           FROM information_schema.columns 
           WHERE table_name = $1 AND table_schema = 'public'
-        `, [reelsTable.table_name])
+        `,
+          [reelsTable.table_name]
+        )
 
         const columnNames = columns.rows.map(col => col.column_name)
         console.log('📋 Доступные колонки:', columnNames.join(', '))
 
         // Ищем поля с именами пользователей
-        const userFields = columnNames.filter(col => 
-          col.includes('user') || col.includes('name') || col.includes('account')
+        const userFields = columnNames.filter(
+          col =>
+            col.includes('user') ||
+            col.includes('name') ||
+            col.includes('account')
         )
         console.log('👤 Поля пользователей:', userFields.join(', '))
 
         // Ищем поля с метриками
-        const metricFields = columnNames.filter(col => 
-          col.includes('like') || col.includes('view') || col.includes('comment') || 
-          col.includes('count') || col.includes('play')
+        const metricFields = columnNames.filter(
+          col =>
+            col.includes('like') ||
+            col.includes('view') ||
+            col.includes('comment') ||
+            col.includes('count') ||
+            col.includes('play')
         )
         console.log('📊 Поля метрик:', metricFields.join(', '))
 
@@ -114,7 +146,7 @@ async function showTableStructure() {
         if (userFields.length > 0 && metricFields.length > 0) {
           const userField = userFields[0]
           const metricField = metricFields[0]
-          
+
           const topData = await client.query(`
             SELECT ${userField}, ${metricField}, COUNT(*) as record_count
             FROM ${reelsTable.table_name} 
@@ -125,23 +157,32 @@ async function showTableStructure() {
 
           console.log(`\n🏆 Топ по ${metricField}:`)
           topData.rows.forEach((row, index) => {
-            console.log(`   ${index + 1}. ${row[userField]}: ${row[metricField]} (${row.record_count} записей)`)
+            console.log(
+              `   ${index + 1}. ${row[userField]}: ${row[metricField]} (${
+                row.record_count
+              } записей)`
+            )
           })
         }
       }
 
       // Проверяем таблицу конкурентов
-      const competitorsTable = instagramTables.find(t => t.table_name.includes('competitors'))
+      const competitorsTable = instagramTables.find(t =>
+        t.table_name.includes('competitors')
+      )
       if (competitorsTable) {
-        console.log(`\n👥 Шаг 4: Анализ таблицы конкурентов: ${competitorsTable.table_name}`)
-        
-        const competitorsSample = await client.query(`SELECT * FROM ${competitorsTable.table_name} LIMIT 3`)
+        console.log(
+          `\n👥 Шаг 4: Анализ таблицы конкурентов: ${competitorsTable.table_name}`
+        )
+
+        const competitorsSample = await client.query(
+          `SELECT * FROM ${competitorsTable.table_name} LIMIT 3`
+        )
         console.log('🧪 Примеры конкурентов:')
         competitorsSample.rows.forEach((row, index) => {
           console.log(`   ${index + 1}.`, JSON.stringify(row, null, 2))
         })
       }
-
     } finally {
       client.release()
     }
@@ -149,7 +190,6 @@ async function showTableStructure() {
     console.log('\n🎉 === ИССЛЕДОВАНИЕ ЗАВЕРШЕНО ===')
     console.log('✅ Структура базы данных изучена!')
     console.log('📊 Теперь можно создать правильные тесты')
-
   } catch (error) {
     console.error('❌ Ошибка исследования:', error)
     throw error

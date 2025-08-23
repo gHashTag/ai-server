@@ -5,6 +5,7 @@
 ### 🔴 КРИТИЧЕСКИЕ ПРОБЛЕМЫ:
 
 1. **Railway Deployment не синхронизирован**
+
    - **Проблема**: Сервер https://ai-server-express.railway.app показывает старую версию
    - **Статус**: ✅ Health/Root работают, ❌ API endpoints возвращают 404
    - **Причина**: Railway не обновился после push в production ветку
@@ -23,13 +24,15 @@
 ### ✅ Video Status API - ПОЛНОСТЬЮ РЕАЛИЗОВАН
 
 **Новые эндпоинты добавлены**:
+
 ```
 GET /generate/text-to-video/status/:job_id     - статус конкретного задания
-GET /generate/video-jobs/user/:telegram_id    - все задания пользователя  
+GET /generate/video-jobs/user/:telegram_id    - все задания пользователя
 GET /generate/video-jobs/stats                - общая статистика
 ```
 
 **Реализована система отслеживания**:
+
 - ✅ `VideoJobTracker` - отслеживание всех video jobs
 - ✅ Интеграция в `textToVideo` и `veo3Video` методы
 - ✅ Статусы: pending → processing → completed/failed
@@ -37,6 +40,7 @@ GET /generate/video-jobs/stats                - общая статистика
 - ✅ Автоматическая очистка старых заданий
 
 **Пример ответа API**:
+
 ```json
 {
   "success": true,
@@ -58,8 +62,9 @@ GET /generate/video-jobs/stats                - общая статистика
 ### ✅ Competitor Subscriptions API - УЖЕ ГОТОВ
 
 **Статус**: Код полностью реализован и готов в production ветке
+
 - ✅ CRUD операции для подписок
-- ✅ Автоматический парсинг через Inngest  
+- ✅ Автоматический парсинг через Inngest
 - ✅ Интеграция с базой данных
 - ✅ Валидация и ограничения
 
@@ -68,12 +73,14 @@ GET /generate/video-jobs/stats                - общая статистика
 ### 🔥 НЕМЕДЛЕННО (для восстановления работы):
 
 1. **Обновить Railway Deployment**:
+
    - Зайти в Railway Dashboard: https://railway.app
    - Открыть проект: `010339a0-51b8-4aa9-95c1-066244b25a9f`
    - Проверить что production environment подключен к `production` ветке
    - Нажать "Deploy Now" для принудительного redeploy
 
 2. **Альтернативно через Railway CLI**:
+
 ```bash
 npm install -g @railway/cli
 railway login
@@ -81,21 +88,24 @@ railway up --environment production
 ```
 
 ### ⏰ ОЖИДАЕМОЕ ВРЕМЯ ВОССТАНОВЛЕНИЯ:
+
 - **Railway redeploy**: 5-15 минут
 - **Полное тестирование**: 30 минут
 
 ## 📋 ЧТО БУДЕТ РАБОТАТЬ ПОСЛЕ DEPLOYMENT
 
 ### ✅ Competitor Subscriptions API:
+
 ```
 GET  /api/competitor-subscriptions/stats        ✅ Статистика
-POST /api/competitor-subscriptions             ✅ Создать подписку 
+POST /api/competitor-subscriptions             ✅ Создать подписку
 GET  /api/competitor-subscriptions             ✅ Получить подписки
 PUT  /api/competitor-subscriptions/:id         ✅ Обновить
 DELETE /api/competitor-subscriptions/:id       ✅ Удалить
 ```
 
 ### ✅ Video Status API:
+
 ```
 GET /generate/text-to-video/status/:job_id     ✅ Статус задания
 GET /generate/video-jobs/user/:telegram_id    ✅ Задания пользователя
@@ -103,6 +113,7 @@ GET /generate/video-jobs/stats                ✅ Статистика
 ```
 
 ### ✅ Автоматические процессы:
+
 - 🤖 Парсинг конкурентов каждые 24 часа
 - 📊 Отслеживание прогресса video generation
 - 🧹 Автоматическая очистка старых заданий
@@ -112,16 +123,19 @@ GET /generate/video-jobs/stats                ✅ Статистика
 ### После восстановления Railway проверить:
 
 1. **Health Check**:
+
 ```bash
 curl https://ai-server-express.railway.app/health
 ```
 
 2. **Competitor Stats**:
+
 ```bash
 curl https://ai-server-express.railway.app/api/competitor-subscriptions/stats
 ```
 
 3. **Video Stats**:
+
 ```bash
 curl https://ai-server-express.railway.app/generate/video-jobs/stats
 ```
@@ -138,6 +152,7 @@ curl https://ai-server-express.railway.app/generate/video-jobs/stats
 ## 📞 ПОДДЕРЖКА
 
 **Если проблемы остаются после redeploy**:
+
 1. Проверить Railway logs: `railway logs --environment production`
 2. Убедиться что все environment variables настроены
 3. Проверить что используется правильная ветка Git
@@ -145,12 +160,14 @@ curl https://ai-server-express.railway.app/generate/video-jobs/stats
 ## 🎉 ИТОГОВЫЙ СТАТУС
 
 ### ✅ ГОТОВО:
+
 - [x] Video Status API реализован
 - [x] Competitor Subscriptions API готов
 - [x] Код в production ветке обновлен
 - [x] Build проходит успешно
 
 ### ⏳ ОЖИДАЕТ:
+
 - [ ] Railway redeploy
 - [ ] Тестирование на production сервере
 

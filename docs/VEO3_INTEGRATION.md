@@ -32,21 +32,23 @@ yarn add @google/generative-ai
 **Endpoint:** `POST /generate/veo3-video`
 
 **Тело запроса:**
+
 ```json
 {
   "prompt": "A beautiful sunset over mountains",
-  "duration": 5,  // секунды (1-10, по умолчанию 5)
+  "duration": 5, // секунды (1-10, по умолчанию 5)
   "telegram_id": "123456789",
   "username": "user123",
   "is_ru": false,
   "bot_name": "your_bot",
-  "style": "cinematic",  // опционально
-  "cameraMovement": "smooth pan",  // опционально
-  "imageUrl": "https://..."  // опционально, для image-to-video
+  "style": "cinematic", // опционально
+  "cameraMovement": "smooth pan", // опционально
+  "imageUrl": "https://..." // опционально, для image-to-video
 }
 ```
 
 **Ответ:**
+
 ```json
 {
   "message": "Processing Veo 3 video generation"
@@ -58,10 +60,11 @@ yarn add @google/generative-ai
 **Endpoint:** `POST /generate/text-to-video`
 
 **Тело запроса:**
+
 ```json
 {
   "prompt": "A beautiful sunset over mountains",
-  "videoModel": "veo3-fast",  // ← используйте эту модель
+  "videoModel": "veo3-fast", // ← используйте эту модель
   "telegram_id": "123456789",
   "username": "user123",
   "is_ru": false,
@@ -72,29 +75,31 @@ yarn add @google/generative-ai
 ## 💰 Стоимость и расчеты
 
 ### Базовая стоимость
+
 - **$0.40** за секунду видео
 - Конвертация в звезды: **1 звезда ≈ $0.16**
 - За 5 секунд: **$2.00 = ~13 звезд**
 
 ### Пример расчета
+
 ```javascript
-const duration = 5; // секунды
-const costInDollars = duration * 0.40; // $2.00
-const costInStars = Math.ceil(costInDollars * 2.5); // 5 звезд
+const duration = 5 // секунды
+const costInDollars = duration * 0.4 // $2.00
+const costInStars = Math.ceil(costInDollars * 2.5) // 5 звезд
 ```
 
 ## 🎨 Параметры генерации
 
 ### Поддерживаемые параметры:
 
-| Параметр | Значения | Описание |
-|----------|----------|----------|
-| `duration` | 1-10 секунд | Длительность видео |
-| `aspectRatio` | '16:9', '9:16', '1:1' | Соотношение сторон |
-| `resolution` | 'SD', 'HD', '720p', '1080p' | Разрешение видео |
-| `fps` | 24, 30, 60 | Частота кадров |
-| `style` | string | Стиль видео (cinematic, anime, etc.) |
-| `cameraMovement` | string | Движение камеры (pan, zoom, static) |
+| Параметр         | Значения                    | Описание                             |
+| ---------------- | --------------------------- | ------------------------------------ |
+| `duration`       | 1-10 секунд                 | Длительность видео                   |
+| `aspectRatio`    | '16:9', '9:16', '1:1'       | Соотношение сторон                   |
+| `resolution`     | 'SD', 'HD', '720p', '1080p' | Разрешение видео                     |
+| `fps`            | 24, 30, 60                  | Частота кадров                       |
+| `style`          | string                      | Стиль видео (cinematic, anime, etc.) |
+| `cameraMovement` | string                      | Движение камеры (pan, zoom, static)  |
 
 ## 🔧 Конфигурация
 
@@ -130,12 +135,14 @@ const costInStars = Math.ceil(costInDollars * 2.5); // 5 звезд
 ### Основные компоненты:
 
 1. **GoogleVeo3Service** (`src/services/googleVeo3Service.ts`)
+
    - Основной сервис для работы с Veo 3 API
    - Генерация видео
    - Загрузка изображений
    - Расчет стоимости
 
 2. **GenerationController** (`src/controllers/generation.controller.ts`)
+
    - Endpoint для Veo 3
    - Валидация параметров
    - Обработка запросов
@@ -148,6 +155,7 @@ const costInStars = Math.ceil(costInDollars * 2.5); // 5 звезд
 ## 📝 Примеры использования
 
 ### JavaScript/TypeScript
+
 ```javascript
 const response = await fetch('https://your-api.com/generate/veo3-video', {
   method: 'POST',
@@ -162,15 +170,16 @@ const response = await fetch('https://your-api.com/generate/veo3-video', {
     is_ru: false,
     bot_name: 'your_bot',
     style: 'photorealistic',
-    cameraMovement: 'slow zoom in'
-  })
-});
+    cameraMovement: 'slow zoom in',
+  }),
+})
 
-const result = await response.json();
-console.log(result);
+const result = await response.json()
+console.log(result)
 ```
 
 ### cURL
+
 ```bash
 curl -X POST https://your-api.com/generate/veo3-video \
   -H "Content-Type: application/json" \
@@ -194,6 +203,7 @@ curl -X POST https://your-api.com/generate/veo3-video \
 ## 🐛 Отладка
 
 ### Проверка конфигурации
+
 ```bash
 # Проверьте наличие API ключа
 echo $GOOGLE_AI_API_KEY
@@ -203,7 +213,9 @@ npm list @google/generative-ai
 ```
 
 ### Логирование
+
 Сервис автоматически логирует:
+
 - Начало генерации
 - Ошибки API
 - Результаты генерации
@@ -212,6 +224,7 @@ npm list @google/generative-ai
 ## 📊 Мониторинг
 
 ### Метрики для отслеживания:
+
 - Количество запросов
 - Средняя длительность видео
 - Общая стоимость
@@ -245,6 +258,7 @@ A: Да, видео включает аудио дорожку, которую �
 ## 🤝 Поддержка
 
 При возникновении проблем:
+
 1. Проверьте логи сервера
 2. Убедитесь в корректности API ключа
 3. Проверьте баланс и лимиты

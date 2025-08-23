@@ -3,11 +3,13 @@
 ## 📍 Где искать результаты
 
 **Основная папка:**
+
 ```bash
 /Users/playra/ai-server/src/uploads/
 ```
 
 **Ваше видео появится в:**
+
 ```bash
 /Users/playra/ai-server/src/uploads/test_user/veo3-videos/[timestamp].mp4
 ```
@@ -15,11 +17,13 @@
 ## 📊 Команды для мониторинга
 
 ### 1. Проверка API:
+
 ```bash
 curl http://localhost:4000/health
 ```
 
 ### 2. Мониторинг папки uploads:
+
 ```bash
 # Простой способ:
 ls -la /Users/playra/ai-server/src/uploads/
@@ -29,6 +33,7 @@ watch -n 2 "ls -la /Users/playra/ai-server/src/uploads/"
 ```
 
 ### 3. Поиск новых MP4 файлов:
+
 ```bash
 # Поиск всех MP4 файлов за последние 10 минут:
 find /Users/playra/ai-server/src/uploads -name "*.mp4" -newermt "10 minutes ago"
@@ -38,6 +43,7 @@ find /Users/playra/ai-server/src/uploads -path "*test_user*" -name "*.mp4"
 ```
 
 ### 4. Проверка процесса генерации:
+
 ```bash
 # Проверка активности сервера:
 ps aux | grep "node.*server"
@@ -47,6 +53,7 @@ top -l 1 | grep "node"
 ```
 
 ### 5. Быстрый скрипт для ожидания результата:
+
 ```bash
 #!/bin/bash
 echo "Ожидание результата для test_user..."
@@ -73,16 +80,18 @@ find /Users/playra/ai-server/src/uploads/test_user -name "*.mp4" -exec ls -la {}
 ### Если генерация долго не завершается:
 
 1. **Проверить настройки KIE_AI_API_KEY:**
+
    ```bash
    # В .env должно быть:
    KIE_AI_API_KEY=kie_your_api_key_here
    ```
 
 2. **Проверить ошибки в логах:**
+
    ```bash
    # Если есть systemd:
    journalctl -u your_service_name -f
-   
+
    # Или через PM2:
    pm2 logs
    ```
@@ -105,7 +114,7 @@ find /Users/playra/ai-server/src/uploads/test_user -name "*.mp4" -exec ls -la {}
 ## 🎯 Ожидаемое время генерации
 
 - **Haiper-video-2**: 1-2 минуты
-- **Veo3-fast**: 2-5 минут  
+- **Veo3-fast**: 2-5 минут
 - **Veo3 Standard**: 5-10 минут
 
 ## 📱 Telegram уведомления
@@ -114,4 +123,4 @@ find /Users/playra/ai-server/src/uploads/test_user -name "*.mp4" -exec ls -la {}
 
 ---
 
-*Создано: 21.08.2025*
+_Создано: 21.08.2025_

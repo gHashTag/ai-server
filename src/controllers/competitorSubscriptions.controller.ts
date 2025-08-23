@@ -62,7 +62,8 @@ export class CompetitorSubscriptionsController {
       if (!user_telegram_id || !bot_name || !competitor_username) {
         return res.status(400).json({
           success: false,
-          error: 'user_telegram_id, bot_name, and competitor_username are required',
+          error:
+            'user_telegram_id, bot_name, and competitor_username are required',
         })
       }
 
@@ -190,14 +191,16 @@ export class CompetitorSubscriptionsController {
     try {
       const subscriptionId = req.params.id
 
-      const result = await CompetitorSubscriptionService.triggerParsingForSubscription(
-        subscriptionId
-      )
+      const result =
+        await CompetitorSubscriptionService.triggerParsingForSubscription(
+          subscriptionId
+        )
 
       if (result.success) {
         res.json(result)
       } else {
-        const statusCode = result.error === 'Subscription not found or inactive' ? 404 : 500
+        const statusCode =
+          result.error === 'Subscription not found or inactive' ? 404 : 500
         res.status(statusCode).json(result)
       }
     } catch (error: any) {

@@ -9,6 +9,7 @@
 ## Что изменилось
 
 ### 1. Удалены RapidAPI компоненты
+
 - ❌ Класс `InstagramAPI` с RapidAPI логикой
 - ❌ Переменные `RAPIDAPI_INSTAGRAM_KEY` и `RAPIDAPI_INSTAGRAM_HOST`
 - ❌ Методы `getSimilarUsers()` и `getUserReels()` с RapidAPI
@@ -16,7 +17,8 @@
 - ❌ Файл `src/core/instagram/api.ts`
 
 ### 2. Добавлена Apify интеграция
-- ✅ Класс `InstagramApifyClient` 
+
+- ✅ Класс `InstagramApifyClient`
 - ✅ Интеграция с существующей функцией `instagramApifyScraper`
 - ✅ Переменная окружения `APIFY_TOKEN`
 - ✅ Асинхронная обработка данных через Apify
@@ -27,7 +29,7 @@
 instagramScraper-v2.ts (основная функция)
     ↓
 InstagramApifyClient.getSimilarUsers()
-    ↓ 
+    ↓
 triggerApifyInstagramScraping() (из instagramApifyScraper.ts)
     ↓
 Apify актор instagram-scraper
@@ -38,12 +40,14 @@ Apify актор instagram-scraper
 ## Переменные окружения
 
 ### Обязательные:
+
 ```bash
 APIFY_TOKEN=your-apify-token-here
 SUPABASE_URL=your-supabase-connection-string
 ```
 
 ### Удалены:
+
 ```bash
 # Больше НЕ НУЖНЫ:
 # RAPIDAPI_INSTAGRAM_KEY=...
@@ -53,23 +57,27 @@ SUPABASE_URL=your-supabase-connection-string
 ## Особенности новой реализации
 
 ### Асинхронность
+
 - Основная функция `instagramScraper-v2` теперь **запускает** Apify парсинг
 - Данные обрабатываются **асинхронно** через Apify актор
 - Результат: `status: 'processing'` вместо немедленных данных
 
 ### Что парсит Apify
-- ✅ Пользователи Instagram  
+
+- ✅ Пользователи Instagram
 - ✅ Рилсы автоматически
 - ✅ Метаданные (лайки, комментарии, просмотры)
 - ✅ Сохранение в базу данных
 
 ### Монетизация
+
 - Списание происходит в Apify скрапере
 - Используется `requester_telegram_id: 'auto-system'` чтобы избежать двойного списания
 
 ## Тестирование
 
 Функция работает следующим образом:
+
 1. Проверяет `APIFY_TOKEN`
 2. Создает/валидирует проект
 3. **Запускает Apify парсинг** (асинхронно)
@@ -83,7 +91,7 @@ SUPABASE_URL=your-supabase-connection-string
 
 ## Следующие шаги
 
-1. ✅ Установить `APIFY_TOKEN` в продакшене  
+1. ✅ Установить `APIFY_TOKEN` в продакшене
 2. ✅ Удалить `RAPIDAPI_*` переменные из продакшена
 3. ✅ Протестировать новую функцию
 4. ✅ Проверить работу асинхронного парсинга

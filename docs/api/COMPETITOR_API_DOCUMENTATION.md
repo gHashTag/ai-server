@@ -33,13 +33,16 @@ src/
 ## 🛠 API Эндпоинты
 
 ### 1. **GET** `/api/competitor-subscriptions`
+
 Получение подписок пользователя
 
 **Query параметры:**
+
 - `user_telegram_id` (обязательный)
 - `bot_name` (обязательный)
 
 **Ответ:**
+
 ```json
 {
   "success": true,
@@ -62,9 +65,11 @@ src/
 ```
 
 ### 2. **POST** `/api/competitor-subscriptions`
+
 Создание новой подписки
 
 **Body:**
+
 ```json
 {
   "user_telegram_id": "12345678",
@@ -80,15 +85,18 @@ src/
 ```
 
 **Особенности:**
+
 - ✅ Лимит 10 подписок на пользователя
 - ✅ Автоматическое удаление @ из username
 - ✅ Обновление счётчиков в `competitor_profiles`
 - ✅ **Автоматический запуск первичного парсинга через Inngest**
 
 ### 3. **PUT** `/api/competitor-subscriptions/:id`
+
 Обновление подписки
 
 **Body (все поля опциональные):**
+
 ```json
 {
   "max_reels": 15,
@@ -100,9 +108,11 @@ src/
 ```
 
 ### 4. **DELETE** `/api/competitor-subscriptions/:id`
+
 Удаление подписки
 
 **Ответ:**
+
 ```json
 {
   "success": true,
@@ -111,9 +121,11 @@ src/
 ```
 
 ### 5. **GET** `/api/competitor-subscriptions/stats`
+
 Общая статистика
 
 **Ответ:**
+
 ```json
 {
   "success": true,
@@ -136,9 +148,11 @@ src/
 ```
 
 ### 6. **POST** `/api/competitor-subscriptions/:id/trigger-parsing`
+
 Ручной запуск парсинга для подписки
 
 **Ответ:**
+
 ```json
 {
   "success": true,
@@ -148,9 +162,11 @@ src/
 ```
 
 ### 7. **GET** `/api/competitor-subscriptions/:id/history`
+
 История доставок для подписки
 
 **Query параметры:**
+
 - `limit` (опциональный, по умолчанию 10)
 
 ## 🔄 Inngest интеграция
@@ -160,6 +176,7 @@ src/
 **Расписание:** Каждый день в 08:00 UTC (`0 8 * * *`)
 
 **Что делает:**
+
 1. Получает все активные подписки из БД
 2. Группирует по конкурентам для оптимизации
 3. Запускает `instagram/apify-scrape` для каждого конкурента
@@ -167,16 +184,18 @@ src/
 5. Отправляет отчёт админам в Telegram
 
 **Ручной запуск:**
+
 ```javascript
 await inngest.send({
   name: 'competitor/trigger-auto-parse',
-  data: {}
+  data: {},
 })
 ```
 
 ## 🗄 База данных
 
 ### Таблица `competitor_subscriptions`
+
 ```sql
 CREATE TABLE competitor_subscriptions (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -185,30 +204,31 @@ CREATE TABLE competitor_subscriptions (
     bot_name VARCHAR(255) NOT NULL,
     competitor_username VARCHAR(255) NOT NULL,
     competitor_display_name VARCHAR(255),
-    
+
     -- Настройки парсинга
     max_reels INTEGER DEFAULT 10,
     min_views INTEGER DEFAULT 1000,
     max_age_days INTEGER DEFAULT 7,
-    
+
     -- Настройки доставки
     delivery_time TIME DEFAULT '09:00:00',
     delivery_timezone VARCHAR(50) DEFAULT 'UTC',
     delivery_format VARCHAR(50) DEFAULT 'digest',
-    
+
     -- Статус
     is_active BOOLEAN DEFAULT true,
     last_parsed_at TIMESTAMP,
     next_parse_at TIMESTAMP,
-    
+
     created_at TIMESTAMP DEFAULT NOW(),
     updated_at TIMESTAMP DEFAULT NOW(),
-    
+
     UNIQUE(user_telegram_id, competitor_username, bot_name)
 );
 ```
 
 ### Индексы
+
 - `idx_subscriptions_active` - для быстрого поиска активных подписок
 - `idx_subscriptions_user` - для запросов по пользователю
 - `idx_subscriptions_competitor` - для группировки по конкурентам
@@ -216,15 +236,17 @@ CREATE TABLE competitor_subscriptions (
 ## 🧪 Тестирование
 
 ### Прямое тестирование БД:
+
 ```bash
 node test-competitor-service-direct.js
 ```
 
 **Результат тестирования:**
+
 ```
 ✅ Существующие таблицы competitor:
    📊 competitor_delivery_history
-   📊 competitor_profiles  
+   📊 competitor_profiles
    📊 competitor_subscriptions
    📊 competitors
 
@@ -239,6 +261,7 @@ node test-competitor-service-direct.js
 ```
 
 ### Тестирование API (после запуска сервера):
+
 ```bash
 node test-competitor-endpoints.js
 ```
@@ -246,7 +269,9 @@ node test-competitor-endpoints.js
 ## 🚀 Развёртывание на Railway
 
 ### 1. Подключение маршрутов
+
 Маршруты уже подключены в `src/routes/index.ts`:
+
 ```typescript
 import { CompetitorSubscriptionsRoute } from './competitor-subscriptions.route'
 
@@ -257,19 +282,24 @@ export const routes = [
 ```
 
 ### 2. Переменные окружения
+
 Убедитесь, что на Railway настроена:
+
 ```
 NEON_DATABASE_URL=postgresql://...
 ```
 
 ### 3. Проверка работы
+
 После деплоя API будет доступен по адресам:
+
 - `GET https://your-app.railway.app/api/competitor-subscriptions/stats`
 - `POST https://your-app.railway.app/api/competitor-subscriptions`
 
 ## 📋 Возможности
 
 ### ✅ Реализовано:
+
 - [x] REST API для CRUD подписок
 - [x] Автоматические cron задачи через Inngest
 - [x] Интеграция с существующим Instagram парсером
@@ -280,6 +310,7 @@ NEON_DATABASE_URL=postgresql://...
 - [x] Автоматическое обновление профилей конкурентов
 
 ### 🔮 Можно дополнить:
+
 - [ ] Webhook уведомления о готовности парсинга
 - [ ] Фильтры по дате/времени доставки
 - [ ] Экспорт данных в Excel/CSV
@@ -288,7 +319,7 @@ NEON_DATABASE_URL=postgresql://...
 
 ## 🎯 Итог
 
-**Эндпоинт `/api/competitor-subscriptions` полностью работает!** 
+**Эндпоинт `/api/competitor-subscriptions` полностью работает!**
 
 ✅ База данных настроена
 ✅ API эндпоинты реализованы

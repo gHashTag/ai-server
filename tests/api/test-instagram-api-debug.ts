@@ -8,12 +8,20 @@ import axios from 'axios'
 async function debugInstagramAPI() {
   console.log('🔍 === ДИАГНОСТИКА INSTAGRAM API ===\n')
 
-  const apiKey = process.env.RAPIDAPI_INSTAGRAM_KEY || 'da6f54ca68mshc06984da37c569bp1743f1jsne4c79beeb969'
-  const host = process.env.RAPIDAPI_INSTAGRAM_HOST || 'real-time-instagram-scraper-api1.p.rapidapi.com'
+  const apiKey =
+    process.env.RAPIDAPI_INSTAGRAM_KEY ||
+    'da6f54ca68mshc06984da37c569bp1743f1jsne4c79beeb969'
+  const host =
+    process.env.RAPIDAPI_INSTAGRAM_HOST ||
+    'real-time-instagram-scraper-api1.p.rapidapi.com'
   const baseUrl = 'https://real-time-instagram-scraper-api1.p.rapidapi.com'
 
   console.log('🔧 Конфигурация:')
-  console.log(`   🔑 API Key: ${apiKey.substring(0, 10)}...${apiKey.substring(apiKey.length - 10)}`)
+  console.log(
+    `   🔑 API Key: ${apiKey.substring(0, 10)}...${apiKey.substring(
+      apiKey.length - 10
+    )}`
+  )
   console.log(`   🌐 Host: ${host}`)
   console.log(`   📡 Base URL: ${baseUrl}`)
 
@@ -29,7 +37,10 @@ async function debugInstagramAPI() {
     })
     console.log('✅ Базовый эндпоинт доступен:', healthResponse.status)
   } catch (error: any) {
-    console.log('⚠️ Базовый эндпоинт недоступен:', error.response?.status || error.message)
+    console.log(
+      '⚠️ Базовый эндпоинт недоступен:',
+      error.response?.status || error.message
+    )
   }
 
   // Тест 2: Попробуем простой эндпоинт - получить информацию о пользователе
@@ -37,7 +48,7 @@ async function debugInstagramAPI() {
   try {
     const userResponse = await axios.get(`${baseUrl}/v1/user_info`, {
       params: {
-        username_or_id: 'instagram' // Официальный аккаунт Instagram
+        username_or_id: 'instagram', // Официальный аккаунт Instagram
       },
       headers: {
         'x-rapidapi-key': apiKey,
@@ -47,10 +58,17 @@ async function debugInstagramAPI() {
       timeout: 15000,
     })
     console.log('✅ User info API работает:', userResponse.status)
-    console.log('📊 Пример ответа:', JSON.stringify(userResponse.data, null, 2).substring(0, 500) + '...')
+    console.log(
+      '📊 Пример ответа:',
+      JSON.stringify(userResponse.data, null, 2).substring(0, 500) + '...'
+    )
   } catch (error: any) {
-    console.log('❌ User info API error:', error.response?.status, error.response?.data || error.message)
-    
+    console.log(
+      '❌ User info API error:',
+      error.response?.status,
+      error.response?.data || error.message
+    )
+
     if (error.response?.status === 403) {
       console.log('🔒 403 Forbidden - возможные причины:')
       console.log('   1. Неверный API ключ')
@@ -66,7 +84,7 @@ async function debugInstagramAPI() {
     '/v1/user_info',
     '/v1/user_reels',
     '/v1/similar_users_v2',
-    '/v1/user_posts'
+    '/v1/user_posts',
   ]
 
   for (const endpoint of endpoints) {
@@ -75,7 +93,7 @@ async function debugInstagramAPI() {
       const response = await axios.get(`${baseUrl}${endpoint}`, {
         params: {
           username_or_id: 'instagram',
-          count: 1
+          count: 1,
         },
         headers: {
           'x-rapidapi-key': apiKey,
@@ -97,7 +115,7 @@ async function debugInstagramAPI() {
   try {
     const response = await axios.get(`${baseUrl}/v1/user_info`, {
       params: {
-        username_or_id: 'instagram'
+        username_or_id: 'instagram',
       },
       headers: {
         'x-rapidapi-key': apiKey,
@@ -105,27 +123,41 @@ async function debugInstagramAPI() {
       },
       timeout: 10000,
     })
-    
+
     console.log('🔍 Rate Limit Headers:')
-    console.log(`   x-ratelimit-limit: ${response.headers['x-ratelimit-limit'] || 'не указан'}`)
-    console.log(`   x-ratelimit-remaining: ${response.headers['x-ratelimit-remaining'] || 'не указан'}`)
-    console.log(`   x-ratelimit-reset: ${response.headers['x-ratelimit-reset'] || 'не указан'}`)
-    
+    console.log(
+      `   x-ratelimit-limit: ${
+        response.headers['x-ratelimit-limit'] || 'не указан'
+      }`
+    )
+    console.log(
+      `   x-ratelimit-remaining: ${
+        response.headers['x-ratelimit-remaining'] || 'не указан'
+      }`
+    )
+    console.log(
+      `   x-ratelimit-reset: ${
+        response.headers['x-ratelimit-reset'] || 'не указан'
+      }`
+    )
   } catch (error: any) {
-    console.log('❌ Не удалось получить rate limit info:', error.response?.status)
+    console.log(
+      '❌ Не удалось получить rate limit info:',
+      error.response?.status
+    )
   }
 
   // Тест 5: Альтернативные тестовые аккаунты
   console.log('\n🧪 Тест 5: Альтернативные аккаунты...')
   const testAccounts = ['instagram', 'cristiano', 'arianagrande', 'therock']
-  
+
   for (const account of testAccounts) {
     try {
       console.log(`\n👤 Тестируем аккаунт: ${account}`)
       const response = await axios.get(`${baseUrl}/v1/user_reels`, {
         params: {
           username_or_id: account,
-          count: 3
+          count: 3,
         },
         headers: {
           'x-rapidapi-key': apiKey,
@@ -133,20 +165,23 @@ async function debugInstagramAPI() {
         },
         timeout: 15000,
       })
-      
+
       console.log(`✅ ${account}: успех (${response.status})`)
       if (response.data?.data?.items) {
         console.log(`   📹 Найдено рилз: ${response.data.data.items.length}`)
       }
-      
+
       // Выходим после первого успешного теста
       console.log('\n🎉 Найден рабочий API эндпоинт!')
       break
-      
     } catch (error: any) {
-      console.log(`❌ ${account}: ошибка (${error.response?.status}) - ${error.response?.data?.message || error.message}`)
+      console.log(
+        `❌ ${account}: ошибка (${error.response?.status}) - ${
+          error.response?.data?.message || error.message
+        }`
+      )
     }
-    
+
     // Небольшая задержка между запросами
     await new Promise(resolve => setTimeout(resolve, 1000))
   }
@@ -162,8 +197,10 @@ async function debugInstagramAPI() {
 }
 
 // Экспортируем переменные и запускаем
-process.env.RAPIDAPI_INSTAGRAM_KEY = 'da6f54ca68mshc06984da37c569bp1743f1jsne4c79beeb969'
-process.env.RAPIDAPI_INSTAGRAM_HOST = 'real-time-instagram-scraper-api1.p.rapidapi.com'
+process.env.RAPIDAPI_INSTAGRAM_KEY =
+  'da6f54ca68mshc06984da37c569bp1743f1jsne4c79beeb969'
+process.env.RAPIDAPI_INSTAGRAM_HOST =
+  'real-time-instagram-scraper-api1.p.rapidapi.com'
 
 debugInstagramAPI()
   .then(() => {

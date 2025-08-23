@@ -8,7 +8,7 @@ import path from 'path'
 function getLogDir(): string {
   const envLogDir = process.env.LOG_DIR
   const isProduction = process.env.NODE_ENV === 'production'
-  
+
   // If LOG_DIR is provided
   if (envLogDir) {
     // If it's an absolute path, use it directly
@@ -20,13 +20,13 @@ function getLogDir(): string {
       return path.resolve(process.cwd(), envLogDir)
     }
   }
-  
+
   // Production fallbacks - use /tmp which is always writable
   if (isProduction) {
     // Try to use /tmp which is typically writable in containers
     return '/tmp/ai-server-logs'
   }
-  
+
   // Development fallback
   return path.resolve(process.cwd(), 'logs')
 }
@@ -61,45 +61,48 @@ const showOptionsRequests = process.env.SHOW_OPTIONS_REQUESTS === 'true'
 const minimalLogs = process.env.MINIMAL_LOGS === 'true'
 const showTimestamps = process.env.SHOW_TIMESTAMPS !== 'false'
 
-// Создаем кастомный формат для фильтрации 
+// Создаем кастомный формат для фильтрации
 const customFormat = winston.format.combine(
   winston.format.timestamp(),
   winston.format.printf(({ level, message, timestamp }) => {
     // Фильтруем избыточные сообщения
     if (typeof message === 'string') {
-      
       // Минимальный режим - показываем только ошибки и важные события
       if (minimalLogs) {
-        if (level === 'error' || 
-            message.includes('🚀') || 
-            message.includes('listening') ||
-            message.includes('started')) {
+        if (
+          level === 'error' ||
+          message.includes('🚀') ||
+          message.includes('listening') ||
+          message.includes('started')
+        ) {
           const ts = showTimestamps ? `${timestamp} ` : ''
           return `${ts}[${level.toUpperCase()}]: ${message}`
         }
         return ''
       }
-      
+
       // Скрываем служебные HTTP запросы если не включены
       if (!showHealthChecks && message.includes('GET /health')) return ''
       if (!showOptionsRequests && message.includes('OPTIONS /')) return ''
-      
+
       // Приоритет для API запросов
-      if (message.includes('POST /api/') || 
-          message.includes('GET /api/') || 
-          message.includes('PUT /api/') || 
-          message.includes('DELETE /api/')) {
+      if (
+        message.includes('POST /api/') ||
+        message.includes('GET /api/') ||
+        message.includes('PUT /api/') ||
+        message.includes('DELETE /api/')
+      ) {
         const ts = showTimestamps ? `${timestamp} ` : ''
         return `${ts}[${level.toUpperCase()}]: ${message}`
       }
-      
+
       // Показываем все остальные сообщения для info и выше
       if (level !== 'debug') {
         const ts = showTimestamps ? `${timestamp} ` : ''
         return `${ts}[${level.toUpperCase()}]: ${message}`
       }
     }
-    
+
     const ts = showTimestamps ? `${timestamp} ` : ''
     return `${ts}[${level.toUpperCase()}]: ${message}`
   })
@@ -108,19 +111,19 @@ const customFormat = winston.format.combine(
 // Создаем базовые транспорты
 const transports: winston.transport[] = [
   new winston.transports.Console({
-    format: customFormat
-  })
+    format: customFormat,
+  }),
 ]
 
 // Добавляем файловый транспорт только если директория доступна
 if (logDirAvailable) {
   try {
     transports.push(
-      new winston.transports.File({ 
+      new winston.transports.File({
         filename: `${logDir}/combined.log`,
         handleExceptions: true,
         maxsize: 5242880, // 5MB
-        maxFiles: 5
+        maxFiles: 5,
       })
     )
     console.log(`File logging enabled: ${logDir}/combined.log`)
@@ -136,7 +139,7 @@ const logger = winston.createLogger({
   level: logLevel,
   format: customFormat,
   transports,
-  exitOnError: false
+  exitOnError: false,
 })
 
 // Использование logger

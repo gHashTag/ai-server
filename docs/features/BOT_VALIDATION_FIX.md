@@ -1,6 +1,7 @@
 # Bot Validation Fix
 
 ## Проблема
+
 Ошибка `TypeError: Cannot read properties of undefined (reading 'telegram')` возникала из-за того, что функция `getBotByName()` возвращала `undefined` для бота, а код пытался использовать `bot.telegram` без проверки.
 
 ## Исправления
@@ -8,16 +9,20 @@
 Добавлены проверки бота во всех местах использования `getBotByName()`:
 
 ### 1. `src/services/generateTextToVideo.ts:202`
+
 ```typescript
 const { bot } = getBotByName(bot_name)
 
 // Проверяем что бот найден
 if (!bot) {
-  throw new Error(`Bot with name '${bot_name}' not found. Please check bot configuration.`)
+  throw new Error(
+    `Bot with name '${bot_name}' not found. Please check bot configuration.`
+  )
 }
 ```
 
 ### 2. `src/inngest-functions/instagramApifyScraper.ts:450`
+
 ```typescript
 const { bot } = getBotByName(validatedData.bot_name!)
 
@@ -28,16 +33,20 @@ if (!bot) {
 ```
 
 ### 3. `src/inngest-functions/instagramApifyScraper.ts:574` (уведомления админу)
+
 ```typescript
 const { bot } = getBotByName(validatedData.bot_name)
 
 if (!bot) {
-  log.error(`❌ Admin notification failed: Bot not found - ${validatedData.bot_name}`)
+  log.error(
+    `❌ Admin notification failed: Bot not found - ${validatedData.bot_name}`
+  )
   return
 }
 ```
 
 ### 4. `src/inngest-functions/competitorDelivery.ts:110`
+
 ```typescript
 const { bot } = getBotByName(subscriber.bot_name)
 
@@ -48,6 +57,7 @@ if (!bot) {
 ```
 
 ### 5. `src/inngest-functions/competitorDelivery.ts:162`
+
 ```typescript
 const { bot } = getBotByName(subscriber.bot_name)
 
@@ -66,6 +76,7 @@ if (!bot) {
 ## Причины ошибки
 
 Ошибка возникала когда:
+
 - Бот с указанным именем не найден в конфигурации
 - Неверное имя бота передается в функцию
 - Проблемы с инициализацией ботов

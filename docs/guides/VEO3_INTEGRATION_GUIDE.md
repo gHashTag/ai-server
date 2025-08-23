@@ -4,23 +4,26 @@
 
 **Backend:** Fully implemented and tested  
 **API Endpoints:** Available and working  
-**Critical Feature:** 9:16 vertical video format verified working  
+**Critical Feature:** 9:16 vertical video format verified working
 
 ---
 
 ## 🎯 Key Features
 
 ### Supported Formats:
+
 - **📱 9:16** - Vertical (TikTok, Instagram Stories) - **CRITICAL**
-- **📺 16:9** - Horizontal (YouTube, TV)  
+- **📺 16:9** - Horizontal (YouTube, TV)
 - **🟩 1:1** - Square (Instagram Feed)
 
 ### Available Models:
+
 - **veo3_fast** - Fast generation (87% cost savings vs Vertex AI)
 - **veo3** - Premium quality (37% cost savings)
 - **runway-aleph** - Advanced editing
 
 ### Technical Parameters:
+
 - **Duration:** 2-10 seconds
 - **Providers:** Kie.ai (primary) + Vertex AI (fallback)
 - **Cost:** from $0.05/sec (Kie.ai) to $0.40/sec (Vertex AI)
@@ -30,6 +33,7 @@
 ## 🔌 API Integration
 
 ### Endpoints:
+
 ```
 POST /api/inngest - Inngest event (recommended)
 POST /generate/veo3-video - Direct call (fallback)
@@ -37,6 +41,7 @@ POST /generate/text-to-video - Legacy compatibility with VEO3 support
 ```
 
 ### Event Data Structure:
+
 ```typescript
 interface Veo3GenerationEventData {
   prompt: string
@@ -58,6 +63,7 @@ interface Veo3GenerationEventData {
 ## 💻 Frontend Examples
 
 ### React Component Example:
+
 ```jsx
 function VideoGenerator({ userId, onVideoGenerated }) {
   const [prompt, setPrompt] = useState('')
@@ -80,11 +86,11 @@ function VideoGenerator({ userId, onVideoGenerated }) {
             telegram_id: userId,
             username: 'web_user',
             is_ru: false,
-            bot_name: 'default_bot'
-          }
-        })
+            bot_name: 'default_bot',
+          },
+        }),
       })
-      
+
       if (response.ok) {
         onVideoGenerated('Video generation started')
       }
@@ -97,12 +103,12 @@ function VideoGenerator({ userId, onVideoGenerated }) {
 
   return (
     <div>
-      <textarea 
-        value={prompt} 
-        onChange={(e) => setPrompt(e.target.value)}
+      <textarea
+        value={prompt}
+        onChange={e => setPrompt(e.target.value)}
         placeholder="Describe your video..."
       />
-      <select value={format} onChange={(e) => setFormat(e.target.value)}>
+      <select value={format} onChange={e => setFormat(e.target.value)}>
         <option value="9:16">📱 Vertical (TikTok)</option>
         <option value="16:9">📺 Horizontal (YouTube)</option>
         <option value="1:1">🟩 Square (Instagram)</option>
@@ -116,6 +122,7 @@ function VideoGenerator({ userId, onVideoGenerated }) {
 ```
 
 ### Direct API Call Example:
+
 ```javascript
 async function generateVeo3Video(prompt, options = {}) {
   const requestData = {
@@ -126,13 +133,13 @@ async function generateVeo3Video(prompt, options = {}) {
     telegram_id: options.userId,
     username: options.username || 'web_user',
     is_ru: options.isRussian || false,
-    bot_name: options.botName || 'default_bot'
+    bot_name: options.botName || 'default_bot',
   }
 
   const response = await fetch('/generate/veo3-video', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(requestData)
+    body: JSON.stringify(requestData),
   })
 
   return response.json()
@@ -144,6 +151,7 @@ async function generateVeo3Video(prompt, options = {}) {
 ## 🏗️ Implementation Details
 
 ### Backend Architecture:
+
 - **Inngest Function:** `src/inngest-functions/generateVeo3Video.ts`
 - **Event:** `veo3/video.generate`
 - **Service:** `KieAiService` with `VertexVeoService` fallback
@@ -151,6 +159,7 @@ async function generateVeo3Video(prompt, options = {}) {
 - **Result Delivery:** Telegram bot + database storage
 
 ### Cost Calculation:
+
 ```javascript
 const STAR_COST_USD = 0.016
 const MARKUP_RATE = 1.5
@@ -158,6 +167,7 @@ const starsRequired = Math.ceil((costInUSD * MARKUP_RATE) / STAR_COST_USD)
 ```
 
 ### Error Handling:
+
 - Kie.ai unavailable → automatic fallback to Vertex AI
 - Video delivery failure → fallback to URL link
 - User errors → localized error messages (RU/EN)
@@ -167,6 +177,7 @@ const starsRequired = Math.ceil((costInUSD * MARKUP_RATE) / STAR_COST_USD)
 ## 🔍 Testing & Verification
 
 ### Test Critical Format:
+
 ```bash
 curl -X POST http://localhost:4000/generate/veo3-video \
   -H "Content-Type: application/json" \
@@ -182,6 +193,7 @@ curl -X POST http://localhost:4000/generate/veo3-video \
 ```
 
 ### Health Check:
+
 ```bash
 curl http://localhost:4000/health
 ```
@@ -193,18 +205,21 @@ curl http://localhost:4000/health
 ## 📊 Performance Metrics
 
 ### Cost Savings (vs Vertex AI):
+
 - **veo3_fast:** 87% savings
-- **veo3:** 37% savings  
+- **veo3:** 37% savings
 
 ### Processing Time:
+
 - **Kie.ai:** ~8-15 seconds
 - **Vertex AI:** ~20-30 seconds
 
 ### Success Rate:
+
 - **9:16 format:** ✅ 100% working
 - **16:9 format:** ⚠️ Needs verification
 - **1:1 format:** ✅ Working
 
 ---
 
-*Generated with VEO3 Integration System*
+_Generated with VEO3 Integration System_

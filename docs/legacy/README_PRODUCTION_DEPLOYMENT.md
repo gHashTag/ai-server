@@ -5,12 +5,14 @@
 Все Instagram AI функции готовы к деплою в production:
 
 ### ✅ **Завершенные компоненты:**
+
 - **Instagram Reels API** - исправлены ошибки валидации Zod
 - **Валидация проектов** - убраны заглушки, добавлена реальная валидация
 - **4 Inngest функции** - полностью протестированы и готовы к использованию
 - **База данных** - схема PostgreSQL готова для production
 
 ### 🛠️ **Готовые функции:**
+
 1. **analyzeCompetitorReels** - анализ рилсов конкурентов
 2. **findCompetitors** - поиск похожих авторов
 3. **extractTopContent** - извлечение топового контента
@@ -22,6 +24,7 @@
 ## 📋 Checklist для деплоя
 
 ### 1. **Environment Variables**
+
 Убедитесь, что все переменные окружения настроены:
 
 ```env
@@ -45,6 +48,7 @@ PORT=4000
 ```
 
 ### 2. **База данных PostgreSQL**
+
 Функции автоматически создадут необходимые таблицы:
 
 ```sql
@@ -109,6 +113,7 @@ docker-compose up -d
 ```
 
 ### 4. **Inngest Setup**
+
 Убедитесь, что Inngest сервер запущен:
 
 ```bash
@@ -124,11 +129,13 @@ inngest-cli serve --prod
 ## 🧪 Тестирование в production
 
 ### 1. **Базовый тест доступности**
+
 ```bash
 curl http://your-server:4000/api/inngest
 ```
 
 ### 2. **Тест валидации проектов**
+
 ```bash
 # Создайте тестовый проект в базе данных
 INSERT INTO projects (name, is_active) VALUES ('Test Project', true);
@@ -147,6 +154,7 @@ curl -X POST http://your-server:4000/api/inngest/test \
 ```
 
 ### 3. **Мониторинг логов**
+
 ```bash
 # Docker logs
 docker logs -f instagram-ai-functions
@@ -173,8 +181,8 @@ await inngest.send({
     max_reels: 15,
     days_back: 14,
     project_id: 1,
-    requester_telegram_id: user.telegram_id
-  }
+    requester_telegram_id: user.telegram_id,
+  },
 })
 
 // 2. Поиск конкурентов
@@ -185,8 +193,8 @@ await inngest.send({
     max_users: 10,
     min_followers: 1000,
     project_id: 1,
-    requester_telegram_id: user.telegram_id
-  }
+    requester_telegram_id: user.telegram_id,
+  },
 })
 
 // 3. Извлечение топового контента
@@ -197,8 +205,8 @@ await inngest.send({
     limit: 10,
     days_back: 14,
     project_id: 1,
-    requester_telegram_id: user.telegram_id
-  }
+    requester_telegram_id: user.telegram_id,
+  },
 })
 
 // 4. Генерация сценариев
@@ -208,8 +216,8 @@ await inngest.send({
     reel_id: 'reel_id_from_database',
     ig_reel_url: 'https://instagram.com/p/CODE/',
     project_id: 1,
-    requester_telegram_id: user.telegram_id
-  }
+    requester_telegram_id: user.telegram_id,
+  },
 })
 ```
 
@@ -218,20 +226,23 @@ await inngest.send({
 ## 📊 Мониторинг и аналитика
 
 ### 1. **Inngest Dashboard**
+
 - URL: `http://your-server:8288` (в development)
 - Для production используйте Inngest Cloud
 
 ### 2. **Метрики для мониторинга**
+
 - Количество обработанных событий
 - Время выполнения функций
 - Количество ошибок валидации проектов
 - Успешность API вызовов к Instagram
 
 ### 3. **Логи для отслеживания**
+
 ```bash
 # Ищите эти ключевые слова в логах
 grep "✅ Project validation successful" logs.txt
-grep "❌ Project validation failed" logs.txt  
+grep "❌ Project validation failed" logs.txt
 grep "✅ Reels API Success" logs.txt
 grep "❌ API returned error" logs.txt
 ```
@@ -241,6 +252,7 @@ grep "❌ API returned error" logs.txt
 ## 🚨 Troubleshooting
 
 ### Проблема: "Project validation failed"
+
 ```bash
 # Проверьте, существует ли проект
 SELECT * FROM projects WHERE id = YOUR_PROJECT_ID AND is_active = true;
@@ -250,6 +262,7 @@ INSERT INTO projects (name, is_active) VALUES ('Your Project', true);
 ```
 
 ### Проблема: "Instagram API error"
+
 ```bash
 # Проверьте API ключ
 echo $RAPIDAPI_INSTAGRAM_KEY
@@ -261,6 +274,7 @@ curl -H "X-RapidAPI-Key: $RAPIDAPI_INSTAGRAM_KEY" \
 ```
 
 ### Проблема: "Database connection failed"
+
 ```bash
 # Проверьте подключение к базе данных
 psql $NEON_DATABASE_URL -c "SELECT 1"
@@ -271,10 +285,11 @@ psql $NEON_DATABASE_URL -c "SELECT 1"
 ## 🎯 Готово к использованию!
 
 Система готова к production и может обрабатывать:
+
 - ✅ **Анализ рилсов** до 50 рилсов на пользователя
 - ✅ **Поиск конкурентов** до 200 пользователей
 - ✅ **Извлечение топового контента** с сортировкой по популярности
 - ✅ **Генерация сценариев** через OpenAI GPT-4
 - ✅ **Валидация проектов** с реальной базой данных
 
-**Следующий шаг:** Интеграция с Telegram Bot для удобного управления через команды. 
+**Следующий шаг:** Интеграция с Telegram Bot для удобного управления через команды.
