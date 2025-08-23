@@ -8,6 +8,9 @@
 const { spawn } = require('child_process')
 const path = require('path')
 
+// Load environment variables
+require('dotenv').config({ path: path.resolve(__dirname, '../.env') })
+
 console.log('🚀 Starting AI Server development environment...')
 console.log('📊 This will start:')
 console.log('   - AI Server on http://localhost:4000') 
@@ -73,12 +76,13 @@ build.on('close', (code) => {
       env: {
         ...process.env,
         N8N_BASIC_AUTH_ACTIVE: 'true',
-        N8N_BASIC_AUTH_USER: 'admin',
-        N8N_BASIC_AUTH_PASSWORD: 'admin123',
-        N8N_HOST: '0.0.0.0',
+        N8N_BASIC_AUTH_USER: process.env.N8N_BASIC_AUTH_USER || 'admin',
+        N8N_BASIC_AUTH_PASSWORD: process.env.N8N_ADMIN_PASSWORD || 'admin123',
+        N8N_HOST: process.env.N8N_HOST || 'localhost',
         N8N_PORT: '5678',
-        N8N_PROTOCOL: 'http',
-        WEBHOOK_URL: 'http://localhost:5678',
+        N8N_PROTOCOL: process.env.N8N_PROTOCOL || 'http',
+        N8N_SECURE_COOKIE: process.env.N8N_SECURE_COOKIE || 'false',
+        WEBHOOK_URL: process.env.N8N_WEBHOOK_URL || 'http://localhost:5678',
         GENERIC_TIMEZONE: 'Europe/Moscow',
         N8N_METRICS: 'true',
         N8N_LOG_LEVEL: 'info'
