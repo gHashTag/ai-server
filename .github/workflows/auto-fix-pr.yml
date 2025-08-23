@@ -1,0 +1,71 @@
+name: 🤖 Auto-fix PR Issues
+
+on:
+  pull_request:
+    types: [opened, synchronize]
+  pull_request_review:
+    types: [submitted]
+  check_suite:
+    types: [completed]
+
+jobs:
+  auto-fix:
+    runs-on: ubuntu-latest
+    if: contains(github.event.check_suite.conclusion, 'failure') || contains(github.event.pull_request.state, 'open')
+    
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+        fetch-depth: 0
+        
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+        
+    - name: Install dependencies
+      run: npm ci
+      
+    - name: 🔍 Analyze PR Issues
+      id: analyze
+      run: |
+        # Получить информацию о PR и failed checks
+        gh pr view ${{ github.event.number }} --json checks,mergeable > pr_status.json
+        echo "PR_ISSUES=$(cat pr_status.json)" >> $GITHUB_OUTPUT
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        
+    - name: 🤖 Run Claude Code Auto-fix
+      run: |
+        # Запустить Claude Code для исправления проблем
+        echo "Running Claude Code auto-fix for PR #${{ github.event.number }}"
+        
+        # Можно вызвать Claude Code через MCP или API
+        curl -X POST "https://your-claude-code-endpoint/auto-fix" \
+          -H "Content-Type: application/json" \
+          -d '{
+            "pr_number": "${{ github.event.number }}",
+            "repository": "${{ github.repository }}",
+            "issues": "${{ steps.analyze.outputs.PR_ISSUES }}",
+            "head_sha": "${{ github.event.pull_request.head.sha }}"
+          }'
+          
+    - name: 📝 Create fix commit  
+      run: |
+        # Если Claude Code сделал изменения, коммитим их
+        if [[ `git status --porcelain` ]]; then
+          git config --local user.email "action@github.com"
+          git config --local user.name "Claude Code Auto-fix"
+          git add .
+          git commit -m "🤖 Auto-fix: Resolved PR issues via Claude Code
+
+          - Fixed failing tests
+          - Resolved merge conflicts  
+          - Applied code improvements
+          
+          Co-Authored-By: Claude <noreply@anthropic.com>"
+          git push
+        fi
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -1,0 +1,54 @@
+{
+  "name": "Simple Test Webhook",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "test-simple",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook-start",
+      "name": "Simple Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [240, 340],
+      "webhookId": "test-simple-webhook-id"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { \"success\": true, \"received_data\": $json, \"message\": \"Simple webhook test working\" } }}"
+      },
+      "id": "simple-response",
+      "name": "Simple Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [460, 340]
+    }
+  ],
+  "connections": {
+    "Simple Webhook": {
+      "main": [
+        [
+          {
+            "node": "Simple Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "test-simple-webhook-v1",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "test-simple-instance"
+  },
+  "id": "test-simple-webhook",
+  "tags": []
+}

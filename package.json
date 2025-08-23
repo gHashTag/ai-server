@@ -7,7 +7,7 @@
   "scripts": {
     "start": "cross-env NODE_ENV=production node dist/server.js",
     "start:build": "npm run build && cross-env NODE_ENV=production node dist/server.js",
-    "dev": "nodemon --config nodemon.json",
+    "dev": "node scripts/dev-full.js",
     "dev:server": "npm run build && cross-env NODE_ENV=development node dist/server.js",
     "dev:inngest": "npx inngest-cli@latest dev -u http://localhost:4000/api/inngest --port 8289 --log-level warn",
     "dev:full": "node scripts/dev-full.js",
@@ -30,7 +30,17 @@
     "tunnel": "ssh -R 80:localhost:4000 localhost.run",
     "mcp:server": "npm run build && node dist/mcp/index.js",
     "mcp:server:direct": "node dist/mcp/index.js",
-    "mcp:dev": "nodemon --exec \"npm run build && node dist/mcp/index.js\" --watch src/mcp --ext ts"
+    "mcp:dev": "nodemon --exec \"npm run build && node dist/mcp/index.js\" --watch src/mcp --ext ts",
+    "n8n:test": "node tests/n8n/test-n8n-integration.js",
+    "n8n:test:neurophoto": "node tests/n8n/test-neurophoto-workflow.js",
+    "dev:n8n": "N8N_USER_MANAGEMENT_JWT_SECRET=mysecret N8N_USER_MANAGEMENT_DISABLED=true N8N_PERSONALIZATION_ENABLED=false N8N_HOST=localhost N8N_PORT=5678 N8N_PROTOCOL=http N8N_SECURE_COOKIE=false npx n8n start",
+    "claude:fix-pr": "node scripts/claude-pr-fixer.js",
+    "claude:check-prs": "gh pr list --state open --limit 5 && echo '\n=== Checking PR 45 ===' && gh pr checks 45",
+    "webhook:test": "curl http://localhost:4000/webhooks/github/health",
+    "webhook:status": "curl http://localhost:4000/webhooks/github/status | jq",
+    "webhook:analyze": "curl -X POST http://localhost:4000/webhooks/github/analyze/$npm_config_pr -H 'Content-Type: application/json' -d '{\"repository\": \"gHashTag/ai-server\"}' | jq",
+    "n8n:standalone": "N8N_BASIC_AUTH_ACTIVE=false N8N_USER_MANAGEMENT_DISABLED=true N8N_PERSONALIZATION_ENABLED=false N8N_HOST=localhost N8N_PORT=5678 N8N_PROTOCOL=http N8N_SECURE_COOKIE=false npx n8n start",
+    "test:ecosystem": "./scripts/test-dev-ecosystem.sh"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.12.0",
@@ -59,6 +69,7 @@
     "form-data": "^4.0.1",
     "helmet": "^5.1.1",
     "hpp": "^0.2.3",
+    "http-proxy-middleware": "^2.0.6",
     "inngest": "^3.37.0",
     "jest-mock": "^29.7.0",
     "jsonwebtoken": "^8.5.1",
@@ -119,6 +130,7 @@
     "ts-node": "^10.9.1",
     "tsc-alias": "^1.7.0",
     "tsconfig-paths": "^4.0.0",
-    "typescript": "^5.0.0"
+    "typescript": "^5.0.0",
+    "n8n": "^1.71.2"
   }
 }
