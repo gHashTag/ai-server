@@ -12,6 +12,63 @@ log() {
     echo "[CONFLICT-RESOLVER] $1"
 }
 
+# Функция для разрешения простых конфликтов в коде
+resolve_simple_conflict() {
+    local file="$1"
+    local temp_file="/tmp/resolve_conflict_$$"
+    
+    # Проверяем, является ли конфликт простым (только добавления)
+    if python3 -c "
+import sys
+import re
+
+def can_auto_resolve(content):
+    # Разделяем на блоки конфликтов
+    conflicts = re.findall(r'<<<<<<< HEAD.*?\n(.*?)=======\n(.*?)>>>>>>> .*?\n', content, re.DOTALL)
+    
+    for head_part, incoming_part in conflicts:
+        # Если части сильно отличаются, не можем автоматически разрешить
+        head_lines = set(head_part.strip().split('\n'))
+        incoming_lines = set(incoming_part.strip().split('\n'))
+        
+        # Если есть пересечение или incoming содержит только добавления
+        if len(head_lines & incoming_lines) > 0 or len(head_lines) == 0:
+            continue
+        else:
+            return False
+    return True
+
+try:
+    with open('$file', 'r', encoding='utf-8', errors='ignore') as f:
+        content = f.read()
+    
+    if can_auto_resolve(content):
+        # Простое разрешение - выбираем incoming (нашу) версию
+        resolved = re.sub(r'<<<<<<< HEAD.*?\n(.*?)=======\n(.*?)>>>>>>> .*?\n', r'\2', content, flags=re.DOTALL)
+        
+        with open('$temp_file', 'w', encoding='utf-8') as f:
+            f.write(resolved)
+        
+        print('SUCCESS')
+    else:
+        print('COMPLEX')
+        
+except Exception as e:
+    print('ERROR')
+    print(str(e), file=sys.stderr)
+" 2>/dev/null; then
+        if [[ -f "$temp_file" ]]; then
+            cp "$temp_file" "$file"
+            rm -f "$temp_file"
+            return 0
+        fi
+    fi
+    
+    # Если автоматическое разрешение не удалось, выбираем нашу версию
+    git checkout --ours "$file"
+    return 0
+}
+
 if [[ -z "$FEATURE_BRANCH" ]]; then
     log "❌ Не указана ветка для merge"
     exit 1
@@ -101,63 +158,6 @@ echo "$CONFLICTED_FILES" | while read -r file; do
             ;;
     esac
 done
-
-# Функция для разрешения простых конфликтов в коде
-resolve_simple_conflict() {
-    local file="$1"
-    local temp_file="/tmp/resolve_conflict_$$"
-    
-    # Проверяем, является ли конфликт простым (только добавления)
-    if python3 -c "
-import sys
-import re
-
-def can_auto_resolve(content):
-    # Разделяем на блоки конфликтов
-    conflicts = re.findall(r'<<<<<<< HEAD.*?\n(.*?)=======\n(.*?)>>>>>>> .*?\n', content, re.DOTALL)
-    
-    for head_part, incoming_part in conflicts:
-        # Если части сильно отличаются, не можем автоматически разрешить
-        head_lines = set(head_part.strip().split('\n'))
-        incoming_lines = set(incoming_part.strip().split('\n'))
-        
-        # Если есть пересечение или incoming содержит только добавления
-        if len(head_lines & incoming_lines) > 0 or len(head_lines) == 0:
-            continue
-        else:
-            return False
-    return True
-
-try:
-    with open('$file', 'r', encoding='utf-8', errors='ignore') as f:
-        content = f.read()
-    
-    if can_auto_resolve(content):
-        # Простое разрешение - выбираем incoming (нашу) версию
-        resolved = re.sub(r'<<<<<<< HEAD.*?\n(.*?)=======\n(.*?)>>>>>>> .*?\n', r'\2', content, flags=re.DOTALL)
-        
-        with open('$temp_file', 'w', encoding='utf-8') as f:
-            f.write(resolved)
-        
-        print('SUCCESS')
-    else:
-        print('COMPLEX')
-        
-except Exception as e:
-    print('ERROR')
-    print(str(e), file=sys.stderr)
-" 2>/dev/null; then
-        if [[ -f "$temp_file" ]]; then
-            cp "$temp_file" "$file"
-            rm -f "$temp_file"
-            return 0
-        fi
-    fi
-    
-    # Если автоматическое разрешение не удалось, выбираем нашу версию
-    git checkout --ours "$file"
-    return 0
-}
 
 # Проверяем результат
 REMAINING_CONFLICTS=$(git diff --name-only --diff-filter=U 2>/dev/null | wc -l)
