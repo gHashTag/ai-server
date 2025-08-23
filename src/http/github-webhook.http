@@ -1,0 +1,178 @@
+###
+# GitHub Webhook Auto-fixer API Tests
+# Тестирование endpoint'ов для автоматического исправления PR
+###
+
+@baseUrl = http://localhost:4000
+@githubSecret = default-webhook-secret
+
+### Health Check
+GET {{baseUrl}}/webhooks/github/health
+
+### System Status  
+GET {{baseUrl}}/webhooks/github/status
+
+### Manual PR Analysis
+POST {{baseUrl}}/webhooks/github/analyze/45
+Content-Type: application/json
+
+{
+  "repository": "gHashTag/ai-server"
+}
+
+### Test webhook endpoint (только в development)
+POST {{baseUrl}}/webhooks/github/test
+Content-Type: application/json
+X-GitHub-Event: pull_request
+X-GitHub-Delivery: test-delivery-123
+X-Hub-Signature-256: sha256=test
+
+{
+  "action": "opened",
+  "pull_request": {
+    "number": 99,
+    "title": "Test PR",
+    "head": {
+      "ref": "test-branch"
+    }
+  },
+  "repository": {
+    "full_name": "gHashTag/ai-server"
+  }
+}
+
+### Simulate GitHub PR webhook  
+POST {{baseUrl}}/webhooks/github/pr-issues
+Content-Type: application/json
+X-GitHub-Event: pull_request
+X-GitHub-Delivery: pr-webhook-delivery-456
+X-Hub-Signature-256: sha256=a57b61a1a2b79e2c6e7d8c2a5fe4b9ef7c8d2a1b3c4d5e6f7a8b9c0d1e2f3a4b
+
+{
+  "action": "opened",
+  "pull_request": {
+    "number": 45,
+    "title": "🤖 Complete Hive Mind Migration: Inngest Functions + MCP-AI Server",
+    "state": "open",
+    "head": {
+      "ref": "v2",
+      "sha": "abc123def456"
+    },
+    "base": {
+      "ref": "production"
+    },
+    "user": {
+      "login": "gHashTag"
+    },
+    "mergeable": true
+  },
+  "repository": {
+    "full_name": "gHashTag/ai-server"
+  }
+}
+
+### Simulate GitHub Check Suite Failed webhook
+POST {{baseUrl}}/webhooks/github/pr-issues  
+Content-Type: application/json
+X-GitHub-Event: check_suite
+X-GitHub-Delivery: check-suite-delivery-789
+X-Hub-Signature-256: sha256=b68c72b2b3c80f3d7e8f9d3b6af5caaf8d9e3b2c4d5e6f7a8b9c0d1e2f3a4b5c
+
+{
+  "action": "completed",
+  "check_suite": {
+    "id": 123456,
+    "conclusion": "failure",
+    "pull_requests": [
+      {
+        "number": 45,
+        "head": {
+          "ref": "v2",
+          "sha": "def456ghi789"
+        }
+      }
+    ]
+  },
+  "repository": {
+    "full_name": "gHashTag/ai-server"
+  }
+}
+
+### Simulate GitHub PR Review webhook (changes requested)
+POST {{baseUrl}}/webhooks/github/pr-issues
+Content-Type: application/json  
+X-GitHub-Event: pull_request_review
+X-GitHub-Delivery: pr-review-delivery-abc
+X-Hub-Signature-256: sha256=c79d83c3c4d91a4e8f9a0e4c7ba6dbba9e0f4c3d5e6f7a8b9c0d1e2f3a4b5c6d
+
+{
+  "action": "submitted",
+  "review": {
+    "state": "changes_requested",
+    "body": "Please fix the TypeScript errors and add proper error handling",
+    "user": {
+      "login": "reviewer-user"
+    }
+  },
+  "pull_request": {
+    "number": 40,
+    "title": "fix: Bot API compatibility in Inngest functions"
+  },
+  "repository": {
+    "full_name": "gHashTag/ai-server"
+  }
+}
+
+### Test Invalid Signature (should return 403)
+POST {{baseUrl}}/webhooks/github/pr-issues
+Content-Type: application/json
+X-GitHub-Event: pull_request
+X-GitHub-Delivery: invalid-signature-test
+X-Hub-Signature-256: sha256=invalid-signature-here
+
+{
+  "action": "opened",
+  "pull_request": {
+    "number": 1,
+    "title": "Test PR with invalid signature"
+  }
+}
+
+### Test Missing Signature (should return 401)
+POST {{baseUrl}}/webhooks/github/pr-issues
+Content-Type: application/json
+X-GitHub-Event: pull_request
+X-GitHub-Delivery: missing-signature-test
+
+{
+  "action": "opened",
+  "pull_request": {
+    "number": 2,
+    "title": "Test PR without signature"
+  }
+}
+
+### Test Rate Limiting (run multiple times quickly)
+POST {{baseUrl}}/webhooks/github/pr-issues
+Content-Type: application/json
+X-GitHub-Event: ping
+X-GitHub-Delivery: rate-limit-test-{{$randomInt}}
+X-Hub-Signature-256: sha256=test
+
+{
+  "zen": "Testing rate limiting"
+}
+
+### Test Unsupported Event Type
+POST {{baseUrl}}/webhooks/github/pr-issues
+Content-Type: application/json
+X-GitHub-Event: unsupported_event
+X-GitHub-Delivery: unsupported-event-test
+X-Hub-Signature-256: sha256=test
+
+{
+  "action": "some_action",
+  "repository": {
+    "full_name": "gHashTag/ai-server"
+  }
+}
