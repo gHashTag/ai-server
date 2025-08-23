@@ -98,7 +98,7 @@ export class DartAIService {
     logger.info('🔗 Dart AI Service initialized (FULL API)', {
       api_url: this.apiUrl,
       has_api_key: !!this.apiKey,
-      has_github_token: !!this.githubToken
+      has_github_token: !!this.githubToken,
     })
 
     this.apiClient = axios.create({
@@ -155,23 +155,27 @@ export class DartAIService {
   /**
    * Получить все задачи из Dart AI
    */
-  public async getTasks(): Promise<{ tasks: DartAITask[]; count: number; success: boolean }> {
+  public async getTasks(): Promise<{
+    tasks: DartAITask[]
+    count: number
+    success: boolean
+  }> {
     try {
       logger.debug('📜 Получаю список задач из Dart AI')
-      
+
       const response = await this.apiClient.get('/tasks')
       const tasks = response.data.results || []
       const count = response.data.count || tasks.length
 
       logger.info('✅ Получено задач из Dart AI', {
         count,
-        first_task: tasks[0]?.title
+        first_task: tasks[0]?.title,
       })
 
       return { tasks, count, success: true }
     } catch (error) {
       logger.error('💥 Ошибка получения задач из Dart AI', {
-        error: error.message
+        error: error.message,
       })
       return { tasks: [], count: 0, success: false }
     }
@@ -180,23 +184,27 @@ export class DartAIService {
   /**
    * Получить список пространств из Dart AI
    */
-  public async getSpaces(): Promise<{ spaces: DartAISpace[]; count: number; success: boolean }> {
+  public async getSpaces(): Promise<{
+    spaces: DartAISpace[]
+    count: number
+    success: boolean
+  }> {
     try {
       logger.debug('🏢 Получаю список пространств из Dart AI')
-      
+
       const response = await this.apiClient.get('/spaces')
       const spaces = response.data.results || []
       const count = response.data.count || spaces.length
 
       logger.info('✅ Получено пространств из Dart AI', {
         count,
-        spaces: spaces.map(s => `"${s.title}" (${s.kind})`)
+        spaces: spaces.map(s => `"${s.title}" (${s.kind})`),
       })
 
       return { spaces, count, success: true }
     } catch (error) {
       logger.error('💥 Ошибка получения пространств из Dart AI', {
-        error: error.message
+        error: error.message,
       })
       return { spaces: [], count: 0, success: false }
     }
@@ -276,26 +284,28 @@ export class DartAIService {
   public async findTasksWithGitHubMetadata(): Promise<DartAITask[]> {
     try {
       const { tasks, success } = await this.getTasks()
-      
+
       if (!success) return []
-      
+
       // Фильтруем задачи по ключевым словам
       const githubRelatedTasks = tasks.filter(task => {
         const title = task.title.toLowerCase()
         const description = JSON.stringify(task.description || '').toLowerCase()
-        
-        return title.includes('github') || 
-               title.includes('issue') ||
-               description.includes('github') ||
-               task.metadata?.github_issue_number ||
-               task.metadata?.github_repository
+
+        return (
+          title.includes('github') ||
+          title.includes('issue') ||
+          description.includes('github') ||
+          task.metadata?.github_issue_number ||
+          task.metadata?.github_repository
+        )
       })
-      
+
       logger.info('🔍 Найдено задач связанных с GitHub', {
         total_tasks: tasks.length,
-        github_related: githubRelatedTasks.length
+        github_related: githubRelatedTasks.length,
       })
-      
+
       return githubRelatedTasks
     } catch (error) {
       logger.error('Ошибка поиска GitHub задач', { error: error.message })
@@ -393,14 +403,14 @@ export class DartAIService {
   public async getTaskById(id: string): Promise<DartAITask | null> {
     try {
       logger.debug('📋 Получаю задачу по ID', { id })
-      
+
       const response = await this.apiClient.get(`/public/tasks/${id}`)
       const task = response.data.item
 
       logger.info('✅ Задача получена', {
         id: task.id,
         title: task.title,
-        status: task.status
+        status: task.status,
       })
 
       return {
@@ -420,13 +430,13 @@ export class DartAIService {
         size: task.size,
         timeTracking: task.timeTracking,
         customProperties: task.customProperties,
-        taskRelationships: task.taskRelationships
+        taskRelationships: task.taskRelationships,
       }
     } catch (error) {
       logger.error('💥 Не удалось получить задачу', {
         id,
         error: error.message,
-        status: error.response?.status
+        status: error.response?.status,
       })
       return null
     }
@@ -435,24 +445,30 @@ export class DartAIService {
   /**
    * Обновить задачу
    */
-  public async updateTask(id: string, updates: Partial<DartAITask>): Promise<DartAITask | null> {
+  public async updateTask(
+    id: string,
+    updates: Partial<DartAITask>
+  ): Promise<DartAITask | null> {
     try {
       logger.info('📝 Обновляю задачу', { id, updates: Object.keys(updates) })
 
       const updateData = {
         item: {
           id,
-          ...updates
-        }
+          ...updates,
+        },
       }
 
-      const response = await this.apiClient.put(`/public/tasks/${id}`, updateData)
+      const response = await this.apiClient.put(
+        `/public/tasks/${id}`,
+        updateData
+      )
       const updatedTask = response.data.item
 
       logger.info('✅ Задача обновлена', {
         id: updatedTask.id,
         title: updatedTask.title,
-        status: updatedTask.status
+        status: updatedTask.status,
       })
 
       return {
@@ -472,13 +488,13 @@ export class DartAIService {
         size: updatedTask.size,
         timeTracking: updatedTask.timeTracking,
         customProperties: updatedTask.customProperties,
-        taskRelationships: updatedTask.taskRelationships
+        taskRelationships: updatedTask.taskRelationships,
       }
     } catch (error) {
       logger.error('💥 Ошибка обновления задачи', {
         id,
         error: error.message,
-        response_data: error.response?.data
+        response_data: error.response?.data,
       })
       return null
     }
@@ -499,7 +515,7 @@ export class DartAIService {
       logger.error('💥 Ошибка удаления задачи', {
         id,
         error: error.message,
-        status: error.response?.status
+        status: error.response?.status,
       })
       return false
     }
@@ -508,12 +524,14 @@ export class DartAIService {
   /**
    * Создать задачу с полными параметрами
    */
-  public async createTask(taskData: Partial<DartAITask>): Promise<DartAITask | null> {
+  public async createTask(
+    taskData: Partial<DartAITask>
+  ): Promise<DartAITask | null> {
     try {
       logger.info('📝 Создаю новую задачу', {
         title: taskData.title,
         status: taskData.status,
-        tags: taskData.tags
+        tags: taskData.tags,
       })
 
       const createData = {
@@ -531,8 +549,8 @@ export class DartAIService {
           startAt: taskData.startAt,
           dueAt: taskData.dueAt,
           size: taskData.size,
-          customProperties: taskData.customProperties
-        }
+          customProperties: taskData.customProperties,
+        },
       }
 
       const response = await this.apiClient.post('/public/tasks', createData)
@@ -541,7 +559,7 @@ export class DartAIService {
       logger.info('✅ Задача создана', {
         id: createdTask.id,
         title: createdTask.title,
-        url: createdTask.htmlUrl
+        url: createdTask.htmlUrl,
       })
 
       return {
@@ -561,12 +579,12 @@ export class DartAIService {
         size: createdTask.size,
         timeTracking: createdTask.timeTracking,
         customProperties: createdTask.customProperties,
-        taskRelationships: createdTask.taskRelationships
+        taskRelationships: createdTask.taskRelationships,
       }
     } catch (error) {
       logger.error('💥 Ошибка создания задачи', {
         error: error.message,
-        response_data: error.response?.data
+        response_data: error.response?.data,
       })
       return null
     }
@@ -578,7 +596,7 @@ export class DartAIService {
   private extractDescriptionText(description: any): string {
     if (typeof description === 'string') return description
     if (!description || !description.root) return ''
-    
+
     try {
       // Извлекаем текст из rich text структуры Dart AI
       const extractText = (node: any): string => {
@@ -588,7 +606,7 @@ export class DartAIService {
         }
         return ''
       }
-      
+
       return extractText(description.root)
     } catch (error) {
       return JSON.stringify(description)
@@ -643,59 +661,59 @@ export class DartAIService {
   public async syncAllTasksToGitHub(repository: string): Promise<SyncResult> {
     const startTime = Date.now()
     this.syncStats.total_syncs++
-    
+
     try {
       const { tasks, success } = await this.getTasks()
-      
+
       if (!success) {
         this.syncStats.failed_syncs++
         return {
           success: false,
-          errors: ['Не удалось получить задачи из Dart AI']
+          errors: ['Не удалось получить задачи из Dart AI'],
         }
       }
-      
+
       let issuesCreated = 0
       const errors: string[] = []
-      
-      for (const task of tasks.slice(0, 5)) { // Ограничиваем первыми 5 для теста
+
+      for (const task of tasks.slice(0, 5)) {
+        // Ограничиваем первыми 5 для теста
         const issue = await this.createGitHubIssueFromTask(task, repository)
-        
+
         if (issue) {
           issuesCreated++
         } else {
           errors.push(`Не удалось создать Issue для задачи ${task.title}`)
         }
       }
-      
+
       const processingTime = Date.now() - startTime
-      
+
       if (issuesCreated > 0) {
         this.syncStats.successful_syncs++
         logger.info('✅ Синхронизация Dart AI → GitHub завершена', {
           tasks_processed: tasks.length,
           issues_created: issuesCreated,
-          processing_time_ms: processingTime
+          processing_time_ms: processingTime,
         })
       } else {
         this.syncStats.failed_syncs++
       }
-      
+
       return {
         success: issuesCreated > 0,
         issues_created: issuesCreated,
-        errors: errors.length > 0 ? errors : undefined
+        errors: errors.length > 0 ? errors : undefined,
       }
-      
     } catch (error) {
       this.syncStats.failed_syncs++
       logger.error('Ошибка синхронизации', {
-        error: error.message
+        error: error.message,
       })
-      
+
       return {
         success: false,
-        errors: [error.message]
+        errors: [error.message],
       }
     } finally {
       this.syncStats.last_sync = new Date().toISOString()
@@ -733,21 +751,21 @@ export class DartAIService {
     const description = task.description || 'Без описания'
 
     let formattedDescription = description
-    
+
     formattedDescription += `\n\n---
 ## 🎯 Dart AI Task Info
 `
     formattedDescription += `**Task ID:** \`${task.id}\`\n`
     formattedDescription += `**URL:** [${task.htmlUrl}](${task.htmlUrl})\n`
-    
+
     if (task.dartboard) {
       formattedDescription += `**Dartboard:** ${task.dartboard}\n`
     }
-    
+
     if (task.type) {
       formattedDescription += `**Type:** ${task.type}\n`
     }
-    
+
     if (task.status) {
       formattedDescription += `**Status:** ${task.status}\n`
     }
@@ -772,7 +790,9 @@ export class DartAIService {
       formattedDescription += `**Due Date:** ${task.dueAt}\n`
     }
 
-    formattedDescription += `\n> 🔗 *Синхронизировано из Dart AI: ${new Date().toLocaleString('ru-RU')}*`
+    formattedDescription += `\n> 🔗 *Синхронизировано из Dart AI: ${new Date().toLocaleString(
+      'ru-RU'
+    )}*`
 
     return formattedDescription
   }
@@ -799,16 +819,17 @@ export class DartAIService {
   }> {
     try {
       const startTime = Date.now()
-      
+
       // Проверяем доступность через /tasks endpoint
       const tasksResponse = await this.apiClient.get('/tasks')
       const spacesResponse = await this.apiClient.get('/spaces')
-      
+
       const responseTime = Date.now() - startTime
 
       return {
         success: true,
-        message: 'Dart AI API доступен (поддерживает двухстороннюю синхронизацию)',
+        message:
+          'Dart AI API доступен (поддерживает двухстороннюю синхронизацию)',
         details: {
           status: tasksResponse.status,
           api_url: this.apiUrl,
@@ -818,7 +839,7 @@ export class DartAIService {
           api_version: 'v0',
           readonly: false,
           bidirectional_sync: 'enabled',
-          create_tasks_endpoint: '/api/v0/public/tasks'
+          create_tasks_endpoint: '/api/v0/public/tasks',
         },
       }
     } catch (error) {
@@ -839,12 +860,14 @@ export class DartAIService {
    * Создать задачу в Dart AI из GitHub Issue
    * Использует официальный API POST /api/v0/public/tasks
    */
-  public async createTaskFromGitHubIssue(issue: GitHubIssue): Promise<DartAITask | null> {
+  public async createTaskFromGitHubIssue(
+    issue: GitHubIssue
+  ): Promise<DartAITask | null> {
     try {
       logger.info('📝 Создаю задачу в Dart AI из GitHub Issue', {
         issue_number: issue.number,
         title: issue.title,
-        repository: issue.repository
+        repository: issue.repository,
       })
 
       const taskData = {
@@ -853,7 +876,7 @@ export class DartAIService {
           description: this.formatGitHubIssueDescription(issue),
           tags: [...(issue.labels || []), 'github-sync'],
           // assignee: issue.assignees?.[0], // TODO: Map GitHub users to Dart AI users
-        }
+        },
       }
 
       const response = await this.apiClient.post('/public/tasks', taskData)
@@ -863,7 +886,7 @@ export class DartAIService {
         dart_task_id: createdTask.id,
         dart_task_url: createdTask.htmlUrl,
         github_issue: issue.number,
-        title: createdTask.title
+        title: createdTask.title,
       })
 
       // Конвертируем в наш интерфейс DartAITask
@@ -888,17 +911,16 @@ export class DartAIService {
         metadata: {
           source: 'github_webhook',
           github_url: `https://github.com/${issue.repository}/issues/${issue.number}`,
-          dart_url: createdTask.htmlUrl
-        }
+          dart_url: createdTask.htmlUrl,
+        },
       }
 
       return dartTask
-
     } catch (error) {
       logger.error('💥 Ошибка создания задачи в Dart AI', {
         issue_number: issue.number,
         error: error.message,
-        response_data: error.response?.data
+        response_data: error.response?.data,
       })
       return null
     }
@@ -909,7 +931,7 @@ export class DartAIService {
    */
   private formatGitHubIssueDescription(issue: GitHubIssue): string {
     let description = issue.body || 'Без описания'
-    
+
     // Добавляем метаинформацию
     description += `\n\n---
 ## 🔗 GitHub Issue Info
@@ -930,7 +952,9 @@ export class DartAIService {
     description += `**Created:** ${issue.created_at}  
 **Updated:** ${issue.updated_at}  
 
-> 🤖 *Автоматически синхронизировано из GitHub: ${new Date().toLocaleString('ru-RU')}*`
+> 🤖 *Автоматически синхронизировано из GitHub: ${new Date().toLocaleString(
+      'ru-RU'
+    )}*`
 
     return description
   }

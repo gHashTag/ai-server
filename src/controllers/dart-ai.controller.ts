@@ -223,7 +223,9 @@ export class DartAIController {
       }
 
       // Синхронизировать с Dart AI через официальный API
-      const syncResult = await this.dartAIService.createTaskFromGitHubIssue(issueData)
+      const syncResult = await this.dartAIService.createTaskFromGitHubIssue(
+        issueData
+      )
 
       res.json({
         success: !!syncResult,
@@ -555,10 +557,13 @@ export class DartAIController {
     }
 
     // Для закрытых Issues только логируем, не создаем задачи в Dart AI
-    logger.info('📝 GitHub Issue закрыт, обновление статуса в Dart AI (симуляция)', {
-      issue_number: issue.number,
-      repository: issue.repository
-    })
+    logger.info(
+      '📝 GitHub Issue закрыт, обновление статуса в Dart AI (симуляция)',
+      {
+        issue_number: issue.number,
+        repository: issue.repository,
+      }
+    )
 
     return {
       action: 'github_issue_closed_logged',
@@ -630,7 +635,7 @@ export class DartAIController {
       if (!id) {
         res.status(400).json({
           success: false,
-          error: 'Missing required parameter: id'
+          error: 'Missing required parameter: id',
         })
         return
       }
@@ -640,20 +645,20 @@ export class DartAIController {
       if (!task) {
         res.status(404).json({
           success: false,
-          error: 'Task not found'
+          error: 'Task not found',
         })
         return
       }
 
       res.json({
         success: true,
-        task
+        task,
       })
     } catch (error) {
       logger.error('Failed to get task', { error: error.message })
       res.status(500).json({
         success: false,
-        error: error.message
+        error: error.message,
       })
     }
   }
@@ -669,7 +674,7 @@ export class DartAIController {
       if (!taskData.title) {
         res.status(400).json({
           success: false,
-          error: 'Missing required field: title'
+          error: 'Missing required field: title',
         })
         return
       }
@@ -679,7 +684,7 @@ export class DartAIController {
       if (!task) {
         res.status(500).json({
           success: false,
-          error: 'Failed to create task'
+          error: 'Failed to create task',
         })
         return
       }
@@ -687,13 +692,13 @@ export class DartAIController {
       res.status(201).json({
         success: true,
         message: 'Task created successfully',
-        task
+        task,
       })
     } catch (error) {
       logger.error('Failed to create task', { error: error.message })
       res.status(500).json({
         success: false,
-        error: error.message
+        error: error.message,
       })
     }
   }
@@ -710,7 +715,7 @@ export class DartAIController {
       if (!id) {
         res.status(400).json({
           success: false,
-          error: 'Missing required parameter: id'
+          error: 'Missing required parameter: id',
         })
         return
       }
@@ -720,7 +725,7 @@ export class DartAIController {
       if (!task) {
         res.status(404).json({
           success: false,
-          error: 'Task not found or update failed'
+          error: 'Task not found or update failed',
         })
         return
       }
@@ -728,13 +733,13 @@ export class DartAIController {
       res.json({
         success: true,
         message: 'Task updated successfully',
-        task
+        task,
       })
     } catch (error) {
       logger.error('Failed to update task', { error: error.message })
       res.status(500).json({
         success: false,
-        error: error.message
+        error: error.message,
       })
     }
   }
@@ -750,7 +755,7 @@ export class DartAIController {
       if (!id) {
         res.status(400).json({
           success: false,
-          error: 'Missing required parameter: id'
+          error: 'Missing required parameter: id',
         })
         return
       }
@@ -760,20 +765,20 @@ export class DartAIController {
       if (!deleted) {
         res.status(404).json({
           success: false,
-          error: 'Task not found or delete failed'
+          error: 'Task not found or delete failed',
         })
         return
       }
 
       res.json({
         success: true,
-        message: 'Task deleted successfully'
+        message: 'Task deleted successfully',
       })
     } catch (error) {
       logger.error('Failed to delete task', { error: error.message })
       res.status(500).json({
         success: false,
-        error: error.message
+        error: error.message,
       })
     }
   }

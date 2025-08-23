@@ -42,7 +42,7 @@
         "matcher": "Write.*\\.md$",
         "hooks": [
           {
-            "type": "command", 
+            "type": "command",
             "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/docs-cleanup.sh",
             "timeout": 15000
           }
