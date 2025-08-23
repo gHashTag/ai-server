@@ -10,7 +10,7 @@ async function testDatabaseReels() {
 
   try {
     const db = new InstagramContentAgentDB()
-    
+
     // Тест подключения
     console.log('🔌 Тест 1: Проверка подключения к базе данных...')
     const connectionTest = await db.testConnection()
@@ -21,11 +21,11 @@ async function testDatabaseReels() {
 
     // Проверим, что у нас есть в таблице reels_analysis
     console.log('\n📊 Тест 2: Проверка данных в таблице reels_analysis...')
-    
+
     // Получаем общую статистику
     const client = (db as any).pool
     const pool = await client.connect()
-    
+
     try {
       // Общее количество рилз
       const countResult = await pool.query(`
@@ -35,13 +35,25 @@ async function testDatabaseReels() {
                MIN(created_at) as first_record
         FROM reels_analysis
       `)
-      
+
       const stats = countResult.rows[0]
       console.log('📈 Общая статистика:')
       console.log(`   📹 Всего рилз: ${stats.total_reels}`)
       console.log(`   👥 Уникальных пользователей: ${stats.unique_users}`)
-      console.log(`   📅 Последнее обновление: ${stats.last_update ? new Date(stats.last_update).toLocaleString() : 'N/A'}`)
-      console.log(`   🗓️ Первая запись: ${stats.first_record ? new Date(stats.first_record).toLocaleString() : 'N/A'}`)
+      console.log(
+        `   📅 Последнее обновление: ${
+          stats.last_update
+            ? new Date(stats.last_update).toLocaleString()
+            : 'N/A'
+        }`
+      )
+      console.log(
+        `   🗓️ Первая запись: ${
+          stats.first_record
+            ? new Date(stats.first_record).toLocaleString()
+            : 'N/A'
+        }`
+      )
 
       // Топ пользователей по количеству рилз
       console.log('\n👑 Тест 3: Топ пользователей по количеству рилз...')
@@ -60,9 +72,21 @@ async function testDatabaseReels() {
       topUsersResult.rows.forEach((user, index) => {
         console.log(`${index + 1}. ${user.comp_username}:`)
         console.log(`   📹 Рилз: ${user.reels_count}`)
-        console.log(`   👀 Средние просмотры: ${user.avg_views ? Math.round(user.avg_views).toLocaleString() : 'N/A'}`)
-        console.log(`   👍 Средние лайки: ${user.avg_likes ? Math.round(user.avg_likes).toLocaleString() : 'N/A'}`)
-        console.log(`   🏆 Макс просмотры: ${user.max_views ? user.max_views.toLocaleString() : 'N/A'}`)
+        console.log(
+          `   👀 Средние просмотры: ${
+            user.avg_views ? Math.round(user.avg_views).toLocaleString() : 'N/A'
+          }`
+        )
+        console.log(
+          `   👍 Средние лайки: ${
+            user.avg_likes ? Math.round(user.avg_likes).toLocaleString() : 'N/A'
+          }`
+        )
+        console.log(
+          `   🏆 Макс просмотры: ${
+            user.max_views ? user.max_views.toLocaleString() : 'N/A'
+          }`
+        )
       })
 
       // Топ рилз по engagement
@@ -89,15 +113,40 @@ async function testDatabaseReels() {
       `)
 
       topReelsResult.rows.forEach((reel, index) => {
-        console.log(`\n${index + 1}. ${reel.comp_username} - ${reel.engagement.toLocaleString()} engagement`)
-        console.log(`   👀 Просмотры: ${reel.views_count ? reel.views_count.toLocaleString() : 'N/A'}`)
-        console.log(`   👍 Лайки: ${reel.likes_count ? reel.likes_count.toLocaleString() : 'N/A'}`)
-        console.log(`   💬 Коменты: ${reel.comments_count ? reel.comments_count.toLocaleString() : 'N/A'}`)
+        console.log(
+          `\n${index + 1}. ${
+            reel.comp_username
+          } - ${reel.engagement.toLocaleString()} engagement`
+        )
+        console.log(
+          `   👀 Просмотры: ${
+            reel.views_count ? reel.views_count.toLocaleString() : 'N/A'
+          }`
+        )
+        console.log(
+          `   👍 Лайки: ${
+            reel.likes_count ? reel.likes_count.toLocaleString() : 'N/A'
+          }`
+        )
+        console.log(
+          `   💬 Коменты: ${
+            reel.comments_count ? reel.comments_count.toLocaleString() : 'N/A'
+          }`
+        )
         console.log(`   📊 Engagement Rate: ${reel.engagement_rate}%`)
         console.log(`   🔗 URL: ${reel.ig_reel_url || 'N/A'}`)
-        console.log(`   📅 Дата: ${reel.created_at_instagram ? new Date(reel.created_at_instagram).toLocaleDateString() : 'N/A'}`)
+        console.log(
+          `   📅 Дата: ${
+            reel.created_at_instagram
+              ? new Date(reel.created_at_instagram).toLocaleDateString()
+              : 'N/A'
+          }`
+        )
         if (reel.caption) {
-          const shortCaption = reel.caption.length > 80 ? reel.caption.substring(0, 80) + '...' : reel.caption
+          const shortCaption =
+            reel.caption.length > 80
+              ? reel.caption.substring(0, 80) + '...'
+              : reel.caption
           console.log(`   📝 Описание: ${shortCaption}`)
         }
       })
@@ -118,25 +167,34 @@ async function testDatabaseReels() {
 
       console.log('🗓️ Активность за последние дни:')
       activityResult.rows.forEach(day => {
-        console.log(`   ${day.date}: ${day.reels_count} рилз, ${day.avg_views ? Math.round(day.avg_views).toLocaleString() : 'N/A'} средние просмотры`)
+        console.log(
+          `   ${day.date}: ${day.reels_count} рилз, ${
+            day.avg_views ? Math.round(day.avg_views).toLocaleString() : 'N/A'
+          } средние просмотры`
+        )
       })
 
       // Проверим функцию анализа из нашего кода
       console.log('\n🔍 Тест 6: Использование нашей функции getTopReels...')
-      const testUsernames = topUsersResult.rows.slice(0, 3).map(user => user.comp_username)
-      
+      const testUsernames = topUsersResult.rows
+        .slice(0, 3)
+        .map(user => user.comp_username)
+
       for (const username of testUsernames) {
         try {
           const topReels = await db.getTopReels(username, 3)
           console.log(`\n👤 ${username}: ${topReels.length} топ рилз`)
           topReels.forEach((reel, idx) => {
-            console.log(`   ${idx + 1}. Views: ${reel.views_count?.toLocaleString()}, Likes: ${reel.likes_count?.toLocaleString()}`)
+            console.log(
+              `   ${
+                idx + 1
+              }. Views: ${reel.views_count?.toLocaleString()}, Likes: ${reel.likes_count?.toLocaleString()}`
+            )
           })
         } catch (error) {
           console.log(`❌ Ошибка для ${username}:`, error.message)
         }
       }
-
     } finally {
       pool.release()
     }
@@ -147,16 +205,19 @@ async function testDatabaseReels() {
     console.log('✅ Функции анализа работают!')
     console.log('')
     console.log('🔥 ВЫВОД: Наша система анализа рилз полностью функциональна!')
-    console.log('📊 Проблема только с лимитами RapidAPI, но база данных содержит реальные данные')
-    console.log('💡 Можно использовать существующие данные для демонстрации функциональности')
-
+    console.log(
+      '📊 Проблема только с лимитами RapidAPI, но база данных содержит реальные данные'
+    )
+    console.log(
+      '💡 Можно использовать существующие данные для демонстрации функциональности'
+    )
   } catch (error) {
     console.error('❌ Ошибка тестирования базы данных:', error)
-    
+
     if (error.message.includes('NEON_DATABASE_URL')) {
       console.log('🔧 РЕШЕНИЕ: Проверь переменную NEON_DATABASE_URL')
     }
-    
+
     if (error.message.includes('connection')) {
       console.log('🔧 РЕШЕНИЕ: Проверь доступность базы данных Neon')
     }
@@ -166,7 +227,9 @@ async function testDatabaseReels() {
 }
 
 // Устанавливаем переменную окружения для БД
-process.env.NEON_DATABASE_URL = process.env.NEON_DATABASE_URL || 'postgresql://neondb_owner:npg_5RWzh7CwrXxE@ep-delicate-block-a1l1lt0p-pooler.ap-southeast-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require'
+process.env.NEON_DATABASE_URL =
+  process.env.NEON_DATABASE_URL ||
+  'postgresql://neondb_owner:npg_5RWzh7CwrXxE@ep-delicate-block-a1l1lt0p-pooler.ap-southeast-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require'
 
 testDatabaseReels()
   .then(() => {

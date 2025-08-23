@@ -10,7 +10,7 @@ async function startCompetitorAnalysis() {
   try {
     // Запуск 1: Прямой RILS парсинг
     console.log('\n1️⃣ Запускаем прямой RILS парсинг...')
-    
+
     const rilsResult = await inngest.send({
       name: 'instagram/apify-scrape',
       data: {
@@ -21,23 +21,23 @@ async function startCompetitorAnalysis() {
         min_views: 500, // Снижаем порог для большего количества
         max_age_days: 14, // Последние 2 недели
         requester_telegram_id: '144022504',
-        bot_name: 'neuro_blogger_bot'
-      }
+        bot_name: 'neuro_blogger_bot',
+      },
     })
-    
+
     console.log('✅ RILS парсинг запущен:', rilsResult.ids[0])
 
     // Запуск 2: Автоматический парсинг системы подписок
     console.log('\n2️⃣ Запускаем автоматический парсинг системы...')
-    
+
     const autoResult = await inngest.send({
       name: 'competitor/trigger-auto-parse',
       data: {
         triggered_by: 'manual_start',
-        immediate: true
-      }
+        immediate: true,
+      },
     })
-    
+
     console.log('✅ Автопарсинг системы запущен:', autoResult.ids[0])
 
     // Информация о том что будет происходить
@@ -55,11 +55,11 @@ async function startCompetitorAnalysis() {
     const { Pool } = require('pg')
     const dbPool = new Pool({
       connectionString: process.env.SUPABASE_URL,
-      ssl: { rejectUnauthorized: false }
+      ssl: { rejectUnauthorized: false },
     })
 
     const client = await dbPool.connect()
-    
+
     try {
       const subscription = await client.query(`
         SELECT * FROM competitor_subscriptions 
@@ -74,27 +74,32 @@ async function startCompetitorAnalysis() {
         console.log(`   • Формат доставки: ${sub.delivery_format}`)
         console.log(`   • Максимум рилсов: ${sub.max_reels}`)
         console.log(`   • Минимум просмотров: ${sub.min_views}`)
-        console.log(`   • Создана: ${new Date(sub.created_at).toLocaleString('ru-RU')}`)
+        console.log(
+          `   • Создана: ${new Date(sub.created_at).toLocaleString('ru-RU')}`
+        )
       } else {
         console.log('\n⚠️  Подписка не найдена, создаем...')
-        
-        const newSub = await client.query(`
+
+        const newSub = await client.query(
+          `
           INSERT INTO competitor_subscriptions 
           (user_telegram_id, bot_name, competitor_username, competitor_display_name, 
            max_reels, min_views, max_age_days, delivery_format)
           VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
           ON CONFLICT (user_telegram_id, competitor_username, bot_name) DO NOTHING
           RETURNING *
-        `, [
-          '144022504',
-          'neuro_blogger_bot', 
-          'yacheslav_nekludov',
-          'Ячеслав Неклюдов',
-          15,
-          500,
-          14,
-          'digest'
-        ])
+        `,
+          [
+            '144022504',
+            'neuro_blogger_bot',
+            'yacheslav_nekludov',
+            'Ячеслав Неклюдов',
+            15,
+            500,
+            14,
+            'digest',
+          ]
+        )
 
         if (newSub.rows.length > 0) {
           console.log('✅ Подписка создана!')
@@ -102,7 +107,6 @@ async function startCompetitorAnalysis() {
           console.log('✅ Подписка уже существовала')
         }
       }
-
     } finally {
       client.release()
       await dbPool.end()
@@ -112,7 +116,6 @@ async function startCompetitorAnalysis() {
     console.log('\n📊 Для отслеживания прогресса:')
     console.log('   • Inngest Dashboard: http://localhost:8288')
     console.log('   • Логи сервера: pm2 logs ai-server-main')
-
   } catch (error) {
     console.error('❌ Ошибка запуска:', error.message)
   }

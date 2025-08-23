@@ -1,6 +1,7 @@
 # 🚨 ДИАГНОСТИКА ПРОБЛЕМЫ: Inngest функции отсутствуют в Production
 
 ## 🔍 **ПРОБЛЕМА:**
+
 Функции работают локально, но **НЕ СИНХРОНИЗИРУЮТСЯ с production Inngest**.
 
 ## 🕵️ **НАЙДЕННЫЕ ПРИЧИНЫ:**
@@ -8,17 +9,19 @@
 ### 1. **❌ Отсутствуют Environment Variables для Inngest в Production**
 
 В `src/routes/inngest.route.ts` используется:
+
 ```typescript
 export const inngestRouter = serve({
   client: inngest,
   functions: functions,
-  signingKey: process.env.INNGEST_SIGNING_KEY,  // ❌ НЕ НАСТРОЕНО в production!
+  signingKey: process.env.INNGEST_SIGNING_KEY, // ❌ НЕ НАСТРОЕНО в production!
 })
 ```
 
 ### 2. **❌ В Docker Compose НЕТ Inngest переменных**
 
 `docker-compose.yml`:
+
 ```yaml
 environment:
   - NODE_ENV=production
@@ -63,6 +66,7 @@ services:
 ### **Шаг 3: Обновить .env файл для production**
 
 Создать `.env.production`:
+
 ```bash
 # Inngest Production Keys
 INNGEST_SIGNING_KEY=signkey_prod_xxxxxxxxxxxxx
@@ -180,6 +184,7 @@ chmod +x fix-production-inngest.sh
 ## 📊 **ПРОВЕРКА ПОСЛЕ ИСПРАВЛЕНИЯ:**
 
 ### **1. Функции должны появиться в Inngest Dashboard:**
+
 - Открыть: https://app.inngest.com
 - Перейти в ваше production приложение
 - Увидеть 14 функций, включая `instagramScraperV2`
@@ -212,8 +217,9 @@ curl -X POST https://ai-server-u14194.vm.elestio.app/api/inngest \
 **Проблема была в отсутствии конфигурации Inngest для production!**
 
 После исправления:
+
 - ✅ Функции будут синхронизироваться с Inngest Cloud
-- ✅ События будут обрабатываться в production  
+- ✅ События будут обрабатываться в production
 - ✅ Telegram бот сможет подключиться к production серверу
 
-**🔥 Нужно настроить environment variables для Inngest в production!** 
+**🔥 Нужно настроить environment variables для Inngest в production!**

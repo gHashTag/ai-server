@@ -2,9 +2,9 @@
 
 /**
  * Скрипт для анализа прибыльности ботов за май, июнь, июль 2024
- * 
+ *
  * Показывает доходность каждого бота в звездах и рублях по месяцам
- * 
+ *
  * Использование:
  * bun run scripts/bot-profitability-analysis.ts
  */
@@ -14,10 +14,10 @@ import { config as dotenvConfig } from 'dotenv'
 dotenvConfig({ path: '.env' })
 dotenvConfig({ path: `.env.${process.env.NODE_ENV || 'development'}.local` })
 
-import { 
-  getBotProfitability, 
-  generateBotProfitabilityStats, 
-  displayBotProfitabilityReport 
+import {
+  getBotProfitability,
+  generateBotProfitabilityStats,
+  displayBotProfitabilityReport,
 } from '../src/core/supabase/getBotProfitabilityReport'
 import { supabaseAdmin as supabase } from '../src/core/supabase'
 
@@ -25,7 +25,7 @@ import { supabaseAdmin as supabase } from '../src/core/supabase'
 
 async function testConnection(): Promise<boolean> {
   console.log('🔍 Проверка подключения к Supabase...')
-  
+
   // Проверяем переменные окружения
   if (!process.env.SUPABASE_URL) {
     console.error('❌ SUPABASE_URL не установлен')
@@ -35,9 +35,9 @@ async function testConnection(): Promise<boolean> {
     console.error('❌ SUPABASE_SERVICE_ROLE_KEY не установлен')
     return false
   }
-  
+
   console.log('✅ Переменные окружения настроены')
-  
+
   try {
     // Тестируем простой запрос
     const { data, error } = await supabase
@@ -60,7 +60,7 @@ async function testConnection(): Promise<boolean> {
 
 async function analyzeBotProfitability() {
   console.log('📊 Начинаем анализ прибыльности ботов...')
-  
+
   try {
     // Получаем данные за май-июль 2024 используя нашу функцию
     const profitabilityData = await getBotProfitability(
@@ -80,7 +80,6 @@ async function analyzeBotProfitability() {
 
     // Отображаем отчет
     displayBotProfitabilityReport(stats)
-
   } catch (error) {
     console.error('❌ Ошибка анализа данных:', error)
     throw error
@@ -90,8 +89,10 @@ async function analyzeBotProfitability() {
 // Функция displayResults удалена - используем displayBotProfitabilityReport из модуля
 
 async function main() {
-  console.log('🚀 Начинаем анализ прибыльности ботов за май, июнь, июль 2024...')
-  
+  console.log(
+    '🚀 Начинаем анализ прибыльности ботов за май, июнь, июль 2024...'
+  )
+
   try {
     // Сначала проверяем подключение
     const connectionOk = await testConnection()
@@ -102,9 +103,8 @@ async function main() {
 
     // Выполняем анализ (отчет отображается внутри функции)
     await analyzeBotProfitability()
-    
+
     console.log('\n✅ Анализ завершен успешно!')
-    
   } catch (error) {
     console.error('💥 Критическая ошибка:', error)
     process.exit(1)

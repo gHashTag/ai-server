@@ -314,7 +314,6 @@ export const systemHealthCheck = inngest.createFunction(
 
     // Step 6: Отправка алертов
     await step.run('send-alerts', async () => {
-
       // Отправляем алерты только при проблемах или раз в час
       const shouldSendReport =
         criticalIssues.length > 0 ||
@@ -380,7 +379,9 @@ export const systemHealthCheck = inngest.createFunction(
     })
 
     // Calculate status outside of step for return
-    const finalCriticalIssues = healthResults.filter(r => r.status === 'critical')
+    const finalCriticalIssues = healthResults.filter(
+      r => r.status === 'critical'
+    )
     const finalWarningIssues = healthResults.filter(r => r.status === 'warning')
 
     return {
