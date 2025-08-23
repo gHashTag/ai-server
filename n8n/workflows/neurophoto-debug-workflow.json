@@ -1,0 +1,160 @@
+{
+  "name": "NeuroPhoto Debug Workflow",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "neurophoto-debug",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook-start-debug",
+      "name": "NeuroPhoto Debug Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [240, 340],
+      "webhookId": "neurophoto-debug-webhook-id"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "prompt-check",
+              "leftValue": "={{$json.body[\"prompt\"]}}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty"
+              }
+            },
+            {
+              "id": "telegram-id-check", 
+              "leftValue": "={{$json.body[\"telegram_id\"]}}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty"
+              }
+            },
+            {
+              "id": "model-url-check",
+              "leftValue": "={{$json.body[\"model_url\"]}}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty"
+              }
+            }
+          ],
+          "combineOperation": "all"
+        }
+      },
+      "id": "validation-check-debug",
+      "name": "Validate Input Debug",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [460, 340]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Debug: Show successful validation\nconst webhookData = $input.all()[0].json.body;\n\nconst debugResult = {\n  success: true,\n  message: 'Debug: Validation passed successfully',\n  workflow_id: 'neurophoto-debug',\n  timestamp: new Date().toISOString(),\n  debug_info: {\n    received_webhook_data: $input.all()[0].json,\n    extracted_body: webhookData,\n    validation_passed: true\n  },\n  data: {\n    prompt: webhookData.prompt,\n    telegram_id: webhookData.telegram_id,\n    model_url: webhookData.model_url,\n    username: webhookData.username || 'N8N_User',\n    num_images: webhookData.num_images || 1\n  }\n};\n\nconsole.log('✅ NeuroPhoto debug workflow - validation success:', debugResult);\n\nreturn debugResult;"
+      },
+      "id": "debug-success",
+      "name": "Debug Success",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [680, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Debug: Show validation failure\nconst webhookData = $input.all()[0].json.body || {};\n\nconst debugError = {\n  success: false,\n  message: 'Debug: Validation failed',\n  workflow_id: 'neurophoto-debug',\n  timestamp: new Date().toISOString(),\n  debug_info: {\n    received_webhook_data: $input.all()[0].json,\n    extracted_body: webhookData,\n    validation_failed: true\n  },\n  validation_check: {\n    prompt_exists: !!(webhookData.prompt && webhookData.prompt.trim()),\n    telegram_id_exists: !!(webhookData.telegram_id && webhookData.telegram_id.toString().trim()),\n    model_url_exists: !!(webhookData.model_url && webhookData.model_url.trim())\n  }\n};\n\nconsole.log('❌ NeuroPhoto debug workflow - validation failed:', debugError);\n\nreturn debugError;"
+      },
+      "id": "debug-error",
+      "name": "Debug Error",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [680, 400]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{$json}}"
+      },
+      "id": "debug-response",
+      "name": "Debug Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [900, 350]
+    }
+  ],
+  "connections": {
+    "NeuroPhoto Debug Webhook": {
+      "main": [
+        [
+          {
+            "node": "Validate Input Debug",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate Input Debug": {
+      "main": [
+        [
+          {
+            "node": "Debug Success",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Debug Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Debug Success": {
+      "main": [
+        [
+          {
+            "node": "Debug Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Debug Error": {
+      "main": [
+        [
+          {
+            "node": "Debug Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "neurophoto-debug-workflow-v1",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "neurophoto-debug-instance"
+  },
+  "id": "neurophoto-debug-workflow",
+  "tags": []
+}

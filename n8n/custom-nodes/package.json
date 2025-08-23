@@ -1,0 +1,47 @@
+{
+  "name": "@ai-server/n8n-nodes-aiserver",
+  "version": "1.0.0",
+  "description": "Custom N8N nodes for AI Server integration",
+  "keywords": [
+    "n8n-community-node-package"
+  ],
+  "license": "MIT",
+  "homepage": "",
+  "author": {
+    "name": "AI Server Team"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/your-repo/ai-server-n8n-nodes.git"
+  },
+  "main": "index.js",
+  "scripts": {
+    "build": "tsc && gulp build:icons",
+    "dev": "tsc --watch",
+    "format": "prettier nodes --write",
+    "lint": "eslint nodes package.json",
+    "lintfix": "eslint nodes package.json --fix",
+    "prepublishOnly": "npm run build && npm run lint -s"
+  },
+  "files": [
+    "dist"
+  ],
+  "n8n": {
+    "n8nNodesApiVersion": 1,
+    "credentials": [],
+    "nodes": [
+      "dist/nodes/AiServerApi/AiServerApi.node.js",
+      "dist/nodes/InstagramScraper/InstagramScraper.node.js",
+      "dist/nodes/NeuroImageGenerator/NeuroImageGenerator.node.js"
+    ]
+  },
+  "devDependencies": {
+    "@types/node": "^18.16.16",
+    "gulp": "^4.0.2",
+    "n8n-workflow": "*",
+    "typescript": "^4.9.5"
+  },
+  "peerDependencies": {
+    "n8n-workflow": "*"
+  }
+}

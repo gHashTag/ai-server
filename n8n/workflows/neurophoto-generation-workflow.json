@@ -1,0 +1,318 @@
+{
+  "name": "NeuroPhoto Generation Workflow",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "neurophoto-generation",
+        "responseMode": "responseNode",
+        "options": {
+          "noResponseBody": false
+        }
+      },
+      "id": "webhook-start",
+      "name": "NeuroPhoto Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [
+        240,
+        340
+      ],
+      "webhookId": "neurophoto-webhook-id"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "prompt-check",
+              "leftValue": "={{$json.body[\"prompt\"]}}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty"
+              }
+            },
+            {
+              "id": "telegram-id-check", 
+              "leftValue": "={{$json.body[\"telegram_id\"]}}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty"
+              }
+            },
+            {
+              "id": "model-url-check",
+              "leftValue": "={{$json.body[\"model_url\"]}}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty"
+              }
+            }
+          ],
+          "combineOperation": "all"
+        }
+      },
+      "id": "validation-check",
+      "name": "Validate Input",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        460,
+        340
+      ]
+    },
+    {
+      "parameters": {
+        "url": "http://localhost:4000/api/generate/neuro-photo",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "User-Agent", 
+              "value": "N8N-NeuroPhoto-Workflow"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyContentType": "json",
+        "jsonBody": "={{ JSON.stringify({\n  prompt: $json.body.prompt,\n  model_url: $json.body.model_url,\n  telegram_id: $json.body.telegram_id,\n  username: $json.body.username || 'N8N_User',\n  num_images: $json.body.num_images || 1,\n  is_ru: $json.body.is_ru !== undefined ? $json.body.is_ru : true,\n  bot_name: $json.body.bot_name || 'neuro_blogger_bot',\n  gender: $json.body.gender || ''\n}) }}",
+        "options": {
+          "timeout": 60000,
+          "redirect": {
+            "redirect": {}
+          }
+        }
+      },
+      "id": "neurophoto-api-call",
+      "name": "Call NeuroPhoto API",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        680,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "success-check",
+              "leftValue": "={{$json[\"success\"]}}",
+              "rightValue": "true",
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              }
+            }
+          ],
+          "combineOperation": "all"
+        }
+      },
+      "id": "check-success",
+      "name": "Check API Success",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        900,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Обработка успешного результата генерации нейрофото\nconst apiResponse = $input.all()[0].json;\n\n// Подготовка данных для ответа\nconst result = {\n  success: true,\n  message: 'NeuroPhoto generation completed successfully',\n  workflow_id: 'neurophoto-generation',\n  timestamp: new Date().toISOString(),\n  data: {\n    job_id: apiResponse.jobId || 'unknown',\n    telegram_id: $('NeuroPhoto Webhook').first().json.body.telegram_id,\n    prompt: $('NeuroPhoto Webhook').first().json.body.prompt,\n    model_url: $('NeuroPhoto Webhook').first().json.body.model_url,\n    num_images: $('NeuroPhoto Webhook').first().json.body.num_images || 1,\n    api_response: apiResponse\n  },\n  processing_info: {\n    workflow_executed_at: new Date().toISOString(),\n    api_call_successful: true,\n    estimated_completion: 'Асинхронная обработка, результат будет доставлен в Telegram'\n  }\n};\n\n// Логирование для отладки\nconsole.log('✅ NeuroPhoto workflow completed:', result);\n\nreturn result;"
+      },
+      "id": "success-processor",
+      "name": "Process Success",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1120,
+        240
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Обработка ошибки генерации нейрофото\nconst webhookData = $('NeuroPhoto Webhook').first().json.body;\nconst apiResponse = $input.all()[0].json;\n\n// Подготовка сообщения об ошибке\nconst errorResult = {\n  success: false,\n  message: 'NeuroPhoto generation failed',\n  workflow_id: 'neurophoto-generation',\n  timestamp: new Date().toISOString(),\n  error: {\n    api_response: apiResponse,\n    telegram_id: webhookData.telegram_id,\n    prompt: webhookData.prompt,\n    reason: apiResponse.message || 'Неизвестная ошибка API',\n    possible_causes: [\n      'Недостаточно баланса пользователя',\n      'Некорректный model_url',\n      'Ошибка внешнего API (Replicate)',\n      'Проблемы с сетью'\n    ]\n  },\n  troubleshooting: {\n    check_balance: `Проверьте баланс пользователя ${webhookData.telegram_id}`,\n    verify_model: 'Убедитесь что model_url корректен',\n    retry: 'Попробуйте повторить запрос через некоторое время'\n  }\n};\n\n// Логирование ошибки\nconsole.log('❌ NeuroPhoto workflow failed:', errorResult);\n\nreturn errorResult;"
+      },
+      "id": "error-processor",
+      "name": "Process Error",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1120,
+        360
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Обработка ошибки валидации входных данных\nconst webhookData = $input.all()[0].json.body;\n\n// Проверим какие поля отсутствуют\nconst missingFields = [];\nif (!webhookData.prompt || webhookData.prompt.trim() === '') {\n  missingFields.push('prompt');\n}\nif (!webhookData.telegram_id || webhookData.telegram_id.toString().trim() === '') {\n  missingFields.push('telegram_id');\n}\nif (!webhookData.model_url || webhookData.model_url.trim() === '') {\n  missingFields.push('model_url');\n}\n\nconst validationError = {\n  success: false,\n  message: 'Validation failed: missing required fields',\n  workflow_id: 'neurophoto-generation',\n  timestamp: new Date().toISOString(),\n  validation_error: {\n    missing_fields: missingFields,\n    received_data: webhookData,\n    required_fields: ['prompt', 'telegram_id', 'model_url'],\n    optional_fields: ['username', 'num_images', 'is_ru', 'bot_name', 'gender']\n  },\n  example_request: {\n    prompt: 'Beautiful portrait of a person in a garden',\n    telegram_id: '123456789',\n    model_url: 'user_model_id/model_version',\n    username: 'test_user',\n    num_images: 2,\n    is_ru: true,\n    bot_name: 'neuro_blogger_bot',\n    gender: 'female'\n  }\n};\n\n// Логирование ошибки валидации\nconsole.log('⚠️ NeuroPhoto workflow validation failed:', validationError);\n\nreturn validationError;"
+      },
+      "id": "validation-error",
+      "name": "Validation Error",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        680,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{$json}}"
+      },
+      "id": "success-response",
+      "name": "Success Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [
+        1340,
+        240
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{$json}}",
+        "responseCode": 400
+      },
+      "id": "error-response",
+      "name": "Error Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [
+        1340,
+        380
+      ]
+    }
+  ],
+  "connections": {
+    "NeuroPhoto Webhook": {
+      "main": [
+        [
+          {
+            "node": "Validate Input",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate Input": {
+      "main": [
+        [
+          {
+            "node": "Call NeuroPhoto API",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Validation Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Call NeuroPhoto API": {
+      "main": [
+        [
+          {
+            "node": "Check API Success",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check API Success": {
+      "main": [
+        [
+          {
+            "node": "Process Success",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Process Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Process Success": {
+      "main": [
+        [
+          {
+            "node": "Success Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Process Error": {
+      "main": [
+        [
+          {
+            "node": "Error Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validation Error": {
+      "main": [
+        [
+          {
+            "node": "Error Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "neurophoto-workflow-v1",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "neurophoto-instance"
+  },
+  "id": "neurophoto-generation-workflow",
+  "tags": [
+    {
+      "createdAt": "2025-08-23T12:00:00.000Z",
+      "updatedAt": "2025-08-23T12:00:00.000Z", 
+      "id": "neurophoto-tag",
+      "name": "AI Generation"
+    }
+  ]
+}

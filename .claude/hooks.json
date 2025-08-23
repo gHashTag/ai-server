@@ -15,7 +15,7 @@
     ],
     "PostTaskCompletion": [
       {
-        "description": "Автоматическая очистка PR и отображение ссылки",
+        "description": "Полный цикл завершения задачи с автоматическим deployment",
         "matcher": ".*",
         "hooks": [
           {
@@ -27,6 +27,11 @@
             "type": "command",
             "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/pr-status.sh",
             "timeout": 15000
+          },
+          {
+            "type": "command",
+            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/auto-merge-production.sh",
+            "timeout": 60000
           }
         ]
       }
