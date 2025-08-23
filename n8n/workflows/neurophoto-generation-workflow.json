@@ -31,7 +31,7 @@
           "conditions": [
             {
               "id": "prompt-check",
-              "leftValue": "={{$json[\"prompt\"]}}",
+              "leftValue": "={{$json.body[\"prompt\"]}}",
               "rightValue": "",
               "operator": {
                 "type": "string",
@@ -40,7 +40,7 @@
             },
             {
               "id": "telegram-id-check", 
-              "leftValue": "={{$json[\"telegram_id\"]}}",
+              "leftValue": "={{$json.body[\"telegram_id\"]}}",
               "rightValue": "",
               "operator": {
                 "type": "string",
@@ -49,7 +49,7 @@
             },
             {
               "id": "model-url-check",
-              "leftValue": "={{$json[\"model_url\"]}}",
+              "leftValue": "={{$json.body[\"model_url\"]}}",
               "rightValue": "",
               "operator": {
                 "type": "string",
@@ -86,42 +86,8 @@
           ]
         },
         "sendBody": true,
-        "bodyParameters": {
-          "parameters": [
-            {
-              "name": "prompt",
-              "value": "={{$json[\"prompt\"]}}"
-            },
-            {
-              "name": "model_url",
-              "value": "={{$json[\"model_url\"]}}"
-            },
-            {
-              "name": "telegram_id",
-              "value": "={{$json[\"telegram_id\"]}}"
-            },
-            {
-              "name": "username",
-              "value": "={{$json[\"username\"] || 'N8N_User'}}"
-            },
-            {
-              "name": "num_images",
-              "value": "={{$json[\"num_images\"] || 1}}"
-            },
-            {
-              "name": "is_ru",
-              "value": "={{$json[\"is_ru\"] || true}}"
-            },
-            {
-              "name": "bot_name",
-              "value": "={{$json[\"bot_name\"] || 'neuro_blogger_bot'}}"
-            },
-            {
-              "name": "gender",
-              "value": "={{$json[\"gender\"] || ''}}"
-            }
-          ]
-        },
+        "bodyContentType": "json",
+        "jsonBody": "={{ JSON.stringify({\n  prompt: $json.body.prompt,\n  model_url: $json.body.model_url,\n  telegram_id: $json.body.telegram_id,\n  username: $json.body.username || 'N8N_User',\n  num_images: $json.body.num_images || 1,\n  is_ru: $json.body.is_ru !== undefined ? $json.body.is_ru : true,\n  bot_name: $json.body.bot_name || 'neuro_blogger_bot',\n  gender: $json.body.gender || ''\n}) }}",
         "options": {
           "timeout": 60000,
           "redirect": {
@@ -171,7 +137,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// Обработка успешного результата генерации нейрофото\nconst apiResponse = $input.all()[0].json;\n\n// Подготовка данных для ответа\nconst result = {\n  success: true,\n  message: 'NeuroPhoto generation completed successfully',\n  workflow_id: 'neurophoto-generation',\n  timestamp: new Date().toISOString(),\n  data: {\n    job_id: apiResponse.jobId || 'unknown',\n    telegram_id: $('NeuroPhoto Webhook').first().json.telegram_id,\n    prompt: $('NeuroPhoto Webhook').first().json.prompt,\n    model_url: $('NeuroPhoto Webhook').first().json.model_url,\n    num_images: $('NeuroPhoto Webhook').first().json.num_images || 1,\n    api_response: apiResponse\n  },\n  processing_info: {\n    workflow_executed_at: new Date().toISOString(),\n    api_call_successful: true,\n    estimated_completion: 'Асинхронная обработка, результат будет доставлен в Telegram'\n  }\n};\n\n// Логирование для отладки\nconsole.log('✅ NeuroPhoto workflow completed:', result);\n\nreturn result;"
+        "jsCode": "// Обработка успешного результата генерации нейрофото\nconst apiResponse = $input.all()[0].json;\n\n// Подготовка данных для ответа\nconst result = {\n  success: true,\n  message: 'NeuroPhoto generation completed successfully',\n  workflow_id: 'neurophoto-generation',\n  timestamp: new Date().toISOString(),\n  data: {\n    job_id: apiResponse.jobId || 'unknown',\n    telegram_id: $('NeuroPhoto Webhook').first().json.body.telegram_id,\n    prompt: $('NeuroPhoto Webhook').first().json.body.prompt,\n    model_url: $('NeuroPhoto Webhook').first().json.body.model_url,\n    num_images: $('NeuroPhoto Webhook').first().json.body.num_images || 1,\n    api_response: apiResponse\n  },\n  processing_info: {\n    workflow_executed_at: new Date().toISOString(),\n    api_call_successful: true,\n    estimated_completion: 'Асинхронная обработка, результат будет доставлен в Telegram'\n  }\n};\n\n// Логирование для отладки\nconsole.log('✅ NeuroPhoto workflow completed:', result);\n\nreturn result;"
       },
       "id": "success-processor",
       "name": "Process Success",
@@ -184,7 +150,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// Обработка ошибки генерации нейрофото\nconst webhookData = $('NeuroPhoto Webhook').first().json;\nconst apiResponse = $input.all()[0].json;\n\n// Подготовка сообщения об ошибке\nconst errorResult = {\n  success: false,\n  message: 'NeuroPhoto generation failed',\n  workflow_id: 'neurophoto-generation',\n  timestamp: new Date().toISOString(),\n  error: {\n    api_response: apiResponse,\n    telegram_id: webhookData.telegram_id,\n    prompt: webhookData.prompt,\n    reason: apiResponse.message || 'Неизвестная ошибка API',\n    possible_causes: [\n      'Недостаточно баланса пользователя',\n      'Некорректный model_url',\n      'Ошибка внешнего API (Replicate)',\n      'Проблемы с сетью'\n    ]\n  },\n  troubleshooting: {\n    check_balance: `Проверьте баланс пользователя ${webhookData.telegram_id}`,\n    verify_model: 'Убедитесь что model_url корректен',\n    retry: 'Попробуйте повторить запрос через некоторое время'\n  }\n};\n\n// Логирование ошибки\nconsole.log('❌ NeuroPhoto workflow failed:', errorResult);\n\nreturn errorResult;"
+        "jsCode": "// Обработка ошибки генерации нейрофото\nconst webhookData = $('NeuroPhoto Webhook').first().json.body;\nconst apiResponse = $input.all()[0].json;\n\n// Подготовка сообщения об ошибке\nconst errorResult = {\n  success: false,\n  message: 'NeuroPhoto generation failed',\n  workflow_id: 'neurophoto-generation',\n  timestamp: new Date().toISOString(),\n  error: {\n    api_response: apiResponse,\n    telegram_id: webhookData.telegram_id,\n    prompt: webhookData.prompt,\n    reason: apiResponse.message || 'Неизвестная ошибка API',\n    possible_causes: [\n      'Недостаточно баланса пользователя',\n      'Некорректный model_url',\n      'Ошибка внешнего API (Replicate)',\n      'Проблемы с сетью'\n    ]\n  },\n  troubleshooting: {\n    check_balance: `Проверьте баланс пользователя ${webhookData.telegram_id}`,\n    verify_model: 'Убедитесь что model_url корректен',\n    retry: 'Попробуйте повторить запрос через некоторое время'\n  }\n};\n\n// Логирование ошибки\nconsole.log('❌ NeuroPhoto workflow failed:', errorResult);\n\nreturn errorResult;"
       },
       "id": "error-processor",
       "name": "Process Error",
@@ -197,7 +163,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// Обработка ошибки валидации входных данных\nconst webhookData = $input.all()[0].json;\n\n// Проверим какие поля отсутствуют\nconst missingFields = [];\nif (!webhookData.prompt || webhookData.prompt.trim() === '') {\n  missingFields.push('prompt');\n}\nif (!webhookData.telegram_id || webhookData.telegram_id.toString().trim() === '') {\n  missingFields.push('telegram_id');\n}\nif (!webhookData.model_url || webhookData.model_url.trim() === '') {\n  missingFields.push('model_url');\n}\n\nconst validationError = {\n  success: false,\n  message: 'Validation failed: missing required fields',\n  workflow_id: 'neurophoto-generation',\n  timestamp: new Date().toISOString(),\n  validation_error: {\n    missing_fields: missingFields,\n    received_data: webhookData,\n    required_fields: ['prompt', 'telegram_id', 'model_url'],\n    optional_fields: ['username', 'num_images', 'is_ru', 'bot_name', 'gender']\n  },\n  example_request: {\n    prompt: 'Beautiful portrait of a person in a garden',\n    telegram_id: '123456789',\n    model_url: 'user_model_id/model_version',\n    username: 'test_user',\n    num_images: 2,\n    is_ru: true,\n    bot_name: 'neuro_blogger_bot',\n    gender: 'female'\n  }\n};\n\n// Логирование ошибки валидации\nconsole.log('⚠️ NeuroPhoto workflow validation failed:', validationError);\n\nreturn validationError;"
+        "jsCode": "// Обработка ошибки валидации входных данных\nconst webhookData = $input.all()[0].json.body;\n\n// Проверим какие поля отсутствуют\nconst missingFields = [];\nif (!webhookData.prompt || webhookData.prompt.trim() === '') {\n  missingFields.push('prompt');\n}\nif (!webhookData.telegram_id || webhookData.telegram_id.toString().trim() === '') {\n  missingFields.push('telegram_id');\n}\nif (!webhookData.model_url || webhookData.model_url.trim() === '') {\n  missingFields.push('model_url');\n}\n\nconst validationError = {\n  success: false,\n  message: 'Validation failed: missing required fields',\n  workflow_id: 'neurophoto-generation',\n  timestamp: new Date().toISOString(),\n  validation_error: {\n    missing_fields: missingFields,\n    received_data: webhookData,\n    required_fields: ['prompt', 'telegram_id', 'model_url'],\n    optional_fields: ['username', 'num_images', 'is_ru', 'bot_name', 'gender']\n  },\n  example_request: {\n    prompt: 'Beautiful portrait of a person in a garden',\n    telegram_id: '123456789',\n    model_url: 'user_model_id/model_version',\n    username: 'test_user',\n    num_images: 2,\n    is_ru: true,\n    bot_name: 'neuro_blogger_bot',\n    gender: 'female'\n  }\n};\n\n// Логирование ошибки валидации\nconsole.log('⚠️ NeuroPhoto workflow validation failed:', validationError);\n\nreturn validationError;"
       },
       "id": "validation-error",
       "name": "Validation Error",
