@@ -29,6 +29,7 @@ import {
   healthTestHandler,
 } from './systemHealthCheck'
 import { generateVeo3Video } from './generateVeo3Video'
+import { reelsMonitor } from './reelsMonitor'
 import {
   networkCheckMonitor,
   triggerNetworkCheck,
@@ -75,6 +76,7 @@ export const functions = [
   triggerHealthCheck, // 🔄 Ручной запуск проверки здоровья
   healthTestHandler, // 🧪 Обработчик тестовых событий для health check
   generateVeo3Video, // 🎬 VEO3 видео генерация через Kie.ai API
+  reelsMonitor, // 🎬 NEW: Мониторинг новых рилсов каждые 4 часа
   networkCheckMonitor, // 🌐 Мониторинг network check каждые 10 минут
   triggerNetworkCheck, // 🔄 Ручной запуск network check
   postDeployNetworkCheck, // 🚀 Post-deploy network check
@@ -109,6 +111,7 @@ export { competitorDelivery } // 📬 Доставка рилсов конкур
 export { systemMonitor, triggerSystemMonitor } // 📊 Системный мониторинг
 export { systemHealthCheck, triggerHealthCheck, healthTestHandler } // 💚 Проверка здоровья системы
 export { generateVeo3Video } // 🎬 VEO3 видео генерация через Kie.ai API
+export { reelsMonitor } // 🎬 NEW: Мониторинг новых рилсов каждые 4 часа
 export { networkCheckMonitor, triggerNetworkCheck, postDeployNetworkCheck } // 🌐 Network check функции
 export { deploymentAutoDetector, deploymentRecoverySystem, railwayDeploymentWebhook } // 🚀 Deployment мониторинг
 export { dailyHealthReport, triggerDailyReport, handleTelegramCallbacks } // 📊 Ежедневные отчеты и интерактивность
@@ -135,6 +138,7 @@ export * from './competitorDelivery' // 📬 Доставка рилсов ко�
 export * from './systemMonitor' // 📊 Системный мониторинг
 export * from './systemHealthCheck' // 💚 Проверка здоровья системы
 export * from './generateVeo3Video' // 🎬 VEO3 видео генерация через Kie.ai API
+export * from './reelsMonitor' // 🎬 NEW: Мониторинг новых рилсов каждые 4 часа
 export * from './networkCheckMonitor' // 🌐 Network check мониторинг
 export * from './deploymentMonitor' // 🚀 Deployment мониторинг
 export * from './dailyHealthReport' // 📊 Ежедневные отчеты и интерактивность
