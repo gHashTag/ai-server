@@ -5,7 +5,7 @@
 ## 📋 Оглавление
 
 1. [Архитектура системы](#архитектура-системы)
-2. [Типы и категории расходов](#типы-и-категории-расходов)  
+2. [Типы и категории расходов](#типы-и-категории-расходов)
 3. [Добавление расходов](#добавление-расходов)
 4. [Получение отчетов](#получение-отчетов)
 5. [Скрипты](#скрипты)
@@ -31,7 +31,7 @@
   "id": "uuid",
   "inv_id": "farm_expense_1672531200000_abc123",
   "telegram_id": "SYSTEM_BOT_FARM",
-  "bot_name": "bot_farm_manager", 
+  "bot_name": "bot_farm_manager",
   "amount": 309.13,
   "stars": 0,
   "currency": "THB",
@@ -59,7 +59,7 @@
 ### Категории расходов (ExpenseCategory):
 
 - **PERSONAL** - Личные расходы
-- **SHARED** - Общие расходы проекта  
+- **SHARED** - Общие расходы проекта
 - **INFRASTRUCTURE** - Инфраструктура (хостинг, БД, хранилище)
 - **AI_SERVICES** - AI сервисы (OpenAI, ElevenLabs, Replicate)
 - **DEVELOPMENT** - Инструменты разработки (Cursor, IDE)
@@ -71,7 +71,7 @@
 - **CLOUDCONVERT** - Конвертация файлов
 - **HOSTING** - Хостинг сервисы
 - **AI_API** - AI API (OpenAI, GPT)
-- **DEVELOPMENT_TOOLS** - Инструменты разработки  
+- **DEVELOPMENT_TOOLS** - Инструменты разработки
 - **VOICE_GENERATION** - Генерация голоса
 - **IMAGE_GENERATION** - Генерация изображений
 - **VIDEO_GENERATION** - Генерация видео
@@ -96,7 +96,7 @@ const expense = {
   currency: 'THB',
   description: 'AI API / ChatGPT',
   purpose: 'Генерация текстов и взаимодействие с пользователями.',
-  url: 'OpenAI'
+  url: 'OpenAI',
 }
 
 const success = await addBotFarmExpense(expense)
@@ -141,12 +141,15 @@ console.log(`Категорий: ${stats.categorySummaries.length}`)
 ### Расходы по категории
 
 ```typescript
-import { getBotFarmExpensesByCategory, ExpenseCategory } from '@/core/supabase/getBotFarmExpenseReports'
+import {
+  getBotFarmExpensesByCategory,
+  ExpenseCategory,
+} from '@/core/supabase/getBotFarmExpenseReports'
 
 // Только AI сервисы
 const aiExpenses = await getBotFarmExpensesByCategory(
-  ExpenseCategory.AI_SERVICES, 
-  '2024-05-01', 
+  ExpenseCategory.AI_SERVICES,
+  '2024-05-01',
   '2024-05-31'
 )
 ```
@@ -172,7 +175,7 @@ bun run scripts/add-may-expenses.ts
 
 Этот скрипт добавляет все расходы за май 2024 из предоставленной таблицы.
 
-### Тестирование отчетов  
+### Тестирование отчетов
 
 ```bash
 bun run scripts/test-expense-reports.ts
@@ -189,7 +192,9 @@ const stats = await getBotFarmExpenseStats('2024-05-01', '2024-05-31')
 
 console.log('Топ-5 крупнейших расходов:')
 stats.topExpenses.slice(0, 5).forEach((expense, index) => {
-  console.log(`${index + 1}. ${expense.name}: ${expense.amount} ${expense.currency}`)
+  console.log(
+    `${index + 1}. ${expense.name}: ${expense.amount} ${expense.currency}`
+  )
 })
 ```
 
@@ -200,8 +205,12 @@ const stats = await getBotFarmExpenseStats('2024-05-01', '2024-05-31')
 
 console.log('Распределение по категориям:')
 stats.categorySummaries.forEach(category => {
-  const percentage = ((category.totalAmount / stats.totalAmount) * 100).toFixed(1)
-  console.log(`${category.category}: ${percentage}% (${category.totalAmount} ${category.currency})`)
+  const percentage = ((category.totalAmount / stats.totalAmount) * 100).toFixed(
+    1
+  )
+  console.log(
+    `${category.category}: ${percentage}% (${category.totalAmount} ${category.currency})`
+  )
 })
 ```
 
@@ -212,7 +221,11 @@ const monthlyStats = await getMonthlyExpenseStats(2024)
 
 console.log('Динамика расходов по месяцам:')
 monthlyStats.forEach(month => {
-  console.log(`${month.month}: ${month.totalAmount.toFixed(2)} ${month.currency} (${month.count} операций)`)
+  console.log(
+    `${month.month}: ${month.totalAmount.toFixed(2)} ${month.currency} (${
+      month.count
+    } операций)`
+  )
 })
 ```
 
@@ -222,11 +235,14 @@ monthlyStats.forEach(month => {
 const allExpenses = await getBotFarmExpenses('2024-05-01', '2024-05-31')
 
 // Только расходы на OpenAI
-const openaiExpenses = allExpenses.filter(expense => 
+const openaiExpenses = allExpenses.filter(expense =>
   expense.name.toUpperCase().includes('OPENAI')
 )
 
-const openaiTotal = openaiExpenses.reduce((sum, expense) => sum + expense.amount, 0)
+const openaiTotal = openaiExpenses.reduce(
+  (sum, expense) => sum + expense.amount,
+  0
+)
 console.log(`Всего потрачено на OpenAI: ${openaiTotal} THB`)
 ```
 
@@ -235,29 +251,29 @@ console.log(`Всего потрачено на OpenAI: ${openaiTotal} THB`)
 ### Общая статистика по расходам фермы ботов
 
 ```sql
-SELECT 
+SELECT
   COUNT(*) as total_transactions,
   SUM(amount) as total_amount,
   currency,
   MIN(payment_date) as earliest_expense,
   MAX(payment_date) as latest_expense
-FROM payments_v2 
-WHERE telegram_id = 'SYSTEM_BOT_FARM' 
+FROM payments_v2
+WHERE telegram_id = 'SYSTEM_BOT_FARM'
   AND type = 'MONEY_OUTCOME';
 ```
 
 ### Расходы по категориям
 
 ```sql
-SELECT 
+SELECT
   metadata->>'expense_category' as category,
   COUNT(*) as transactions,
   SUM(amount) as total_amount,
   currency
-FROM payments_v2 
-WHERE telegram_id = 'SYSTEM_BOT_FARM' 
+FROM payments_v2
+WHERE telegram_id = 'SYSTEM_BOT_FARM'
   AND type = 'MONEY_OUTCOME'
-  AND payment_date >= '2024-05-01' 
+  AND payment_date >= '2024-05-01'
   AND payment_date < '2024-06-01'
 GROUP BY metadata->>'expense_category', currency
 ORDER BY total_amount DESC;
@@ -266,15 +282,15 @@ ORDER BY total_amount DESC;
 ### Топ расходов по сумме
 
 ```sql
-SELECT 
+SELECT
   metadata->>'original_name' as service_name,
   amount,
   currency,
   payment_date,
   metadata->>'expense_category' as category,
   description
-FROM payments_v2 
-WHERE telegram_id = 'SYSTEM_BOT_FARM' 
+FROM payments_v2
+WHERE telegram_id = 'SYSTEM_BOT_FARM'
   AND type = 'MONEY_OUTCOME'
 ORDER BY amount DESC
 LIMIT 10;
@@ -299,7 +315,7 @@ LIMIT 10;
 ## 🔮 Планы развития
 
 - Добавление поддержки конвертации валют
-- Автоматические уведомления при превышении бюджета 
+- Автоматические уведомления при превышении бюджета
 - Интеграция с внешними системами учета
 - Веб-интерфейс для управления расходами
 - Автоматический импорт расходов из банковских выписок

@@ -7,9 +7,7 @@ import { Telegraf } from 'telegraf'
 import { MyContext } from '@/interfaces'
 config({ path: `.env.${process.env.NODE_ENV || 'development'}.local` })
 
-export const bots = BOT_TOKENS.map(
-  token => new Telegraf<MyContext>(token)
-)
+export const bots = BOT_TOKENS.map(token => new Telegraf<MyContext>(token))
 
 // Mock bot для тестирования без реальных токенов
 function createMockBot() {
@@ -17,33 +15,66 @@ function createMockBot() {
   return {
     telegram: {
       sendMessage: async (chatId: string, message: string, options?: any) => {
-        logger.info('📨 Mock bot sendMessage:', { chatId, message: message.substring(0, 100), options })
+        logger.info('📨 Mock bot sendMessage:', {
+          chatId,
+          message: message.substring(0, 100),
+          options,
+        })
         return { message_id: Date.now(), chat: { id: chatId }, text: message }
       },
       sendPhoto: async (chatId: string, photo: any, options?: any) => {
-        logger.info('📷 Mock bot sendPhoto:', { chatId, photo: 'mock_photo', options })
-        return { message_id: Date.now(), chat: { id: chatId }, photo: [{ file_id: 'mock_file_id' }] }
+        logger.info('📷 Mock bot sendPhoto:', {
+          chatId,
+          photo: 'mock_photo',
+          options,
+        })
+        return {
+          message_id: Date.now(),
+          chat: { id: chatId },
+          photo: [{ file_id: 'mock_file_id' }],
+        }
       },
       sendVideo: async (chatId: string, video: any, options?: any) => {
-        logger.info('🎥 Mock bot sendVideo:', { chatId, video: 'mock_video', options })
-        return { message_id: Date.now(), chat: { id: chatId }, video: { file_id: 'mock_video_id' } }
+        logger.info('🎥 Mock bot sendVideo:', {
+          chatId,
+          video: 'mock_video',
+          options,
+        })
+        return {
+          message_id: Date.now(),
+          chat: { id: chatId },
+          video: { file_id: 'mock_video_id' },
+        }
       },
       sendDocument: async (chatId: string, document: any, options?: any) => {
-        logger.info('📎 Mock bot sendDocument:', { chatId, document: 'mock_document', options })
-        return { message_id: Date.now(), chat: { id: chatId }, document: { file_id: 'mock_doc_id' } }
+        logger.info('📎 Mock bot sendDocument:', {
+          chatId,
+          document: 'mock_document',
+          options,
+        })
+        return {
+          message_id: Date.now(),
+          chat: { id: chatId },
+          document: { file_id: 'mock_doc_id' },
+        }
       },
       getChatMember: async (chatId: string, userId: number) => {
         logger.info('👤 Mock bot getChatMember:', { chatId, userId })
         return { user: { id: userId }, status: 'member' }
       },
-      token: 'mock_token'
+      token: 'mock_token',
     },
     api: {
       getMe: async () => {
         logger.info('🤖 Mock bot getMe')
-        return { id: 123456789, is_bot: true, first_name: 'Mock Bot', username: 'mock_bot' }
-      }
-    }
+        return {
+          id: 123456789,
+          is_bot: true,
+          first_name: 'Mock Bot',
+          username: 'mock_bot',
+        }
+      },
+    },
   }
 }
 
@@ -85,13 +116,16 @@ export function getBotByName(bot_name: string): {
         availableBots: Object.keys(BOT_NAMES),
         tokenIsPlaceholder: token ? token.includes('placeholder') : false,
       })
-      
+
       // В тестовом режиме возвращаем mock bot вместо ошибки
-      if (process.env.NODE_ENV === 'development' && process.env.USE_MOCK_BOT === 'true') {
+      if (
+        process.env.NODE_ENV === 'development' &&
+        process.env.USE_MOCK_BOT === 'true'
+      ) {
         logger.info('🧪 Возвращаем mock bot для тестирования')
         return { bot: createMockBot() }
       }
-      
+
       return { error: 'Valid bot token not found in configuration' }
     }
   }

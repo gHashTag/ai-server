@@ -13,7 +13,7 @@ dotenv.config()
 
 async function testLogMonitor() {
   console.log('🚀 Отправка события для запуска мониторинга логов...')
-  
+
   try {
     // Отправляем событие для ручного запуска мониторинга
     const result = await inngest.send({
@@ -21,15 +21,14 @@ async function testLogMonitor() {
       data: {
         userId: 'admin',
         reason: 'manual_test',
-        timestamp: new Date().toISOString()
-      }
+        timestamp: new Date().toISOString(),
+      },
     })
-    
+
     console.log('✅ Событие успешно отправлено!')
     console.log('📋 ID события:', result.ids?.[0] || result)
     console.log('\n🔍 Проверьте Inngest Dashboard: http://localhost:8288')
     console.log('📱 Проверьте Telegram группу: https://t.me/c/2250147975/1')
-    
   } catch (error) {
     console.error('❌ Ошибка при отправке события:', error)
     process.exit(1)

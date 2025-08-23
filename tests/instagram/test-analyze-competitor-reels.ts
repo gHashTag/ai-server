@@ -22,18 +22,18 @@ async function testAnalyzeCompetitorReels() {
         metadata: {
           test: 'popular-blogger-analysis',
           timestamp: new Date().toISOString(),
-          description: 'Анализ рилз популярного блогера о саморазвитии'
-        }
-      }
+          description: 'Анализ рилз популярного блогера о саморазвитии',
+        },
+      },
     })
-    
+
     console.log('✅ Event 1 отправлен:', event1.ids[0])
     console.log('🎯 Цель: Анализ engagement и популярных тем')
-    
+
     // Небольшая задержка между тестами
     await new Promise(resolve => setTimeout(resolve, 3000))
 
-    // Тест 2: Анализ бизнес-аккаунта  
+    // Тест 2: Анализ бизнес-аккаунта
     console.log('\n💼 Тест 2: Анализ бизнес-аккаунта...')
     const event2 = await inngest.send({
       name: 'instagram/analyze-reels',
@@ -46,11 +46,11 @@ async function testAnalyzeCompetitorReels() {
         metadata: {
           test: 'business-account-analysis',
           timestamp: new Date().toISOString(),
-          description: 'Анализ бизнес-контента предпринимателя'
-        }
-      }
+          description: 'Анализ бизнес-контента предпринимателя',
+        },
+      },
     })
-    
+
     console.log('✅ Event 2 отправлен:', event2.ids[0])
     console.log('🎯 Цель: Анализ бизнес-контента и стратегий')
 
@@ -70,11 +70,11 @@ async function testAnalyzeCompetitorReels() {
         metadata: {
           test: 'russian-blogger-analysis',
           timestamp: new Date().toISOString(),
-          description: 'Анализ русскоязычного контента'
-        }
-      }
+          description: 'Анализ русскоязычного контента',
+        },
+      },
     })
-    
+
     console.log('✅ Event 3 отправлен:', event3.ids[0])
     console.log('🎯 Цель: Анализ русскоязычного контента')
 
@@ -97,39 +97,54 @@ async function testAnalyzeCompetitorReels() {
 
     console.log('\n⏱️ Время выполнения: ~30-60 секунд на каждый тест')
     console.log('📊 Мониторинг: Смотри логи Inngest Dashboard')
-    
+
     console.log('\n🚀 Все тесты запущены! Проверяй результаты в базе данных.')
     console.log('\n📋 Для проверки результатов выполни:')
-    console.log('   SELECT comp_username, COUNT(*) as reels_count, AVG(views_count) as avg_views')
-    console.log('   FROM reels_analysis WHERE created_at > NOW() - INTERVAL \'1 hour\'')
+    console.log(
+      '   SELECT comp_username, COUNT(*) as reels_count, AVG(views_count) as avg_views'
+    )
+    console.log(
+      "   FROM reels_analysis WHERE created_at > NOW() - INTERVAL '1 hour'"
+    )
     console.log('   GROUP BY comp_username ORDER BY avg_views DESC;')
 
     return {
       tests: [
-        { id: event1.ids[0], username: 'alexyanovsky', type: 'popular-blogger' },
+        {
+          id: event1.ids[0],
+          username: 'alexyanovsky',
+          type: 'popular-blogger',
+        },
         { id: event2.ids[0], username: 'garyvee', type: 'business-account' },
-        { id: event3.ids[0], username: 'yuliya_kosmodamianskaya', type: 'russian-blogger' }
+        {
+          id: event3.ids[0],
+          username: 'yuliya_kosmodamianskaya',
+          type: 'russian-blogger',
+        },
       ],
       message: 'Все 3 теста запущены успешно!',
       next_steps: [
         'Проверить Inngest Dashboard для статуса выполнения',
         'Проверить таблицу reels_analysis в базе данных',
-        'Проанализировать логи выполнения функций'
-      ]
+        'Проанализировать логи выполнения функций',
+      ],
     }
-
   } catch (error) {
     console.error('❌ Ошибка при тестировании:', error)
-    
+
     // Детальная диагностика
     if (error.message.includes('RAPIDAPI_INSTAGRAM_KEY')) {
-      console.log('\n🔧 ДИАГНОСТИКА: Проверь переменную окружения RAPIDAPI_INSTAGRAM_KEY')
+      console.log(
+        '\n🔧 ДИАГНОСТИКА: Проверь переменную окружения RAPIDAPI_INSTAGRAM_KEY'
+      )
     }
-    
+
     if (error.message.includes('NEON_DATABASE_URL')) {
-      console.log('\n🔧 ДИАГНОСТИКА: Проверь переменную окружения NEON_DATABASE_URL')
+      console.log(
+        '\n🔧 ДИАГНОСТИКА: Проверь переменную окружения NEON_DATABASE_URL'
+      )
     }
-    
+
     if (error.message.includes('network')) {
       console.log('\n🔧 ДИАГНОСТИКА: Проблемы с сетью или API недоступен')
     }

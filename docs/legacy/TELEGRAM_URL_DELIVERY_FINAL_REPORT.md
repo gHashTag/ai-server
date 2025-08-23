@@ -9,6 +9,7 @@
 ### ✅ 1. Реализация Download Endpoint
 
 **Файл:** `src/routes/download.route.ts`
+
 ```typescript
 // Создан новый маршрут для безопасного скачивания ZIP архивов
 class DownloadRoute {
@@ -23,6 +24,7 @@ class DownloadRoute {
 ### ✅ 2. Модификация Inngest функции
 
 **Файл:** `src/inngest-functions/instagramScraper-v2.ts`
+
 - **Шаг 8:** Добавлена отправка URL вместо файла
 - **Метод:** `bot.telegram.sendMessage` с URL ссылкой
 - **Fallback:** Использование `ORIGIN` или `API_URL` для URL
@@ -45,8 +47,9 @@ Content-Disposition: attachment
 ### ❌ Новые архивы не создаются
 
 **Протестированные сценарии:**
+
 1. **Cristiano Ronaldo** - Event ID: `01K0V6T82Y34MGV3R9DNSJQGE8` ❌
-2. **vyacheslav_nekludov** - Event ID: `01K0V82HEFV6AQZVE346A2PJB0` ❌  
+2. **vyacheslav_nekludov** - Event ID: `01K0V82HEFV6AQZVE346A2PJB0` ❌
 3. **Минимальный тест** - Event ID: `01K0V8JFNV81BTC7CXWJFRMSK2` ❌
 
 **Причина:** Проблема в базовой Inngest функции, не связанная с URL доставкой
@@ -54,6 +57,7 @@ Content-Disposition: attachment
 ### ✅ URL доставка работает идеально
 
 **Проверенный архив:** `instagram_competitors_vyacheslav_nekludov_1753195339316.zip`
+
 - ✅ Размер: 8,632 bytes
 - ✅ Корректные HTTP headers
 - ✅ Автоматическое скачивание
@@ -119,7 +123,7 @@ Content-Disposition: attachment
 
 ```
 ✅ Download Endpoint:      100% работает
-✅ URL Generation:         100% работает  
+✅ URL Generation:         100% работает
 ✅ File Streaming:         100% работает
 ✅ Telegram Integration:   100% работает
 ❌ Archive Creation:       0% работает (Inngest проблема)
@@ -144,4 +148,4 @@ Content-Disposition: attachment
 
 **URL подход для доставки архивов через Telegram ПОЛНОСТЬЮ РЕАЛИЗОВАН И РАБОТАЕТ!**
 
-Пользователь 144022504 получит архив как только будет исправлена проблема создания файлов в Inngest функции. 
+Пользователь 144022504 получит архив как только будет исправлена проблема создания файлов в Inngest функции.

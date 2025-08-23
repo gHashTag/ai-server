@@ -1,6 +1,0 @@
-fix: обновление hardware SKU с gpu-t4 на gpu-l40s для Replicate API
-
-- Replicate API больше не поддерживает gpu-t4
-- Обновлено в generateModelTraining.ts (2 места)
-- Обновлено в services/generateModelTraining.ts (1 место)
-- gpu-l40s обеспечивает оптимальное соотношение производительности/стоимости для LoRA обучения

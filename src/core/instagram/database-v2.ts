@@ -17,13 +17,15 @@ import { logger } from '@/utils/logger'
 // Ленивая инициализация - подключение создается только при первом использовании
 function getConnectionString() {
   const connectionString = process.env.SUPABASE_URL
-  
+
   if (!connectionString) {
-    console.warn('⚠️ No database connection string found. Instagram features may not work.')
+    console.warn(
+      '⚠️ No database connection string found. Instagram features may not work.'
+    )
     console.warn('Set SUPABASE_URL environment variable.')
     return null
   }
-  
+
   return connectionString
 }
 
@@ -117,7 +119,7 @@ export interface TelegramMemoryData {
 
 export class InstagramContentAgentDB {
   private pool: typeof dbPool
-  private _isInitialized: boolean = false
+  private _isInitialized = false
 
   constructor() {
     this.pool = dbPool
@@ -132,7 +134,9 @@ export class InstagramContentAgentDB {
 
     const connectionString = getConnectionString()
     if (!connectionString) {
-      logger.warn('⚠️ No database connection available. Skipping database operations.')
+      logger.warn(
+        '⚠️ No database connection available. Skipping database operations.'
+      )
       return
     }
 
@@ -143,7 +147,9 @@ export class InstagramContentAgentDB {
       this._isInitialized = true
     } catch (error) {
       logger.error('❌ Instagram Content Agent DB connection failed:', error)
-      logger.warn('⚠️ Database operations will be skipped due to connection failure.')
+      logger.warn(
+        '⚠️ Database operations will be skipped due to connection failure.'
+      )
       // Don't throw error - allow app to continue without database
     }
   }
@@ -159,7 +165,7 @@ export class InstagramContentAgentDB {
     competitors: CompetitorData[]
   ): Promise<{ saved: number; duplicates: number }> {
     await this.ensureConnection()
-    
+
     if (!this._isInitialized) {
       logger.warn('⚠️ Database not available, skipping competitor save')
       return { saved: 0, duplicates: 0 }
@@ -528,7 +534,7 @@ export class InstagramContentAgentDB {
       const client = await this.pool.connect()
       await client.query('SELECT 1')
       client.release()
-      
+
       logger.info('✅ Database connection test successful')
       this._isInitialized = true
       return true

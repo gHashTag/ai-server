@@ -19,6 +19,7 @@ morphing_images.zip
 ```
 
 **Требования к изображениям:**
+
 - Форматы: `.jpg`, `.jpeg`, `.png`, `.webp`
 - Количество: от 2 до 100 изображений
 - Размер ZIP архива: до 50 МБ
@@ -43,6 +44,7 @@ curl -X POST https://your-server.com/generate/morph-images \
 ### 3. Получение ответа
 
 **Успешный ответ (200 OK):**
+
 ```json
 {
   "message": "Морфинг отправлен на обработку",
@@ -53,6 +55,7 @@ curl -X POST https://your-server.com/generate/morph-images \
 ```
 
 **Ошибка (400 Bad Request):**
+
 ```json
 {
   "message": "Ошибка валидации",
@@ -65,33 +68,35 @@ curl -X POST https://your-server.com/generate/morph-images \
 
 ### Обязательные параметры
 
-| Параметр | Тип | Описание | Пример |
-|----------|-----|----------|---------|
-| `type` | string | Тип операции | `"morphing"` |
-| `telegram_id` | string | ID пользователя Telegram | `"144022504"` |
-| `images_zip` | File | ZIP архив с изображениями | `morphing_images.zip` |
-| `image_count` | string | Количество изображений | `"4"` |
-| `morphing_type` | string | Тип морфинга | `"seamless"` или `"loop"` |
-| `model` | string | Модель для обработки | `"kling-v1.6-pro"` |
-| `is_ru` | string | Язык ответов | `"true"` или `"false"` |
-| `bot_name` | string | Имя бота | `"ai_koshey_bot"` |
-| `username` | string | Имя пользователя | `"test_user"` |
+| Параметр        | Тип    | Описание                  | Пример                    |
+| --------------- | ------ | ------------------------- | ------------------------- |
+| `type`          | string | Тип операции              | `"morphing"`              |
+| `telegram_id`   | string | ID пользователя Telegram  | `"144022504"`             |
+| `images_zip`    | File   | ZIP архив с изображениями | `morphing_images.zip`     |
+| `image_count`   | string | Количество изображений    | `"4"`                     |
+| `morphing_type` | string | Тип морфинга              | `"seamless"` или `"loop"` |
+| `model`         | string | Модель для обработки      | `"kling-v1.6-pro"`        |
+| `is_ru`         | string | Язык ответов              | `"true"` или `"false"`    |
+| `bot_name`      | string | Имя бота                  | `"ai_koshey_bot"`         |
+| `username`      | string | Имя пользователя          | `"test_user"`             |
 
 ### Заголовки
 
-| Заголовок | Описание | Пример |
-|-----------|----------|---------|
-| `x-secret-key` | API ключ для аутентификации | `your-secret-key` |
-| `Content-Type` | Тип контента | `multipart/form-data` |
+| Заголовок      | Описание                    | Пример                |
+| -------------- | --------------------------- | --------------------- |
+| `x-secret-key` | API ключ для аутентификации | `your-secret-key`     |
+| `Content-Type` | Тип контента                | `multipart/form-data` |
 
 ## 🎬 Типы морфинга
 
 ### Seamless (Плавные переходы)
+
 - Создает плавные переходы между изображениями
 - Подходит для создания анимации изменений
 - Рекомендуется для последовательных кадров
 
 ### Loop (Зацикленное видео)
+
 - Создает зацикленное видео
 - Последний кадр плавно переходит в первый
 - Подходит для создания бесконечных анимаций
@@ -107,7 +112,7 @@ const axios = require('axios')
 
 async function createMorphingVideo() {
   const form = new FormData()
-  
+
   // Добавляем параметры
   form.append('type', 'morphing')
   form.append('telegram_id', '144022504')
@@ -117,10 +122,10 @@ async function createMorphingVideo() {
   form.append('is_ru', 'true')
   form.append('bot_name', 'ai_koshey_bot')
   form.append('username', 'test_user')
-  
+
   // Добавляем ZIP файл
   form.append('images_zip', fs.createReadStream('./morphing_images.zip'))
-  
+
   try {
     const response = await axios.post(
       'https://your-server.com/generate/morph-images',
@@ -128,13 +133,12 @@ async function createMorphingVideo() {
       {
         headers: {
           'x-secret-key': 'YOUR_SECRET_KEY',
-          ...form.getHeaders()
-        }
+          ...form.getHeaders(),
+        },
       }
     )
-    
+
     console.log('Морфинг запущен:', response.data)
-    
   } catch (error) {
     console.error('Ошибка:', error.response?.data || error.message)
   }
@@ -150,11 +154,11 @@ import requests
 
 def create_morphing_video():
     url = 'https://your-server.com/generate/morph-images'
-    
+
     headers = {
         'x-secret-key': 'YOUR_SECRET_KEY'
     }
-    
+
     data = {
         'type': 'morphing',
         'telegram_id': '144022504',
@@ -165,18 +169,18 @@ def create_morphing_video():
         'bot_name': 'ai_koshey_bot',
         'username': 'test_user'
     }
-    
+
     files = {
         'images_zip': open('morphing_images.zip', 'rb')
     }
-    
+
     try:
         response = requests.post(url, headers=headers, data=data, files=files)
         response.raise_for_status()
-        
+
         result = response.json()
         print(f"Морфинг запущен: {result}")
-        
+
     except requests.exceptions.RequestException as e:
         print(f"Ошибка: {e}")
     finally:
@@ -196,17 +200,20 @@ create_morphing_video()
 ## ⚠️ Ограничения и требования
 
 ### Файлы
+
 - **Максимальный размер ZIP:** 50 МБ
 - **Количество изображений:** от 2 до 100
 - **Поддерживаемые форматы:** JPG, JPEG, PNG, WebP
 - **Именование файлов:** должно содержать числа для сортировки
 
 ### Производительность
+
 - **Время обработки:** 5-10 минут в зависимости от количества изображений
 - **Таймаут обработки:** 10 минут
 - **Качество видео:** высокое (определяется Kling-v1.6)
 
 ### Аутентификация
+
 - Требуется валидный `x-secret-key`
 - Проверка существования пользователя в системе
 
@@ -214,13 +221,13 @@ create_morphing_video()
 
 ### Типичные ошибки
 
-| Код | Ошибка | Решение |
-|-----|--------|---------|
-| 400 | `type is required and must be "morphing"` | Передайте `type=morphing` |
-| 400 | `images_zip file is required` | Убедитесь, что ZIP файл прикреплен |
-| 400 | `User validation failed` | Проверьте `telegram_id` и `username` |
-| 500 | `ZIP extraction failed` | Проверьте корректность ZIP архива |
-| 500 | `Kling processing failed` | Попробуйте позже или обратитесь в поддержку |
+| Код | Ошибка                                    | Решение                                     |
+| --- | ----------------------------------------- | ------------------------------------------- |
+| 400 | `type is required and must be "morphing"` | Передайте `type=morphing`                   |
+| 400 | `images_zip file is required`             | Убедитесь, что ZIP файл прикреплен          |
+| 400 | `User validation failed`                  | Проверьте `telegram_id` и `username`        |
+| 500 | `ZIP extraction failed`                   | Проверьте корректность ZIP архива           |
+| 500 | `Kling processing failed`                 | Попробуйте позже или обратитесь в поддержку |
 
 ### Отладка
 
@@ -250,7 +257,7 @@ cd test_images
 
 # Добавьте тестовые изображения
 cp image1.jpg morphing_frame_1.jpg
-cp image2.jpg morphing_frame_2.jpg  
+cp image2.jpg morphing_frame_2.jpg
 cp image3.jpg morphing_frame_3.jpg
 
 # Создайте ZIP архив
@@ -269,6 +276,7 @@ zip ../test_morphing_images.zip *.jpg
 ## 🔄 Changelog
 
 ### v1.0.0 (2024-12-XX)
+
 - ✅ Базовая реализация морфинг API
 - ✅ Интеграция с Kling-v1.6
 - ✅ Поддержка seamless и loop режимов
@@ -278,4 +286,4 @@ zip ../test_morphing_images.zip *.jpg
 
 ---
 
-*Создано командой AI-Server Development Team* 
+_Создано командой AI-Server Development Team_

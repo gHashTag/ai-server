@@ -5,6 +5,7 @@
 ### ✅ Что уже реализовано:
 
 1. **Instagram Apify Scraper** (`instagramApifyScraper.ts`)
+
    - ✅ Парсинг рилсов через Apify API
    - ✅ Сохранение в PostgreSQL `instagram_apify_reels`
    - ✅ Монетизация: 0.144 ⭐ за рилс
@@ -12,11 +13,13 @@
    - ✅ Расширенная фильтрация видео контента
 
 2. **Competitor Auto Parser** (`competitorAutoParser.ts`)
+
    - ✅ Cron запуск каждые 24 часа (08:00 UTC)
    - ✅ Автоматический парсинг всех активных подписок
    - ✅ Группировка по конкурентам для оптимизации
 
 3. **Competitor Delivery** (`competitorDelivery.ts`)
+
    - ✅ Доставка результатов подписчикам
    - ✅ Форматы: дайджест, индивидуальные рилсы, архив
    - ✅ Фильтрация по просмотрам и возрасту
@@ -39,6 +42,7 @@
 **Требование**: Раз в 24 часа каждый подписчик должен получать новые рилсы от конкурентов, на которых он подписан.
 
 **Текущая схема работы**:
+
 ```
 08:00 UTC: competitorAutoParser запускается → парсит всех конкурентов
 08:15 UTC: Каждый парсинг должен запускать competitorDelivery
@@ -60,7 +64,10 @@
 
 ```typescript
 // В конце instagramApifyScraper перед return result
-if (processedReels.length > 0 && validatedData.requester_telegram_id === 'auto-system') {
+if (
+  processedReels.length > 0 &&
+  validatedData.requester_telegram_id === 'auto-system'
+) {
   await step.run('trigger-delivery', async () => {
     try {
       // Запускаем доставку для этого конкурента
@@ -69,10 +76,10 @@ if (processedReels.length > 0 && validatedData.requester_telegram_id === 'auto-s
         data: {
           competitor_username: validatedData.username_or_hashtag,
           project_id: validatedData.project_id,
-          triggered_by: 'auto-parser'
-        }
+          triggered_by: 'auto-parser',
+        },
       })
-      
+
       log.info('📬 Доставка запущена:', deliveryResult.ids[0])
     } catch (error: any) {
       log.error('❌ Ошибка запуска доставки:', error.message)
@@ -96,43 +103,49 @@ export const systemMonitor = inngest.createFunction(
     // Проверяем что все парсинги и доставки выполнились
     const yesterday = new Date()
     yesterday.setHours(yesterday.getHours() - 24)
-    
+
     // Проверяем количество парсингов
     const parsedToday = await step.run('check-parsing', async () => {
       const client = await dbPool.connect()
       try {
-        const result = await client.query(`
+        const result = await client.query(
+          `
           SELECT COUNT(*) as count 
           FROM instagram_apify_reels 
           WHERE scraped_at >= $1
-        `, [yesterday])
+        `,
+          [yesterday]
+        )
         return result.rows[0].count
       } finally {
         client.release()
       }
     })
-    
+
     // Проверяем количество доставок
     const deliveriesCount = await step.run('check-deliveries', async () => {
       const client = await dbPool.connect()
       try {
-        const result = await client.query(`
+        const result = await client.query(
+          `
           SELECT COUNT(*) as count 
           FROM competitor_delivery_history 
           WHERE created_at >= $1
-        `, [yesterday])
+        `,
+          [yesterday]
+        )
         return result.rows[0].count
       } finally {
         client.release()
       }
     })
-    
+
     // Отправляем отчет админу
     await step.run('send-daily-report', async () => {
       if (process.env.ADMIN_CHAT_ID) {
         const { getBotByName } = await import('@/core/bot')
         const { bot } = getBotByName('neuro_blogger_bot')
-        
+
         const report = `
 📊 Ежедневный отчёт системы парсинга
 
@@ -143,18 +156,23 @@ export const systemMonitor = inngest.createFunction(
 ${parsedToday > 0 ? '✅' : '❌'} Парсинг работает
 ${deliveriesCount > 0 ? '✅' : '❌'} Доставка работает
 
-${parsedToday === 0 || deliveriesCount === 0 ? '⚠️ Требуется проверка системы!' : '🎯 Система работает нормально'}
+${
+  parsedToday === 0 || deliveriesCount === 0
+    ? '⚠️ Требуется проверка системы!'
+    : '🎯 Система работает нормально'
+}
         `
-        
+
         await bot.telegram.sendMessage(process.env.ADMIN_CHAT_ID, report)
       }
     })
-    
+
     return {
       success: true,
       parsed_reels: parsedToday,
       deliveries_count: deliveriesCount,
-      status: parsedToday > 0 && deliveriesCount > 0 ? 'healthy' : 'needs_attention'
+      status:
+        parsedToday > 0 && deliveriesCount > 0 ? 'healthy' : 'needs_attention',
     }
   }
 )
@@ -168,25 +186,29 @@ ${parsedToday === 0 || deliveriesCount === 0 ? '⚠️ Требуется про
 // В competitorDelivery.ts - улучшить логику "нет новых рилсов"
 if (reelsData.length === 0) {
   log.info('📭 Нет новых рилсов для доставки')
-  
+
   // Отправляем уведомление только активным подписчикам с настройкой уведомлений
   for (const subscriber of subscribers) {
     try {
-      if (subscriber.notify_when_no_reels !== false) { // Если не отключено
+      if (subscriber.notify_when_no_reels !== false) {
+        // Если не отключено
         const { getBotByName } = await import('@/core/bot')
         const { bot } = getBotByName(subscriber.bot_name)
-        
+
         await bot.api.sendMessage(
           subscriber.user_telegram_id,
           `📭 @${competitor_username}: нет новых рилсов за последние 24 часа\n\n` +
-          `💡 Возможно, конкурент не публиковал контент или настройки фильтрации слишком строгие`
+            `💡 Возможно, конкурент не публиковал контент или настройки фильтрации слишком строгие`
         )
       }
     } catch (error: any) {
-      log.error(`❌ Ошибка уведомления пользователя ${subscriber.user_telegram_id}:`, error.message)
+      log.error(
+        `❌ Ошибка уведомления пользователя ${subscriber.user_telegram_id}:`,
+        error.message
+      )
     }
   }
-  
+
   return { success: true, message: 'No new reels to deliver' }
 }
 ```
@@ -197,14 +219,14 @@ if (reelsData.length === 0) {
 
 ```sql
 -- Обновление таблицы competitor_subscriptions
-ALTER TABLE competitor_subscriptions 
+ALTER TABLE competitor_subscriptions
 ADD COLUMN IF NOT EXISTS delivery_format VARCHAR(20) DEFAULT 'digest',
 ADD COLUMN IF NOT EXISTS notify_when_no_reels BOOLEAN DEFAULT true,
 ADD COLUMN IF NOT EXISTS preferred_delivery_time TIME DEFAULT '09:00:00',
 ADD COLUMN IF NOT EXISTS timezone VARCHAR(50) DEFAULT 'UTC';
 
 -- Обновление таблицы competitor_delivery_history
-ALTER TABLE competitor_delivery_history 
+ALTER TABLE competitor_delivery_history
 ADD COLUMN IF NOT EXISTS delivery_method VARCHAR(20) DEFAULT 'auto',
 ADD COLUMN IF NOT EXISTS delivery_trigger VARCHAR(50) DEFAULT 'scheduled';
 ```
@@ -227,9 +249,9 @@ export const healthCheck = inngest.createFunction(
         database: false,
         inngest: false,
         apify: false,
-        telegram: false
+        telegram: false,
       }
-      
+
       // Проверка базы данных
       try {
         const client = await dbPool.connect()
@@ -239,28 +261,28 @@ export const healthCheck = inngest.createFunction(
       } catch (error) {
         results.database = false
       }
-      
+
       // Проверка Inngest (отправляем тестовое событие)
       try {
         await inngest.send({
           name: 'system/health-ping',
-          data: { timestamp: Date.now() }
+          data: { timestamp: Date.now() },
         })
         results.inngest = true
       } catch (error) {
         results.inngest = false
       }
-      
+
       // Проверка Apify API
       try {
         const response = await fetch('https://api.apify.com/v2/acts', {
-          headers: { Authorization: `Bearer ${process.env.APIFY_TOKEN}` }
+          headers: { Authorization: `Bearer ${process.env.APIFY_TOKEN}` },
         })
         results.apify = response.ok
       } catch (error) {
         results.apify = false
       }
-      
+
       // Проверка Telegram API
       try {
         const { getBotByName } = await import('@/core/bot')
@@ -270,36 +292,38 @@ export const healthCheck = inngest.createFunction(
       } catch (error) {
         results.telegram = false
       }
-      
+
       return results
     })
-    
+
     // Если что-то не работает - отправляем алерт
     const failedServices = Object.entries(checks)
       .filter(([_, status]) => !status)
       .map(([service, _]) => service)
-    
+
     if (failedServices.length > 0) {
       await step.run('send-alert', async () => {
         if (process.env.ADMIN_CHAT_ID) {
           const { getBotByName } = await import('@/core/bot')
           const { bot } = getBotByName('neuro_blogger_bot')
-          
+
           await bot.telegram.sendMessage(
             process.env.ADMIN_CHAT_ID,
             `🚨 АЛЕРТ: Проблемы с системой\n\n` +
-            `❌ Не работают сервисы:\n${failedServices.map(s => `• ${s}`).join('\n')}\n\n` +
-            `⏰ ${new Date().toISOString()}`
+              `❌ Не работают сервисы:\n${failedServices
+                .map(s => `• ${s}`)
+                .join('\n')}\n\n` +
+              `⏰ ${new Date().toISOString()}`
           )
         }
       })
     }
-    
+
     return {
       success: true,
       health_status: checks,
       failed_services: failedServices,
-      overall_health: failedServices.length === 0 ? 'healthy' : 'degraded'
+      overall_health: failedServices.length === 0 ? 'healthy' : 'degraded',
     }
   }
 )
@@ -308,21 +332,25 @@ export const healthCheck = inngest.createFunction(
 ## 📋 План реализации
 
 ### Этап 1: Исправление текущих проблем
+
 - [ ] Добавить триггер доставки в `instagramApifyScraper`
 - [ ] Протестировать связку парсинг → доставка
 - [ ] Проверить работу cron-задач в продакшне
 
 ### Этап 2: Мониторинг и здоровье системы
+
 - [ ] Создать `systemMonitor.ts`
 - [ ] Создать `healthCheck.ts`
 - [ ] Настроить алерты админам
 
 ### Этап 3: Улучшение пользовательского опыта
+
 - [ ] Добавить настройки доставки в подписки
 - [ ] Улучшить форматы уведомлений
 - [ ] Добавить статистику для пользователей
 
 ### Этап 4: Оптимизация и масштабирование
+
 - [ ] Оптимизировать производительность
 - [ ] Добавить кеширование результатов
 - [ ] Улучшить обработку ошибок
@@ -330,12 +358,14 @@ export const healthCheck = inngest.createFunction(
 ## 💰 Экономическая модель
 
 ### Текущие расходы:
+
 - **Apify API**: $2.30 за 1000 рилсов
 - **Конверсия**: 0.144 ⭐ за рилс
 - **Средний конкурент**: 10-20 рилсов в день
 - **Средняя подписка**: 3-5 конкурентов
 
 ### Ожидаемое потребление:
+
 - **100 активных подписчиков**
 - **300 уникальных конкурентов**
 - **~3000 рилсов в день** (300 конкурентов × 10 рилсов)
@@ -369,14 +399,15 @@ ALERTS_ENABLED=true
 ## 🧪 Тестирование системы
 
 ### Тест полного цикла:
+
 ```javascript
 // test-full-cycle.js
 async function testFullCycle() {
   console.log('🧪 Тестируем полный цикл парсинга и доставки')
-  
+
   // 1. Создаем тестовую подписку
   const subscription = await createTestSubscription('theaisurfer')
-  
+
   // 2. Запускаем парсинг
   const parseResult = await triggerApifyInstagramScraping({
     username_or_hashtag: 'theaisurfer',
@@ -384,11 +415,11 @@ async function testFullCycle() {
     source_type: 'competitor',
     max_reels: 5,
     requester_telegram_id: 'auto-system',
-    bot_name: 'neuro_blogger_bot'
+    bot_name: 'neuro_blogger_bot',
   })
-  
+
   console.log('✅ Парсинг запущен:', parseResult.eventId)
-  
+
   // 3. Ждем завершения и проверяем доставку
   setTimeout(async () => {
     const deliveries = await checkDeliveryHistory(subscription.id)
@@ -400,6 +431,7 @@ async function testFullCycle() {
 ## 📊 Метрики для отслеживания
 
 ### Ключевые показатели:
+
 1. **Количество парсингов в день**
 2. **Количество найденных рилсов**
 3. **Количество успешных доставок**
@@ -408,23 +440,24 @@ async function testFullCycle() {
 6. **Активность пользователей**
 
 ### Дашборд метрик:
+
 ```sql
 -- Ежедневная статистика
-SELECT 
+SELECT
   DATE(scraped_at) as date,
   COUNT(*) as reels_parsed,
   COUNT(DISTINCT owner_username) as unique_competitors
-FROM instagram_apify_reels 
+FROM instagram_apify_reels
 WHERE scraped_at >= NOW() - INTERVAL '7 days'
 GROUP BY DATE(scraped_at)
 ORDER BY date DESC;
 
 -- Статистика доставок
-SELECT 
+SELECT
   delivery_status,
   COUNT(*) as count,
   AVG(reels_count) as avg_reels_delivered
-FROM competitor_delivery_history 
+FROM competitor_delivery_history
 WHERE created_at >= NOW() - INTERVAL '24 hours'
 GROUP BY delivery_status;
 ```
@@ -432,6 +465,7 @@ GROUP BY delivery_status;
 ## 🎯 Критерии готовности
 
 ### Система считается готовой когда:
+
 - [ ] Автоматический парсинг работает 24/7
 - [ ] Доставка запускается автоматически после парсинга
 - [ ] Все подписчики получают рилсы ежедневно
@@ -443,7 +477,7 @@ GROUP BY delivery_status;
 
 ## 🚀 Передача задачи агенту
 
-Данное ТЗ содержит все необходимые детали для завершения системы автоматического парсинга и доставки Instagram рилсов. 
+Данное ТЗ содержит все необходимые детали для завершения системы автоматического парсинга и доставки Instagram рилсов.
 
 **Основная задача**: Реализовать недостающие связи между компонентами системы, чтобы обеспечить полный автоматический цикл от парсинга до доставки рилсов подписчикам.
 

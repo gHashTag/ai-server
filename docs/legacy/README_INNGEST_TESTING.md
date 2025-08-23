@@ -3,7 +3,9 @@
 ## 🎯 Готовые функции для тестирования
 
 ### 1. **findCompetitors** (Job 1)
+
 **Событие:** `instagram/scraper-v2`
+
 ```json
 {
   "name": "instagram/scraper-v2",
@@ -19,7 +21,9 @@
 ```
 
 ### 2. **analyzeCompetitorReels** (Job 2)
+
 **Событие:** `instagram/analyze-reels`
+
 ```json
 {
   "name": "instagram/analyze-reels",
@@ -35,7 +39,9 @@
 ```
 
 ### 3. **extractTopContent** (Job 3)
+
 **Событие:** `instagram/extract-top`
+
 ```json
 {
   "name": "instagram/extract-top",
@@ -49,7 +55,9 @@
 ```
 
 ### 4. **generateContentScripts** (Job 4)
+
 **Событие:** `instagram/generate-scripts`
+
 ```json
 {
   "name": "instagram/generate-scripts",
@@ -71,6 +79,7 @@
 ## 🔧 Подготовка к тестированию
 
 ### 1. Подготовь тестовые данные в БД
+
 ```sql
 -- Для extractTopContent и generateContentScripts
 INSERT INTO reels_analysis (
@@ -87,6 +96,7 @@ INSERT INTO reels_analysis (
 ```
 
 ### 2. Переменные окружения
+
 ```bash
 # Instagram API
 RAPIDAPI_INSTAGRAM_KEY=4c7fb71062mshe59423fd65d0fadp145d45jsn0548ea378f88
@@ -111,4 +121,4 @@ NEON_DATABASE_URL=postgresql://neondb_owner:npg_5RWzh7CwrXxE@ep-delicate-block-a
 - **Job 1:** Список конкурентов в таблице `competitors`
 - **Job 2:** Данные рилсов в таблице `reels_analysis`
 - **Job 3:** Отформатированный отчет с ТОП-10 рилсов
-- **Job 4:** 3 альтернативных сценария в таблице `content_scripts` 
+- **Job 4:** 3 альтернативных сценария в таблице `content_scripts`
