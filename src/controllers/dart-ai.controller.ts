@@ -222,13 +222,13 @@ export class DartAIController {
         return
       }
 
-      // Синхронизировать с Dart AI (симуляция)
-      const syncResult = await this.dartAIService.simulateCreateTaskFromGitHubIssue(issueData)
+      // Синхронизировать с Dart AI через официальный API
+      const syncResult = await this.dartAIService.createTaskFromGitHubIssue(issueData)
 
       res.json({
         success: !!syncResult,
         message: syncResult
-          ? 'Issue synced successfully (simulated)'
+          ? 'Issue synced successfully to Dart AI'
           : 'Sync failed',
         issue_number,
         repository,
@@ -528,7 +528,7 @@ export class DartAIController {
       updated_at: body.issue.updated_at,
     }
 
-    const syncResult = await this.dartAIService.simulateCreateTaskFromGitHubIssue(issue)
+    const syncResult = await this.dartAIService.createTaskFromGitHubIssue(issue)
 
     return {
       action: 'github_issue_synced',

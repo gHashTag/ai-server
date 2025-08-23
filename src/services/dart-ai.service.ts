@@ -49,9 +49,10 @@ interface SyncResult {
 
 /**
  * Dart AI Task Manager Integration Service
- * Обеспечивает двухстороннюю синхронизацию: Dart AI ↔ GitHub Issues
- * - GitHub → Dart AI: через webhook обработку GitHub Issues
+ * Обеспечивает полную двухстороннюю синхронизацию: Dart AI ↔ GitHub Issues
+ * - GitHub → Dart AI: создание задач через POST /api/v0/public/tasks
  * - Dart AI → GitHub: создание GitHub Issues из задач
+ * - Webhook поддержка для автоматической синхронизации
  */
 export class DartAIService {
   private readonly apiClient: AxiosInstance
@@ -82,7 +83,7 @@ export class DartAIService {
       )
     }
 
-    logger.info('🔗 Dart AI Service initialized (READ-ONLY)', {
+    logger.info('🔗 Dart AI Service initialized (FULL API)', {
       api_url: this.apiUrl,
       has_api_key: !!this.apiKey,
       has_github_token: !!this.githubToken
@@ -609,7 +610,7 @@ export class DartAIService {
 
       return {
         success: true,
-        message: 'Dart AI API доступен (с симуляцией двухсторонней синхронизации)',
+        message: 'Dart AI API доступен (поддерживает двухстороннюю синхронизацию)',
         details: {
           status: tasksResponse.status,
           api_url: this.apiUrl,
@@ -617,8 +618,9 @@ export class DartAIService {
           tasks_count: tasksResponse.data.count || 0,
           spaces_count: spacesResponse.data.count || 0,
           api_version: 'v0',
-          readonly: true,
-          bidirectional_sync: 'simulated'
+          readonly: false,
+          bidirectional_sync: 'enabled',
+          create_tasks_endpoint: '/api/v0/public/tasks'
         },
       }
     } catch (error) {
@@ -636,63 +638,115 @@ export class DartAIService {
   }
 
   /**
-   * Симуляция создания задачи в Dart AI из GitHub Issue
-   * Поскольку API Dart AI read-only, это демонстрация логики для webhook'а
+   * Создать задачу в Dart AI из GitHub Issue
+   * Использует официальный API POST /api/v0/public/tasks
    */
-  public async simulateCreateTaskFromGitHubIssue(issue: GitHubIssue): Promise<DartAITask | null> {
-    logger.info('📝 Симуляция создания задачи в Dart AI из GitHub Issue', {
-      issue_number: issue.number,
-      title: issue.title,
-      repository: issue.repository
-    })
+  public async createTaskFromGitHubIssue(issue: GitHubIssue): Promise<DartAITask | null> {
+    try {
+      logger.info('📝 Создаю задачу в Dart AI из GitHub Issue', {
+        issue_number: issue.number,
+        title: issue.title,
+        repository: issue.repository
+      })
 
-    // В реальной интеграции здесь был бы POST запрос к Dart AI API
-    const simulatedTask: DartAITask = {
-      duid: `dart_task_${Date.now()}_${issue.number}`,
-      title: issue.title,
-      description: {
-        root: {
-          children: [{
-            text: issue.body || 'Создано из GitHub Issue'
-          }]
+      const taskData = {
+        item: {
+          title: `GitHub Issue #${issue.number}: ${issue.title}`,
+          description: this.formatGitHubIssueDescription(issue),
+          tags: [...(issue.labels || []), 'github-sync'],
+          // assignee: issue.assignees?.[0], // TODO: Map GitHub users to Dart AI users
         }
-      },
-      spaceDuid: 'default_space',
-      kind: 'task',
-      github_issue_number: issue.number,
-      github_repository: issue.repository,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      metadata: {
-        source: 'github_webhook',
-        github_url: `https://github.com/${issue.repository}/issues/${issue.number}`
       }
+
+      const response = await this.apiClient.post('/public/tasks', taskData)
+      const createdTask = response.data.item
+
+      logger.info('✅ Задача создана в Dart AI', {
+        dart_task_id: createdTask.id,
+        dart_task_url: createdTask.htmlUrl,
+        github_issue: issue.number,
+        title: createdTask.title
+      })
+
+      // Конвертируем в наш интерфейс DartAITask
+      const dartTask: DartAITask = {
+        duid: createdTask.id,
+        title: createdTask.title,
+        description: createdTask.description,
+        statusDuid: createdTask.status,
+        spaceDuid: createdTask.dartboard,
+        kind: 'task',
+        assignee: createdTask.assignee,
+        github_issue_number: issue.number,
+        github_repository: issue.repository,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        metadata: {
+          source: 'github_webhook',
+          github_url: `https://github.com/${issue.repository}/issues/${issue.number}`,
+          dart_url: createdTask.htmlUrl
+        }
+      }
+
+      return dartTask
+
+    } catch (error) {
+      logger.error('💥 Ошибка создания задачи в Dart AI', {
+        issue_number: issue.number,
+        error: error.message,
+        response_data: error.response?.data
+      })
+      return null
+    }
+  }
+
+  /**
+   * Форматировать описание GitHub Issue для Dart AI задачи
+   */
+  private formatGitHubIssueDescription(issue: GitHubIssue): string {
+    let description = issue.body || 'Без описания'
+    
+    // Добавляем метаинформацию
+    description += `\n\n---
+## 🔗 GitHub Issue Info
+
+**Repository:** [${issue.repository}](https://github.com/${issue.repository})  
+**Issue:** [#${issue.number}](https://github.com/${issue.repository}/issues/${issue.number})  
+**State:** ${issue.state}  
+`
+
+    if (issue.assignees && issue.assignees.length > 0) {
+      description += `**Assignees:** ${issue.assignees.join(', ')}  \n`
     }
 
-    logger.info('✅ Задача создана в Dart AI (симуляция)', {
-      dart_task_id: simulatedTask.duid,
-      github_issue: issue.number
-    })
+    if (issue.labels && issue.labels.length > 0) {
+      description += `**Labels:** ${issue.labels.join(', ')}  \n`
+    }
 
-    return simulatedTask
+    description += `**Created:** ${issue.created_at}  
+**Updated:** ${issue.updated_at}  
+
+> 🤖 *Автоматически синхронизировано из GitHub: ${new Date().toLocaleString('ru-RU')}*`
+
+    return description
   }
 
   /**
    * Обновить задачу с информацией о GitHub Issue
-   * (Поскольку API Dart AI только для чтения, логируем действие)
+   * TODO: Использовать PATCH /api/v0/public/tasks/{id} когда найдем правильный формат
    */
   private async updateTaskWithGitHubInfo(
     taskId: string,
     issue: GitHubIssue
   ): Promise<boolean> {
-    // В реальном API это был бы PATCH запрос к /tasks/{id}
-    logger.info('💾 Обновляю задачу в Dart AI (симуляция)', {
+    // Пока логируем, в будущем будет реальный PATCH запрос
+    logger.info('💾 Обновляю задачу в Dart AI (будет реализовано)', {
       task_id: taskId,
       github_issue_number: issue.number,
       github_repository: issue.repository,
     })
 
-    // Возвращаем true для симуляции успешного обновления
+    // TODO: Реализовать PATCH запрос когда определим формат
     return true
   }
 }
