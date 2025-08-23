@@ -8,8 +8,8 @@ export const sendInsufficientStarsMessage = async (
 ) => {
   // Защитная проверка бота
   if (!bot || !bot.telegram) {
-    console.error('❌ Bot instance is invalid in sendInsufficientStarsMessage');
-    throw new Error('Bot instance is required');
+    console.error('❌ Bot instance is invalid in sendInsufficientStarsMessage')
+    throw new Error('Bot instance is required')
   }
 
   const message = isRu
