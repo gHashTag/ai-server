@@ -118,37 +118,120 @@ async function collectDailyStats(): Promise<DailyStats> {
 }
 
 /**
- * Анализ логов с помощью AI и формирование выводов
+ * Получение дополнительного контекста системы
  */
-async function analyzeLogsWithAI(stats: DailyStats): Promise<{
-  summary: string
-  recommendations: string[]
+async function getSystemContext(): Promise<string> {
+  try {
+    const client = await dbPool.connect()
+    
+    // Собираем информацию о системе
+    const systemInfo = []
+    
+    // Информация о процессе
+    const uptimeHours = Math.floor(process.uptime() / 3600)
+    const memoryUsage = process.memoryUsage()
+    const memoryMB = Math.round(memoryUsage.rss / 1024 / 1024)
+    
+    systemInfo.push(`Аптайм: ${uptimeHours} часов, память: ${memoryMB}MB`)
+    
+    // Версия и среда
+    const version = process.env.RAILWAY_DEPLOYMENT_ID?.substring(0, 8) || 'unknown'
+    const env = process.env.NODE_ENV || 'development'
+    systemInfo.push(`Версия: ${version}, среда: ${env}`)
+    
+    // Последние деплои
+    try {
+      const lastDeploy = await client.query(`
+        SELECT data->>'version' as version, created_at 
+        FROM system_logs 
+        WHERE data->>'event' = 'deployment' 
+        ORDER BY created_at DESC 
+        LIMIT 1
+      `)
+      
+      if (lastDeploy.rows.length > 0) {
+        const deployAge = Math.round((Date.now() - new Date(lastDeploy.rows[0].created_at).getTime()) / 1000 / 3600)
+        systemInfo.push(`Последний деплой: ${deployAge} часов назад`)
+      }
+    } catch (e) {
+      // Игнорируем если таблица не существует
+    }
+    
+    // База данных
+    const dbResult = await client.query('SELECT version()')
+    systemInfo.push(`БД: ${dbResult.rows[0].version.split(' ')[0]} ${dbResult.rows[0].version.split(' ')[1]}`)
+    
+    client.release()
+    return systemInfo.join(', ')
+    
+  } catch (error) {
+    logger.warn('Could not get system context:', error)
+    return `Аптайм: ${Math.floor(process.uptime() / 3600)} часов, память: ${Math.round(process.memoryUsage().rss / 1024 / 1024)}MB`
+  }
+}
+
+/**
+ * Интеллектуальный анализ всех логов и контекста системы
+ */
+async function analyzeSystemWithAI(stats: DailyStats): Promise<{
+  analysis: string
+  insights: string[]
+  concerns: string[]
   healthScore: number
-  trends: string
+  personality: string
+  actionItems: string[]
+  mood: string
 }> {
-  const prompt = `Ты системный администратор. Проанализируй статистику системы за 24 часа и дай краткий отчет на русском языке:
+  // Собираем дополнительный контекст
+  const now = new Date()
+  const dayOfWeek = now.toLocaleDateString('ru-RU', { weekday: 'long' })
+  const timeContext = {
+    hour: now.getHours(),
+    dayOfWeek,
+    isWeekend: [0, 6].includes(now.getDay()),
+    isBusinessHours: now.getHours() >= 9 && now.getHours() <= 18,
+    isLateEvening: now.getHours() >= 22 || now.getHours() <= 6,
+    season: ['зима', 'зима', 'весна', 'весна', 'весна', 'лето', 'лето', 'лето', 'осень', 'осень', 'осень', 'зима'][now.getMonth()]
+  }
 
-Статистика:
-- Всего запросов: ${stats.totalRequests}
-- Успешных: ${stats.successfulRequests}
-- Ошибок: ${stats.failedRequests}
-- Критичных проблем: ${stats.criticalIssues}
-- Деплоев: ${stats.deploymentsCount}
+  // Получаем дополнительные данные о системе
+  const systemContext = await getSystemContext()
+  
+  const prompt = `Ты Алексей, опытный DevOps-инженер с 10+ лет опыта. Анализируешь production систему как живой организм.
 
-Network Check результаты:
-${stats.networkCheckResults.map(r => 
-  `- ${r.endpoint}: ${r.successRate.toFixed(1)}% успешности (${r.avgResponseTime.toFixed(0)}ms)`
-).join('\n')}
+КОНТЕКСТ ВРЕМЕНИ:
+- Сейчас: ${dayOfWeek}, ${now.toLocaleString('ru-RU')} (${timeContext.season})
+- ${timeContext.isWeekend ? 'Выходной' : 'Рабочий день'}, ${timeContext.isBusinessHours ? 'рабочие часы' : timeContext.isLateEvening ? 'поздний вечер/ночь' : 'внерабочее время'}
 
-Топ ошибок:
-${stats.topErrors.map(e => `- ${e.error}: ${e.count} раз`).join('\n')}
+СИСТЕМНЫЕ ДАННЫЕ ЗА 24 ЧАСА:
+- Активность: ${stats.totalRequests.toLocaleString()} запросов (${stats.totalRequests > 0 ? ((stats.successfulRequests / stats.totalRequests) * 100).toFixed(1) : '100'}% успех)
+- Инциденты: ${stats.criticalIssues} критичных проблем
+- Деплои: ${stats.deploymentsCount}
+- Система: ${systemContext}
+
+ЗДОРОВЬЕ ЭНДПОИНТОВ:
+${stats.networkCheckResults.length > 0 
+  ? stats.networkCheckResults.map(r => 
+      `- ${r.endpoint}: ${r.successRate.toFixed(1)}% доступность (${r.avgResponseTime.toFixed(0)}ms отклик)`
+    ).join('\n')
+  : 'Данные о проверках эндпоинтов отсутствуют'}
+
+КАРТИНА ОШИБОК:
+${stats.topErrors.length > 0 
+  ? stats.topErrors.map((e, i) => `${i + 1}. "${e.error}": ${e.count} раз`).join('\n')
+  : 'Критичных ошибок не зафиксировано'}
+
+Проанализируй как настоящий эксперт. Говори прямо, с пониманием дела. Каждый отчет должен быть уникальным!
 
 Ответь в JSON формате:
 {
-  "summary": "Краткое резюме состояния системы за день",
-  "recommendations": ["рекомендация 1", "рекомендация 2"],
+  "analysis": "Твой живой анализ - что происходит, какие закономерности видишь, что это значит. Говори как коллеге, используй свой опыт и интуицию.",
+  "insights": ["2-3 интересные находки из данных", "Неочевидные паттерны и выводы"],
+  "concerns": ["О чем реально стоит беспокоиться", "Потенциальные проблемы на горизонте"],
   "healthScore": 85,
-  "trends": "Описание трендов и изменений"
+  "personality": "Как бы ты охарактеризовал 'характер' системы сегодня - одним предложением",
+  "actionItems": ["Конкретные задачи на сегодня", "Что сделать в первую очередь"],
+  "mood": "Твое настроение как DevOps'а после анализа - одним словом (спокойствие/беспокойство/удовлетворение/тревога и т.д.)"
 }`
 
   try {
@@ -157,32 +240,101 @@ ${stats.topErrors.map(e => `- ${e.error}: ${e.count} раз`).join('\n')}
       messages: [
         {
           role: 'system',
-          content: 'Ты опытный DevOps инженер. Анализируй данные и давай практичные рекомендации.'
+          content: 'Ты Алексей, DevOps с большим опытом. Говоришь живо, по делу, с пониманием. Каждый анализ уникален. Не используешь шаблоны. Понимаешь систему как живой организм.'
         },
         { role: 'user', content: prompt }
       ],
       response_format: { type: 'json_object' },
-      temperature: 0.3,
-      max_tokens: 800,
+      temperature: 0.8, // Высокая креативность для уникальности
+      max_tokens: 1200,
     })
 
-    return JSON.parse(response.choices[0].message.content || '{}')
-  } catch (error) {
-    logger.error('Error analyzing logs with AI:', error)
+    const result = JSON.parse(response.choices[0].message.content || '{}')
     
-    // Fallback анализ
+    // Добавляем контекстные данные в анализ
+    return {
+      ...result,
+      // Обеспечиваем наличие всех полей с fallback'ами
+      analysis: result.analysis || `Система сегодня показывает себя неплохо - ${stats.totalRequests.toLocaleString()} запросов обработано`,
+      insights: result.insights || ['Активность в норме для времени'],
+      concerns: result.concerns || (stats.criticalIssues > 0 ? ['Есть критичные ошибки'] : ['Пока всё спокойно']),
+      healthScore: result.healthScore || calculateHealthScore(stats),
+      personality: result.personality || 'стабильная рабочая лошадка',
+      actionItems: result.actionItems || ['Мониторить как обычно'],
+      mood: result.mood || (stats.criticalIssues > 5 ? 'беспокойство' : 'спокойствие')
+    }
+    
+  } catch (error) {
+    logger.error('Error in AI analysis:', error)
+    
+    // Интеллектуальный fallback с контекстом
     const successRate = stats.totalRequests > 0 
       ? (stats.successfulRequests / stats.totalRequests) * 100 
       : 100
 
-    return {
-      summary: `За сутки обработано ${stats.totalRequests} запросов с успешностью ${successRate.toFixed(1)}%. ${stats.criticalIssues > 0 ? `Обнаружено ${stats.criticalIssues} критичных проблем.` : 'Критичных проблем нет.'}`,
-      recommendations: stats.criticalIssues > 0 
-        ? ['Проверить логи ошибок', 'Мониторить производительность']
-        : ['Система работает стабильно'],
-      healthScore: Math.max(0, 100 - (stats.criticalIssues * 10) - Math.max(0, (100 - successRate) * 2)),
-      trends: stats.criticalIssues > 5 ? 'Увеличение количества ошибок' : 'Стабильная работа'
-    }
+    const contextualAnalysis = generateContextualFallback(stats, timeContext, successRate)
+    
+    return contextualAnalysis
+  }
+}
+
+/**
+ * Расчет оценки здоровья системы
+ */
+function calculateHealthScore(stats: DailyStats): number {
+  const successRate = stats.totalRequests > 0 
+    ? (stats.successfulRequests / stats.totalRequests) * 100 
+    : 100
+  
+  let score = successRate
+  
+  // Штрафы за критичные проблемы
+  score -= stats.criticalIssues * 5
+  
+  // Учитываем производительность эндпоинтов
+  if (stats.networkCheckResults.length > 0) {
+    const avgEndpointHealth = stats.networkCheckResults.reduce((sum, r) => sum + r.successRate, 0) / stats.networkCheckResults.length
+    score = (score + avgEndpointHealth) / 2
+  }
+  
+  return Math.max(0, Math.min(100, Math.round(score)))
+}
+
+/**
+ * Контекстный fallback анализ
+ */
+function generateContextualFallback(stats: DailyStats, timeContext: any, successRate: number) {
+  const timeGreeting = timeContext.isLateEvening 
+    ? 'Ночная смена подходит к концу' 
+    : timeContext.isBusinessHours 
+    ? 'День в самом разгаре'
+    : 'Спокойное внерабочее время'
+  
+  const systemMood = successRate > 95 
+    ? 'Система чувствует себя отлично' 
+    : successRate > 85 
+    ? 'Система работает с небольшими капризами'
+    : 'Системе нужно внимание'
+  
+  return {
+    analysis: `${timeGreeting}. ${systemMood} - за сутки обработано ${stats.totalRequests.toLocaleString()} запросов с результатом ${successRate.toFixed(1)}%. ${stats.criticalIssues > 0 ? `Зафиксировано ${stats.criticalIssues} критичных инцидентов, требующих разбора.` : 'Критичных проблем не обнаружено.'}`,
+    insights: [
+      stats.topErrors.length > 0 
+        ? `Основная головная боль: "${stats.topErrors[0].error}" (${stats.topErrors[0].count} раз)`
+        : 'В логах тишина - это хороший знак',
+      timeContext.isWeekend ? 'Выходные проходят спокойно' : 'Рабочий день без сюрпризов'
+    ],
+    concerns: stats.criticalIssues > 3 
+      ? ['Многовато ошибок для одного дня', 'Стоит проверить что происходит']
+      : stats.criticalIssues > 0
+      ? ['Есть над чем поработать, но не критично']
+      : ['Всё под контролем'],
+    healthScore: calculateHealthScore(stats),
+    personality: successRate > 95 ? 'послушная и надежная' : successRate > 85 ? 'иногда капризничает' : 'требует присмотра',
+    actionItems: stats.criticalIssues > 0 
+      ? ['Разобраться с критичными ошибками', 'Проверить мониторинг алертов']
+      : ['Профилактический чек систем', 'Можно заняться планами на завтра'],
+    mood: stats.criticalIssues > 5 ? 'тревога' : stats.criticalIssues > 0 ? 'легкое беспокойство' : 'спокойствие'
   }
 }
 
@@ -228,74 +380,77 @@ export const dailyHealthReport = inngest.createFunction(
 
     // Step 2: Анализируем с помощью AI
     const analysis = await step.run('analyze-with-ai', async () => {
-      return await analyzeLogsWithAI(stats)
+      return await analyzeSystemWithAI(stats)
     })
 
     // Step 3: Формируем и отправляем отчет
     await step.run('send-daily-report', async () => {
       const { bot } = getBotByName('neuro_blogger_bot')
 
-      // Определяем emoji статуса
-      let statusEmoji = '💚'
-      if (analysis.healthScore < 50) statusEmoji = '🚨'
-      else if (analysis.healthScore < 80) statusEmoji = '⚠️'
+      // Определяем emoji и настроение на основе AI анализа
+      const moodEmojis = {
+        'спокойствие': '💚',
+        'удовлетворение': '😌', 
+        'беспокойство': '😟',
+        'тревога': '🚨',
+        'легкое беспокойство': '⚠️'
+      }
+      const statusEmoji = moodEmojis[analysis.mood] || (analysis.healthScore < 50 ? '🚨' : analysis.healthScore < 80 ? '⚠️' : '💚')
 
-      let message = `${statusEmoji} ЕЖЕДНЕВНЫЙ ОТЧЕТ О СОСТОЯНИИ СИСТЕМЫ\n\n`
+      // Формируем живое сообщение от AI
+      let message = `${statusEmoji} ОТЧЕТ АЛЕКСЕЯ (DevOps)\n\n`
       
       message += `📅 ${new Date().toLocaleDateString('ru-RU', { 
         weekday: 'long', 
         year: 'numeric', 
         month: 'long', 
         day: 'numeric' 
-      })}\n\n`
+      })}\n`
+      message += `💭 Настроение: ${analysis.mood}\n`
+      message += `🎯 Здоровье системы: ${analysis.healthScore}/100\n\n`
 
-      // Общая оценка здоровья
-      message += `🏥 Оценка здоровья: ${analysis.healthScore}/100\n`
-      
-      // Основные показатели
-      message += `📊 ОСНОВНЫЕ ПОКАЗАТЕЛИ:\n`
-      message += `• Всего запросов: ${stats.totalRequests.toLocaleString()}\n`
-      message += `• Успешность: ${stats.totalRequests > 0 ? ((stats.successfulRequests / stats.totalRequests) * 100).toFixed(1) : '100.0'}%\n`
-      message += `• Критичных проблем: ${stats.criticalIssues}\n`
-      
-      if (stats.deploymentsCount > 0) {
-        message += `• Деплоев за день: ${stats.deploymentsCount}\n`
-      }
+      // AI анализ - главная часть отчета
+      message += `🧠 АНАЛИЗ СИТУАЦИИ:\n`
+      message += `${analysis.analysis}\n\n`
 
-      // Network Check результаты
-      if (stats.networkCheckResults.length > 0) {
-        message += `\n🌐 NETWORK CHECK:\n`
-        stats.networkCheckResults.forEach(result => {
-          const emoji = result.successRate >= 95 ? '✅' : result.successRate >= 80 ? '⚠️' : '❌'
-          message += `${emoji} ${result.endpoint}: ${result.successRate.toFixed(1)}% (${result.avgResponseTime.toFixed(0)}ms)\n`
+      // Характер системы
+      message += `🤖 Характер системы: ${analysis.personality}\n\n`
+
+      // Ключевые находки
+      if (analysis.insights && analysis.insights.length > 0) {
+        message += `💡 КЛЮЧЕВЫЕ НАХОДКИ:\n`
+        analysis.insights.forEach((insight, index) => {
+          message += `• ${insight}\n`
         })
+        message += '\n'
       }
 
-      // Топ ошибок
-      if (stats.topErrors.length > 0) {
-        message += `\n❌ ТОП ОШИБКИ:\n`
-        stats.topErrors.slice(0, 3).forEach((error, index) => {
-          message += `${index + 1}. ${error.error.substring(0, 50)}... (${error.count}x)\n`
+      // Беспокойства
+      if (analysis.concerns && analysis.concerns.length > 0) {
+        message += `⚠️ ЧТО БЕСПОКОИТ:\n`
+        analysis.concerns.forEach((concern, index) => {
+          message += `• ${concern}\n`
         })
+        message += '\n'
       }
 
-      // AI анализ
-      message += `\n🤖 АНАЛИЗ AI:\n`
-      message += `${analysis.summary}\n`
-
-      if (analysis.trends) {
-        message += `\n📈 Тренды: ${analysis.trends}\n`
-      }
-
-      // Рекомендации
-      if (analysis.recommendations.length > 0) {
-        message += `\n💡 РЕКОМЕНДАЦИИ:\n`
-        analysis.recommendations.forEach((rec, index) => {
-          message += `${index + 1}. ${rec}\n`
+      // Действия на сегодня
+      if (analysis.actionItems && analysis.actionItems.length > 0) {
+        message += `📋 ПЛАН НА СЕГОДНЯ:\n`
+        analysis.actionItems.forEach((action, index) => {
+          message += `${index + 1}. ${action}\n`
         })
+        message += '\n'
       }
 
-      message += `\n⬇️ Используйте кнопки ниже для подробностей:`
+      // Краткая техническая сводка (компактно)
+      const successRate = stats.totalRequests > 0 ? ((stats.successfulRequests / stats.totalRequests) * 100).toFixed(1) : '100.0'
+      message += `📊 Техническая сводка: ${stats.totalRequests.toLocaleString()} запросов (${successRate}% успех)`
+      if (stats.criticalIssues > 0) message += `, ${stats.criticalIssues} критичных проблем`
+      if (stats.deploymentsCount > 0) message += `, ${stats.deploymentsCount} деплоев`
+      message += '\n\n'
+
+      message += `⬇️ Используйте кнопки для дополнительных данных:`
 
       // Отправляем с интерактивными кнопками
       await bot.api.sendMessage(
@@ -307,11 +462,18 @@ export const dailyHealthReport = inngest.createFunction(
         }
       )
 
-      // Если критические проблемы - дублируем админу
-      if (analysis.healthScore < 50) {
+      // Если критические проблемы - дублируем админу с контекстом
+      if (analysis.healthScore < 50 || analysis.mood === 'тревога') {
+        const criticalMessage = `🚨 КРИТИЧЕСКАЯ СИТУАЦИЯ!\n\n` +
+          `💭 Алексей (DevOps): ${analysis.mood}\n` +
+          `🎯 Здоровье системы: ${analysis.healthScore}/100\n\n` +
+          `❗ Основная проблема:\n${analysis.analysis.split('.')[0]}.\n\n` +
+          (analysis.concerns.length > 0 ? `⚠️ Критичные беспокойства:\n• ${analysis.concerns[0]}\n\n` : '') +
+          `📞 Требуется НЕМЕДЛЕННОЕ вмешательство!`
+        
         await bot.api.sendMessage(
           process.env.ADMIN_TELEGRAM_ID!,
-          `🚨 КРИТИЧЕСКИЕ ПРОБЛЕМЫ В СИСТЕМЕ!\n\nОценка здоровья: ${analysis.healthScore}/100\nКритичных проблем: ${stats.criticalIssues}\n\nТребуется немедленное внимание!`
+          criticalMessage
         )
       }
 

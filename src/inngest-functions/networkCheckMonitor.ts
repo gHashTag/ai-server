@@ -6,6 +6,7 @@
 import { inngest } from '@/core/inngest/clients'
 import { logger } from '@/utils/logger'
 import { getBotByName } from '@/core/bot'
+import { OpenAI } from 'openai'
 import pkg from 'pg'
 const { Pool } = pkg
 
@@ -14,6 +15,107 @@ const dbPool = new Pool({
   connectionString: process.env.SUPABASE_URL || '',
   ssl: { rejectUnauthorized: false },
 })
+
+// Инициализация OpenAI
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY || process.env.DEEPSEEK_API_KEY,
+  baseURL: process.env.DEEPSEEK_API_KEY
+    ? 'https://api.deepseek.com'
+    : undefined,
+})
+
+/**
+ * AI анализ проблем с сетевыми проверками
+ */
+async function analyzeNetworkIssueWithAI(
+  failedChecks: any[],
+  trends: any,
+  isPostDeploy: boolean
+): Promise<{
+  analysis: string
+  recommendations: string[]
+  severity: 'low' | 'medium' | 'high' | 'critical'
+  rootCause: string
+}> {
+  const now = new Date()
+  const timeContext = {
+    hour: now.getHours(),
+    isWeekend: [0, 6].includes(now.getDay()),
+    isBusinessHours: now.getHours() >= 9 && now.getHours() <= 18,
+    timeOfDay: now.getHours() < 6 ? 'ночь' : 
+                now.getHours() < 12 ? 'утро' :
+                now.getHours() < 18 ? 'день' : 'вечер'
+  }
+
+  const failureRate = trends.totalChecks > 0 ? (trends.recentFailures / trends.totalChecks) * 100 : 0
+
+  const prompt = `Ты опытный DevOps инженер. Анализируешь проблемы с доступностью production системы.
+
+КОНТЕКСТ:
+- Время: ${timeContext.timeOfDay}, ${timeContext.isWeekend ? 'выходной' : 'рабочий день'}
+- ${timeContext.isBusinessHours ? 'Рабочие часы - пользователи активны' : 'Внерабочее время'}
+- ${isPostDeploy ? '⚠️ ПРОБЛЕМА ПОСЛЕ ДЕПЛОЯ!' : 'Плановая проверка'}
+
+ПРОБЛЕМЫ:
+- Всего проверок: ${trends.totalChecks}
+- Неудачных: ${trends.recentFailures} (${failureRate.toFixed(1)}%)
+- Проблемные эндпоинты: ${trends.problematicEndpoints?.join(', ') || 'все'}
+
+ДЕТАЛИ ОШИБОК:
+${failedChecks.map(check => `- ${check.endpoint}: ${check.error || check.status}`).join('\n')}
+
+Проанализируй ситуацию и дай практичные рекомендации. Учитывай время и контекст.
+
+Ответь в JSON формате:
+{
+  "analysis": "Твой анализ ситуации - что происходит и почему",
+  "recommendations": ["конкретная рекомендация 1", "конкретная рекомендация 2"],
+  "severity": "low|medium|high|critical",
+  "rootCause": "наиболее вероятная причина проблемы"
+}`
+
+  try {
+    const response = await openai.chat.completions.create({
+      model: process.env.DEEPSEEK_API_KEY ? 'deepseek-chat' : 'gpt-4-turbo-preview',
+      messages: [
+        {
+          role: 'system',
+          content: 'Ты опытный DevOps инженер. Анализируешь production проблемы практично и по делу.'
+        },
+        { role: 'user', content: prompt }
+      ],
+      response_format: { type: 'json_object' },
+      temperature: 0.3,
+      max_tokens: 600,
+    })
+
+    const result = JSON.parse(response.choices[0].message.content || '{}')
+    
+    return {
+      analysis: result.analysis || 'Обнаружены проблемы с доступностью эндпоинтов',
+      recommendations: result.recommendations || ['Проверить логи сервера', 'Перезапустить сервисы'],
+      severity: result.severity || (failureRate > 50 ? 'critical' : failureRate > 20 ? 'high' : 'medium'),
+      rootCause: result.rootCause || 'Сетевые проблемы или перегрузка сервера'
+    }
+
+  } catch (error) {
+    logger.error('Error in network issue AI analysis:', error)
+    
+    // Intelligent fallback
+    const severity = isPostDeploy && failureRate > 30 ? 'critical' :
+                    failureRate > 50 ? 'critical' :
+                    failureRate > 20 ? 'high' : 'medium'
+
+    return {
+      analysis: `${isPostDeploy ? 'После деплоя' : 'В ходе мониторинга'} обнаружены проблемы с доступностью ${trends.recentFailures} из ${trends.totalChecks} проверок (${failureRate.toFixed(1)}%). ${timeContext.isBusinessHours ? 'Это критично - пользователи могут быть затронуты.' : 'Проблема во внерабочее время, но требует внимания.'}`,
+      recommendations: isPostDeploy 
+        ? ['Проверить успешность деплоя', 'Рассмотреть откат изменений', 'Проверить логи приложения']
+        : ['Проверить состояние серверов', 'Изучить системные логи', 'Мониторить нагрузку'],
+      severity,
+      rootCause: isPostDeploy ? 'Проблемы связанные с деплоем' : 'Возможная перегрузка или сетевые проблемы'
+    }
+  }
+}
 
 interface NetworkCheckResult {
   endpoint: string
@@ -314,16 +416,23 @@ export const networkCheckMonitor = inngest.createFunction(
           message += `\n⚠️ Проблемные эндпоинты:\n${trends.problematicEndpoints.map(e => `• ${e}`).join('\n')}\n`
         }
 
-        message += `\n🛠 Действия:\n`
-        if (isPostDeploy) {
-          message += `• Проверить успешность деплоя\n`
-          message += `• Откатить изменения при необходимости\n`
+        // Получаем AI анализ ситуации
+        const aiContext = await analyzeNetworkIssueWithAI(failedChecks, trends, isPostDeploy)
+        
+        message += `\n🤖 АНАЛИЗ AI:\n${aiContext.analysis}\n`
+        
+        if (aiContext.recommendations.length > 0) {
+          message += `\n💡 РЕКОМЕНДАЦИИ:\n`
+          aiContext.recommendations.forEach((rec, i) => {
+            message += `${i + 1}. ${rec}\n`
+          })
         }
-        message += `• Проверить состояние серверов\n`
-        message += `• Проверить сетевые соединения\n`
-        message += `• Изучить логи приложения\n`
 
-        message += `\n#network_check #monitoring #${isCritical ? 'critical' : 'warning'}`
+        if (aiContext.rootCause) {
+          message += `\n🔍 Возможная причина: ${aiContext.rootCause}\n`
+        }
+
+        message += `\n#network_check #monitoring #${aiContext.severity}`
 
         // Создаем интерактивные кнопки
         const keyboard = {
