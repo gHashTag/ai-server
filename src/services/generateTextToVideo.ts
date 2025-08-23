@@ -87,7 +87,9 @@ export const processVideoGeneration = async (
   aspect_ratio: string,
   prompt: string,
   imageUrl?: string,
-  duration: number = 5
+  duration: number = 5,
+  telegram_id?: string,
+  bot_name?: string
 ) => {
   // Получаем конфигурацию модели
   const modelConfig = VIDEO_MODELS_CONFIG[videoModel]
@@ -137,14 +139,16 @@ export const processVideoGeneration = async (
     
     console.log(`📋 Mapping ${videoModel} → ${kieApiModel} for Kie.ai API`)
     
-    // Генерируем через Kie.ai
-    const result = await kieAiService.generateVideo({
-      model: kieApiModel,
-      prompt,
-      duration,
-      aspectRatio: kieAspectRatio,
-      imageUrl
-    })
+      // Генерируем через Kie.ai
+      const result = await kieAiService.generateVideo({
+        model: kieApiModel,
+        prompt,
+        duration,
+        aspectRatio: kieAspectRatio,
+        imageUrl,
+        userId: telegram_id, // Передаем telegram_id для сохранения в БД
+        projectId: bot_name ? parseInt(bot_name.replace(/\D/g, '').slice(0, 9)) || 1 : undefined // Преобразуем bot_name в число
+      })
     
     return result.videoUrl
   }
@@ -248,7 +252,9 @@ export const generateTextToVideo = async (
       userExists.aspect_ratio,
       prompt,
       undefined, // imageUrl для text-to-video пока не используется
-      duration // передаем duration
+      duration, // передаем duration
+      telegram_id, // передаем telegram_id для Kie.ai
+      bot_name // передаем bot_name для Kie.ai
     )
     //const videoUrl = 'https://yuukfqcsdhkyxegfwlcb.supabase.co/storage/v1/object/public/dev/2025-01-15T06%2011%2018.236Z.mp4';
     let videoUrl: string
