@@ -1,6 +1,7 @@
 # 🔥 ПОШАГОВЫЙ ПЛАН ИСПРАВЛЕНИЯ INNGEST В PRODUCTION
 
 ## 🚨 **ПРОБЛЕМА УСТАНОВЛЕНА:**
+
 **Функции Inngest НЕ СИНХРОНИЗИРУЮТСЯ с production** из-за отсутствующих environment variables.
 
 ---
@@ -12,7 +13,7 @@
 1. **Зайти в Inngest Dashboard:** https://app.inngest.com
 2. **Войти в аккаунт** или создать новый
 3. **Создать новое приложение** для production:
-   - Название: `ai-server-production` 
+   - Название: `ai-server-production`
    - Environment: `production`
 4. **Скопировать ключи:**
    - `INNGEST_SIGNING_KEY` (начинается с `signkey_prod_`)
@@ -25,7 +26,7 @@
 ```bash
 # Добавить эти строки в .env:
 INNGEST_SIGNING_KEY=signkey_prod_YOUR_ACTUAL_KEY_HERE
-INNGEST_EVENT_KEY=eventkey_prod_YOUR_ACTUAL_KEY_HERE  
+INNGEST_EVENT_KEY=eventkey_prod_YOUR_ACTUAL_KEY_HERE
 INNGEST_APP_URL=https://ai-server-u14194.vm.elestio.app
 ```
 
@@ -55,7 +56,7 @@ chmod +x diagnose-production-inngest.sh
 2. **Перейти в ваше production приложение**
 3. **Увидеть 14 функций**, включая:
    - `🤖 Instagram Scraper V2 (Real API + Zod)`
-   - `🔍 Find Instagram Competitors` 
+   - `🔍 Find Instagram Competitors`
    - `📈 Analyze Competitor Reels`
    - И другие...
 
@@ -67,7 +68,7 @@ chmod +x diagnose-production-inngest.sh
 ✅ `src/routes/inngest.route.ts` - добавлен serveHost для production  
 ✅ `src/core/inngest/clients.ts` - добавлен eventKey  
 ✅ `production-env-template.txt` - шаблон всех переменных  
-✅ `diagnose-production-inngest.sh` - скрипт диагностики  
+✅ `diagnose-production-inngest.sh` - скрипт диагностики
 
 **Осталось только добавить реальные ключи в .env на сервере!**
 
@@ -76,12 +77,14 @@ chmod +x diagnose-production-inngest.sh
 ## 🔍 **ДИАГНОСТИКА ПОСЛЕ ИСПРАВЛЕНИЯ:**
 
 ### **Тест 1: Проверка endpoint'а**
+
 ```bash
 curl https://ai-server-u14194.vm.elestio.app/api/inngest
 # Ожидаемый результат: {"functionsFound": 14, "hasSigningKey": true}
 ```
 
 ### **Тест 2: Отправка события**
+
 ```bash
 curl -X POST https://ai-server-u14194.vm.elestio.app/api/inngest \
   -H 'Content-Type: application/json' \
@@ -103,24 +106,29 @@ curl -X POST https://ai-server-u14194.vm.elestio.app/api/inngest \
 ## 🎯 **ПОСЛЕ ИСПРАВЛЕНИЯ TELEGRAM БОТ СМОЖЕТ:**
 
 ### **Подключиться к production серверу:**
+
 ```javascript
-const response = await fetch('https://ai-server-u14194.vm.elestio.app/api/inngest', {
-  method: 'POST',
-  headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify({
-    name: 'instagram/scraper-v2',  // ✅ Правильное событие!
-    data: {
-      username_or_id: 'vyacheslav_nekludov',
-      project_id: 37,
-      max_users: 10,
-      scrape_reels: true,
-      requester_telegram_id: user_id
-    }
-  })
-});
+const response = await fetch(
+  'https://ai-server-u14194.vm.elestio.app/api/inngest',
+  {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      name: 'instagram/scraper-v2', // ✅ Правильное событие!
+      data: {
+        username_or_id: 'vyacheslav_nekludov',
+        project_id: 37,
+        max_users: 10,
+        scrape_reels: true,
+        requester_telegram_id: user_id,
+      },
+    }),
+  }
+)
 ```
 
 ### **Получить архив с отчётами:**
+
 - HTML отчёт с красивой визуализацией
 - Excel файл с данными конкурентов
 - ZIP архив для скачивания
@@ -130,16 +138,19 @@ const response = await fetch('https://ai-server-u14194.vm.elestio.app/api/innges
 ## ⚠️ **ВАЖНЫЕ МОМЕНТЫ:**
 
 ### **Безопасность:**
+
 - ✅ Ключи Inngest **НЕ КОММИТЯТСЯ** в git
 - ✅ Все секреты через environment variables
 - ✅ CORS настроен правильно
 
 ### **Production готовность:**
+
 - ✅ Docker контейнеры оптимизированы
 - ✅ Логирование настроено
 - ✅ Error handling работает
 
 ### **Совместимость:**
+
 - ✅ Inngest v3 SDK используется правильно
 - ✅ Events Schema валидируется
 - ✅ Database connections управляются
@@ -165,4 +176,4 @@ const response = await fetch('https://ai-server-u14194.vm.elestio.app/api/innges
 2. **Проверить логи:** `docker logs ai-server | grep -i inngest`
 3. **Проверить переменные:** `echo $INNGEST_SIGNING_KEY`
 
-**🔥 ПРОБЛЕМА БУДЕТ РЕШЕНА ПОСЛЕ ДОБАВЛЕНИЯ INNGEST КЛЮЧЕЙ!** 
+**🔥 ПРОБЛЕМА БУДЕТ РЕШЕНА ПОСЛЕ ДОБАВЛЕНИЯ INNGEST КЛЮЧЕЙ!**

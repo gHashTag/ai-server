@@ -212,7 +212,19 @@ certbot/
 
 # Optional: Archives Directory
 # Uncomment if you want to ignore archived files
-# archives/
+archives/
+archive/
+
+# IDE Configuration
+# -----------------
+.cursor/
+.cursor/**
+
+# Generated Reports
+# -----------------
+reports/
+reports/**
+*.xlsx
 
 # Keep .gitkeep files
 # -------------------
