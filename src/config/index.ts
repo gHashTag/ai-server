@@ -134,14 +134,16 @@ export const ADMIN_GROUP_ID = '@neuro_blogger_pulse'
 export const BOT_TOKENS =
   NODE_ENV === 'production' ? BOT_TOKENS_PROD : BOT_TOKENS_TEST
 
-export const DEFAULT_BOT_TOKEN = NODE_ENV === 'production' 
-  ? process.env.BOT_TOKEN_1 
-  : process.env.BOT_TOKEN_TEST_1
+export const DEFAULT_BOT_TOKEN =
+  NODE_ENV === 'production'
+    ? process.env.BOT_TOKEN_1
+    : process.env.BOT_TOKEN_TEST_1
 export const defaultBot = new Telegraf<MyContext>(DEFAULT_BOT_TOKEN)
 
-export const PULSE_BOT_TOKEN = NODE_ENV === 'production' 
-  ? process.env.BOT_TOKEN_1 
-  : process.env.BOT_TOKEN_TEST_1
+export const PULSE_BOT_TOKEN =
+  NODE_ENV === 'production'
+    ? process.env.BOT_TOKEN_1
+    : process.env.BOT_TOKEN_TEST_1
 
 export const pulseBot = new Telegraf<MyContext>(PULSE_BOT_TOKEN)
 

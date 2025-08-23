@@ -7,7 +7,8 @@
 
 const fetch = require('node-fetch')
 
-const PRODUCTION_URL = 'https://ai-server-production-production-8e2d.up.railway.app'
+const PRODUCTION_URL =
+  'https://ai-server-production-production-8e2d.up.railway.app'
 
 console.log('🚀 ТЕСТ ПРОДАКШН-СЕРВЕРА INSTAGRAM ПАРСИНГА')
 console.log('=' * 50)
@@ -18,13 +19,13 @@ console.log('=' * 50)
 async function testProductionServer() {
   try {
     console.log('\n1️⃣ Проверка health endpoint...')
-    
+
     // Тест 1: Health check
     const healthResponse = await fetch(`${PRODUCTION_URL}/health`, {
       method: 'GET',
       timeout: 10000,
     })
-    
+
     if (healthResponse.ok) {
       const healthData = await healthResponse.text()
       console.log('✅ Health endpoint работает')
@@ -35,13 +36,13 @@ async function testProductionServer() {
     }
 
     console.log('\n2️⃣ Проверка API endpoint...')
-    
-    // Тест 2: API check  
+
+    // Тест 2: API check
     const apiResponse = await fetch(`${PRODUCTION_URL}/api/test`, {
       method: 'GET',
       timeout: 10000,
     })
-    
+
     if (apiResponse.ok) {
       const apiData = await apiResponse.text()
       console.log('✅ API endpoint работает')
@@ -52,10 +53,10 @@ async function testProductionServer() {
     }
 
     console.log('\n3️⃣ Тестирование Instagram Inngest функции...')
-    
+
     // Тест 3: Trigger endpoint для проверки Inngest
     console.log('   Сначала проверим /trigger endpoint...')
-    
+
     const triggerResponse = await fetch(`${PRODUCTION_URL}/trigger`, {
       method: 'GET',
       timeout: 10000,
@@ -66,14 +67,16 @@ async function testProductionServer() {
       console.log('   ✅ Trigger endpoint работает')
       console.log(`      Ответ: ${triggerData.status}`)
     } else {
-      console.log(`   ❌ Trigger endpoint не работает: ${triggerResponse.status}`)
+      console.log(
+        `   ❌ Trigger endpoint не работает: ${triggerResponse.status}`
+      )
     }
 
     console.log('   Теперь отправим Instagram событие через Inngest SDK...')
 
     // Тест 3b: Instagram Inngest event через SDK
     const { Inngest } = require('inngest')
-    
+
     const inngest = new Inngest({
       id: 'production-test-client',
       name: 'Production Test Client',
@@ -90,8 +93,8 @@ async function testProductionServer() {
         min_views: 10000,
         max_age_days: 7,
         requester_telegram_id: '144022504',
-        bot_name: 'test_bot'
-      }
+        bot_name: 'test_bot',
+      },
     }
 
     const inngestResponse = await inngest.send(instagramEvent)
@@ -100,26 +103,19 @@ async function testProductionServer() {
       console.log('   ✅ Instagram Inngest событие отправлено через SDK')
       console.log(`      Event ID: ${inngestResponse.ids[0] || 'unknown'}`)
       console.log('      ⏱️  Ожидаем выполнение функции...')
-      
+
       // Ждем немного для обработки
       await new Promise(resolve => setTimeout(resolve, 5000))
-      
     } else {
       console.log(`   ❌ Ошибка отправки Inngest события через SDK`)
       console.log(`      Ответ: ${JSON.stringify(inngestResponse)}`)
     }
 
     console.log('\n4️⃣ Проверка статуса сервера...')
-    
+
     // Тест 4: Проверим несколько endpoints
-    const endpoints = [
-      '/api/inngest',
-      '/trigger',
-      '/health',
-      '/api',
-      '/'
-    ]
-    
+    const endpoints = ['/api/inngest', '/trigger', '/health', '/api', '/']
+
     for (const endpoint of endpoints) {
       try {
         const response = await fetch(`${PRODUCTION_URL}${endpoint}`, {
@@ -135,16 +131,15 @@ async function testProductionServer() {
     console.log('\n📋 РЕЗУЛЬТАТЫ ТЕСТИРОВАНИЯ:')
     console.log('=' * 50)
     console.log('✅ Продакшн-сервер доступен')
-    console.log('✅ Instagram парсинг функция настроена')  
+    console.log('✅ Instagram парсинг функция настроена')
     console.log('✅ Inngest интеграция работает')
     console.log('\n🎯 СЛЕДУЮЩИЕ ШАГИ:')
     console.log('1. Проверьте Inngest Dashboard на наличие выполненной задачи')
     console.log('2. Проверьте базу данных на новые записи')
     console.log('3. Проверьте Telegram на уведомления')
     console.log('\n🚀 Продакшн готов к работе!')
-    
-    return true
 
+    return true
   } catch (error) {
     console.error('\n❌ КРИТИЧЕСКАЯ ОШИБКА ТЕСТИРОВАНИЯ:', error.message)
     console.error('🔧 Возможные причины:')
@@ -158,7 +153,7 @@ async function testProductionServer() {
 
 // Запуск теста
 testProductionServer()
-  .then((success) => {
+  .then(success => {
     if (success) {
       console.log('\n🎉 ВСЕ ТЕСТЫ ПРОШЛИ УСПЕШНО!')
       process.exit(0)
@@ -167,7 +162,7 @@ testProductionServer()
       process.exit(1)
     }
   })
-  .catch((error) => {
+  .catch(error => {
     console.error('\n💥 КРИТИЧЕСКАЯ ОШИБКА:', error)
     process.exit(1)
   })

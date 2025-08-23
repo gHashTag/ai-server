@@ -7,13 +7,18 @@ const { Pool } = require('pg')
 
 async function checkSupabaseHistory() {
   console.log('🔍 Проверка истории парсинга в Supabase...')
-  
+
   const connectionString = process.env.SUPABASE_URL
-  console.log('🔗 Подключение к БД:', connectionString ? 'настроено' : 'НЕ НАСТРОЕНО')
-  
+  console.log(
+    '🔗 Подключение к БД:',
+    connectionString ? 'настроено' : 'НЕ НАСТРОЕНО'
+  )
+
   const pool = new Pool({
     connectionString: connectionString,
-    ssl: connectionString?.includes('sslmode=require') ? { rejectUnauthorized: false } : false
+    ssl: connectionString?.includes('sslmode=require')
+      ? { rejectUnauthorized: false }
+      : false,
   })
 
   try {
@@ -26,8 +31,10 @@ async function checkSupabaseHistory() {
         WHERE table_name = 'instagram_apify_reels'
       )
     `)
-    
-    console.log(`📋 Таблица instagram_apify_reels существует: ${tableCheck.rows[0].exists}`)
+
+    console.log(
+      `📋 Таблица instagram_apify_reels существует: ${tableCheck.rows[0].exists}`
+    )
 
     if (tableCheck.rows[0].exists) {
       // Получаем структуру таблицы
@@ -37,12 +44,14 @@ async function checkSupabaseHistory() {
         WHERE table_name = 'instagram_apify_reels'
         ORDER BY ordinal_position
       `)
-      
+
       console.log('\n📊 Структура таблицы:')
       console.table(structure.rows)
 
       // Проверяем количество записей
-      const count = await client.query('SELECT COUNT(*) FROM instagram_apify_reels')
+      const count = await client.query(
+        'SELECT COUNT(*) FROM instagram_apify_reels'
+      )
       console.log(`\n📈 Всего записей: ${count.rows[0].count}`)
 
       // Последние записи
@@ -60,7 +69,7 @@ async function checkSupabaseHistory() {
           ORDER BY created_at DESC 
           LIMIT 5
         `)
-        
+
         console.log('\n📊 Последние 5 записей:')
         console.table(recent.rows)
 
@@ -75,7 +84,7 @@ async function checkSupabaseHistory() {
           GROUP BY project_id 
           ORDER BY reels_count DESC
         `)
-        
+
         console.log('\n📊 Статистика по проектам:')
         console.table(projectStats.rows)
       }
@@ -83,7 +92,6 @@ async function checkSupabaseHistory() {
 
     client.release()
     console.log('\n✅ Проверка завершена!')
-
   } catch (error) {
     console.error('❌ Ошибка при проверке:', error.message)
   } finally {

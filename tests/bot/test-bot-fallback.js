@@ -6,11 +6,11 @@ const { getBotByName } = require('../../dist/core/bot')
 
 async function testBotFallback() {
   console.log('🧪 Тестируем getBotByName с placeholder токенами...')
-  
+
   const result = getBotByName('neuro_blogger_bot')
-  
+
   console.log('Результат:', result)
-  
+
   if (result.error) {
     console.log('✅ Ошибка корректно обработана:', result.error)
   } else if (result.bot) {

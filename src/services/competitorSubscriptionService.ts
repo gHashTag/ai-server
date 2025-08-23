@@ -113,9 +113,14 @@ export class CompetitorSubscriptionService {
           },
         })
 
-        console.log(`✅ Запущен первичный парсинг для @${data.competitor_username}`)
+        console.log(
+          `✅ Запущен первичный парсинг для @${data.competitor_username}`
+        )
       } catch (parseError: any) {
-        console.error('❌ Ошибка запуска первичного парсинга:', parseError.message)
+        console.error(
+          '❌ Ошибка запуска первичного парсинга:',
+          parseError.message
+        )
       }
 
       return {
@@ -144,7 +149,10 @@ export class CompetitorSubscriptionService {
   /**
    * Получение всех подписок пользователя
    */
-  static async getUserSubscriptions(userTelegramId: string, botName: string): Promise<{
+  static async getUserSubscriptions(
+    userTelegramId: string,
+    botName: string
+  ): Promise<{
     success: boolean
     subscriptions?: any[]
     error?: string
@@ -249,7 +257,7 @@ export class CompetitorSubscriptionService {
    * Обновление подписки
    */
   static async updateSubscription(
-    subscriptionId: string, 
+    subscriptionId: string,
     updates: Partial<CompetitorSubscription>
   ): Promise<{
     success: boolean

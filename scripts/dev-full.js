@@ -13,7 +13,7 @@ require('dotenv').config({ path: path.resolve(__dirname, '../.env') })
 
 console.log('🚀 Starting AI Server development environment...')
 console.log('📊 This will start:')
-console.log('   - AI Server on http://localhost:4000') 
+console.log('   - AI Server on http://localhost:4000')
 console.log('   - Inngest Dev Server on http://localhost:8289')
 console.log('   - N8N Workflow Admin on http://localhost:5678')
 console.log('='.repeat(50))
@@ -23,10 +23,10 @@ console.log('🔨 Building project...')
 const build = spawn('npm', ['run', 'build'], {
   stdio: 'inherit',
   shell: true,
-  cwd: path.resolve(__dirname, '..')
+  cwd: path.resolve(__dirname, '..'),
 })
 
-build.on('close', (code) => {
+build.on('close', code => {
   if (code !== 0) {
     console.error('❌ Build failed!')
     process.exit(1)
@@ -34,7 +34,7 @@ build.on('close', (code) => {
 
   console.log('✅ Build completed!')
   console.log('🚀 Starting servers...')
-  
+
   // Start AI Server
   const server = spawn('node', ['dist/server.js'], {
     stdio: ['pipe', 'pipe', 'pipe'],
@@ -45,24 +45,28 @@ build.on('close', (code) => {
       NODE_ENV: 'development',
       PORT: '4000',
       N8N_WEBHOOK_URL: 'http://localhost:5678'
-    }
+    },
   })
 
   // Start Inngest Dev Server
-  const inngest = spawn('npx', [
-    'inngest-cli@latest', 
-    'dev', 
-    '-u', 
-    'http://localhost:4000/api/inngest', 
-    '--port', 
-    '8289', 
-    '--log-level', 
-    'warn'
-  ], {
-    stdio: ['pipe', 'pipe', 'pipe'],
-    shell: true,
-    cwd: path.resolve(__dirname, '..')
-  })
+  const inngest = spawn(
+    'npx',
+    [
+      'inngest-cli@latest',
+      'dev',
+      '-u',
+      'http://localhost:4000/api/inngest',
+      '--port',
+      '8289',
+      '--log-level',
+      'warn',
+    ],
+    {
+      stdio: ['pipe', 'pipe', 'pipe'],
+      shell: true,
+      cwd: path.resolve(__dirname, '..'),
+    }
+  )
 
   // Start N8N locally with delay
   console.log('⏳ N8N will start in 3 seconds after AI Server is ready...')
@@ -136,20 +140,20 @@ build.on('close', (code) => {
   }, 3000) // Wait 3 seconds for AI Server to start
 
   // Handle server output
-  server.stdout.on('data', (data) => {
+  server.stdout.on('data', data => {
     process.stdout.write(`[SERVER] ${data}`)
   })
-  
-  server.stderr.on('data', (data) => {
+
+  server.stderr.on('data', data => {
     process.stderr.write(`[SERVER] ${data}`)
   })
 
   // Handle inngest output
-  inngest.stdout.on('data', (data) => {
+  inngest.stdout.on('data', data => {
     process.stdout.write(`[INNGEST] ${data}`)
   })
-  
-  inngest.stderr.on('data', (data) => {
+
+  inngest.stderr.on('data', data => {
     process.stderr.write(`[INNGEST] ${data}`)
   })
 
@@ -164,7 +168,7 @@ build.on('close', (code) => {
   process.on('SIGINT', () => cleanup())
   process.on('SIGTERM', () => cleanup())
 
-  server.on('close', (code) => {
+  server.on('close', code => {
     console.log(`[SERVER] Process exited with code ${code}`)
     if (code !== 0) {
       console.log('[SERVER] Non-zero exit, shutting down other services')
@@ -172,7 +176,7 @@ build.on('close', (code) => {
     }
   })
 
-  inngest.on('close', (code) => {
+  inngest.on('close', code => {
     console.log(`[INNGEST] Process exited with code ${code}`)
     if (code !== 0) {
       console.log('[INNGEST] Non-zero exit, shutting down other services')

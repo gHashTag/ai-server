@@ -1,6 +1,9 @@
 const fs = require('fs')
 const path = require('path')
-const { createDatabaseConnection, validateConnection } = require('./utils/db-connection')
+const {
+  createDatabaseConnection,
+  validateConnection,
+} = require('./utils/db-connection')
 
 async function runMigration() {
   const dbPool = createDatabaseConnection()
@@ -8,15 +11,18 @@ async function runMigration() {
 
   try {
     console.log('🔧 Applying competitor subscriptions migration...')
-    
+
     const migrationSQL = fs.readFileSync(
-      path.join(__dirname, '../src/db/migrations/create_competitor_subscriptions.sql'),
+      path.join(
+        __dirname,
+        '../src/db/migrations/create_competitor_subscriptions.sql'
+      ),
       'utf8'
     )
-    
+
     await dbPool.query(migrationSQL)
     console.log('✅ Migration applied successfully!')
-    
+
     // Проверяем созданные таблицы
     const result = await dbPool.query(`
       SELECT table_name 
@@ -25,12 +31,11 @@ async function runMigration() {
       AND table_name LIKE 'competitor%'
       ORDER BY table_name
     `)
-    
+
     console.log('📊 Created tables:')
     result.rows.forEach(row => {
       console.log(`  - ${row.table_name}`)
     })
-    
   } catch (error) {
     console.error('❌ Migration failed:', error.message)
     process.exit(1)

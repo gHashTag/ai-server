@@ -1,0 +1,48 @@
+{
+  "hooks": {
+    "UserPromptSubmit": [
+      {
+        "description": "Автоматическое создание PR в начале задачи",
+        "matcher": ".*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/auto-pr-start.sh",
+            "timeout": 30000
+          }
+        ]
+      }
+    ],
+    "PostTaskCompletion": [
+      {
+        "description": "Автоматическая очистка PR и отображение ссылки",
+        "matcher": ".*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/pr-cleanup.sh",
+            "timeout": 30000
+          },
+          {
+            "type": "command",
+            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/pr-status.sh",
+            "timeout": 15000
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "description": "Очистка после создания множественных файлов",
+        "matcher": "Write.*\\.md$",
+        "hooks": [
+          {
+            "type": "command", 
+            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/docs-cleanup.sh",
+            "timeout": 15000
+          }
+        ]
+      }
+    ]
+  }
+}

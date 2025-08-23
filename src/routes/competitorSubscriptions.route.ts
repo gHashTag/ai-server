@@ -17,14 +17,17 @@ router.delete('/:id', CompetitorSubscriptionsController.deleteSubscription)
 router.get('/stats', CompetitorSubscriptionsController.getStats)
 
 // Дополнительные действия
-router.post('/:id/trigger-parsing', CompetitorSubscriptionsController.triggerParsing)
+router.post(
+  '/:id/trigger-parsing',
+  CompetitorSubscriptionsController.triggerParsing
+)
 
 // История доставок (пока оставим старый код)
 router.get('/:id/history', async (req, res) => {
   try {
     const pkg = await import('pg')
     const { Pool } = pkg.default
-    
+
     const dbPool = new Pool({
       connectionString: process.env.SUPABASE_URL || '',
       ssl: { rejectUnauthorized: false },

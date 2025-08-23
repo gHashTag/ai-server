@@ -449,6 +449,11 @@ export const instagramApifyScraper = inngest.createFunction(
           const { getBotByName } = await import('@/core/bot')
           const { bot } = getBotByName(validatedData.bot_name!)
 
+          if (!bot) {
+            log.error(`❌ Bot not found: ${validatedData.bot_name}`)
+            return
+          }
+
           const totalCostStars =
             processedReels.length * instagramScrapingRates.costPerReelInStars
           const totalCostRubles =
@@ -567,6 +572,13 @@ ${processedReels
       try {
         const { getBotByName } = await import('@/core/bot')
         const { bot } = getBotByName(validatedData.bot_name)
+
+        if (!bot) {
+          log.error(
+            `❌ Admin notification failed: Bot not found - ${validatedData.bot_name}`
+          )
+          return
+        }
 
         const adminMessage = `
 🔧 Instagram Apify Scraper завершён

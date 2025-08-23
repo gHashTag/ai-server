@@ -60,13 +60,14 @@ export type ValidatedInstagramUser = z.infer<
   typeof ValidatedInstagramUserSchema
 >
 
-// Обновленная схема события с поддержкой рилсов
+// Обновленная схема события с поддержкой рилсов и автоматическим созданием проектов
 export const InstagramScrapingEventSchema = z.object({
   username_or_id: z.string().min(1, 'Username or ID is required'),
   project_id: z
     .number()
     .int()
-    .positive('Project ID must be a positive integer'),
+    .positive('Project ID must be a positive integer')
+    .optional(), // Теперь project_id опциональный - создастся автоматически
   max_users: z.number().int().positive().max(100).optional().default(50),
   max_reels_per_user: z
     .number()
@@ -77,6 +78,9 @@ export const InstagramScrapingEventSchema = z.object({
     .default(50),
   scrape_reels: z.boolean().optional().default(false),
   requester_telegram_id: z.string().optional(),
+  telegram_username: z.string().optional(), // Username в Telegram для названия проекта
+  bot_name: z.string().optional(), // Имя бота для привязки проекта
+  language: z.string().optional().default('ru'), // Язык отчетов
   metadata: z.record(z.any()).optional().default({}),
 })
 

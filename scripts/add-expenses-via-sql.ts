@@ -16,10 +16,11 @@ const mayExpenses = [
     amount: 309.13,
     currency: 'THB',
     description: 'Конвертация файлов',
-    purpose: 'Используется для преобразования файлов в нужные форматы для работы с данными.',
+    purpose:
+      'Используется для преобразования файлов в нужные форматы для работы с данными.',
     url: 'CloudConvert',
     category: 'INFRASTRUCTURE',
-    expenseType: 'CLOUDCONVERT'
+    expenseType: 'CLOUDCONVERT',
   },
   {
     date: '01/05',
@@ -30,7 +31,7 @@ const mayExpenses = [
     purpose: 'Хостинг и управление проектами для разработки.',
     url: 'Elest',
     category: 'HOSTING',
-    expenseType: 'HOSTING'
+    expenseType: 'HOSTING',
   },
   {
     date: '07/05',
@@ -41,17 +42,22 @@ const mayExpenses = [
     purpose: 'Генерация текстов и взаимодействие с пользователями.',
     url: 'OpenAI',
     category: 'AI_SERVICES',
-    expenseType: 'AI_API'
-  }
+    expenseType: 'AI_API',
+  },
   // Добавим остальные позже, сначала проверим на нескольких
 ]
 
 function generateInsertSQL(expenses: any[]): string {
-  const values = expenses.map(expense => {
-    const invId = `farm_expense_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
-    const paymentDate = `2024-05-${expense.date.split('/')[0].padStart(2, '0')}`
-    
-    return `(
+  const values = expenses
+    .map(expense => {
+      const invId = `farm_expense_${Date.now()}_${Math.random()
+        .toString(36)
+        .substr(2, 9)}`
+      const paymentDate = `2024-05-${expense.date
+        .split('/')[0]
+        .padStart(2, '0')}`
+
+      return `(
       '${invId}',
       'SYSTEM_BOT_FARM',
       'bot_farm_manager',
@@ -62,14 +68,22 @@ function generateInsertSQL(expenses: any[]): string {
       'MONEY_OUTCOME',
       'System',
       '${expense.name}: ${expense.description.replace(/'/g, "''")}',
-      '{"expense_category": "${expense.category}", "expense_type": "${expense.expenseType}", "purpose": "${expense.purpose.replace(/'/g, "''")}", "original_name": "${expense.name}", "url": "${expense.url}", "is_bot_farm_expense": true, "processed_at": "${new Date().toISOString()}"}',
+      '{"expense_category": "${expense.category}", "expense_type": "${
+        expense.expenseType
+      }", "purpose": "${expense.purpose.replace(
+        /'/g,
+        "''"
+      )}", "original_name": "${expense.name}", "url": "${
+        expense.url
+      }", "is_bot_farm_expense": true, "processed_at": "${new Date().toISOString()}"}',
       NULL,
       NULL,
       '${paymentDate}T00:00:00.000Z',
       NOW(),
       NOW()
     )`
-  }).join(',\n')
+    })
+    .join(',\n')
 
   return `
 INSERT INTO payments_v2 (
@@ -95,20 +109,22 @@ INSERT INTO payments_v2 (
 
 async function main() {
   console.log('🚀 Генерируем SQL для добавления расходов фермы ботов...')
-  
+
   const sql = generateInsertSQL(mayExpenses)
-  
+
   console.log('📝 Сгенерированный SQL:')
   console.log('='.repeat(60))
   console.log(sql)
   console.log('='.repeat(60))
-  
+
   console.log('\n📋 Инструкции:')
   console.log('1. Скопируйте SQL выше')
   console.log('2. Откройте Supabase Dashboard → SQL Editor')
   console.log('3. Вставьте и выполните SQL')
   console.log('4. Проверьте результат командой:')
-  console.log("   SELECT * FROM payments_v2 WHERE telegram_id = 'SYSTEM_BOT_FARM';")
+  console.log(
+    "   SELECT * FROM payments_v2 WHERE telegram_id = 'SYSTEM_BOT_FARM';"
+  )
 }
 
 main().catch(console.error)
