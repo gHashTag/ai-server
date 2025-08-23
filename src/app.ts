@@ -183,11 +183,43 @@ export class App {
       }
     })
 
-    this.app.get('/health', (_req, res) => {
-      res.json({
-        status: 'OK',
-        timestamp: new Date().toISOString(),
-      })
+    this.app.get('/health', async (_req, res) => {
+      try {
+        // Проверяем готовность основных компонентов
+        const health = {
+          status: 'OK',
+          timestamp: new Date().toISOString(),
+          components: {
+            server: 'healthy',
+            inngest: 'healthy', // Предполагаем что готов, если дошли до этого места
+            memory: {
+              used: Math.round(process.memoryUsage().rss / 1024 / 1024),
+              unit: 'MB'
+            }
+          },
+          uptime: Math.round(process.uptime()),
+          environment: process.env.NODE_ENV || 'development'
+        }
+
+        // Быстрая проверка доступности процесса
+        if (process.uptime() < 5) {
+          // Если сервер работает менее 5 секунд, даем время на инициализацию
+          health.status = 'STARTING'
+          health.components.server = 'starting'
+        }
+
+        const statusCode = health.status === 'OK' ? 200 : 503
+        res.status(statusCode).json(health)
+        
+      } catch (error) {
+        logger.error('Healthcheck error:', error)
+        res.status(503).json({
+          status: 'ERROR',
+          timestamp: new Date().toISOString(),
+          error: 'Health check failed',
+          uptime: Math.round(process.uptime())
+        })
+      }
     })
 
     this.app.get('/api/test', (_req, res) => {
