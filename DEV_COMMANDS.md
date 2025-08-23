@@ -70,11 +70,11 @@ npm run dev:inngest
 
 # N8N команды
 npm run n8n:standalone    # Запуск только N8N отдельно
+npm run dev:n8n          # То же что standalone
 npm run n8n:test         # Тестирование N8N интеграции
-npm run n8n:status       # Статус N8N контейнера
 
 # Проверка статуса
-docker ps | grep n8n-dev
+ps aux | grep n8n
 ```
 
 ## N8N Workflow Commands
@@ -113,7 +113,7 @@ curl http://localhost:4000/api/n8n/workflows
 ## N8N Особенности
 
 - N8N запускается через 3 секунды после AI Server для корректной инициализации
-- Автоматически очищается предыдущий `n8n-dev` контейнер при запуске  
+- Запускается локально через npx без Docker
 - Доступен сразу после запуска на http://localhost:5678
 - Интегрирован с AI Server API через http://localhost:4000/api/n8n/*
-- Данные сохраняются в Docker volume `n8n_dev_data`
+- Данные сохраняются в локальной папке `~/.n8n`
