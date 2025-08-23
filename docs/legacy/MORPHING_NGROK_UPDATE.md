@@ -4,18 +4,20 @@
 
 **Причина:** ERR_NGROK_3200 - туннель отключился  
 **Время:** 28 июля 2025, 09:33  
-**Статус:** ✅ Восстановлен и работает  
+**Статус:** ✅ Восстановлен и работает
 
 ---
 
 ## 🆕 **НОВЫЙ АКТУАЛЬНЫЙ URL:**
 
 ### **Ngrok Base URL:**
+
 ```
 https://4719685c0b5b.ngrok.app
 ```
 
 ### **Морфинг API Endpoint:**
+
 ```
 https://4719685c0b5b.ngrok.app/generate/morph-images
 ```
@@ -25,12 +27,14 @@ https://4719685c0b5b.ngrok.app/generate/morph-images
 ## 🧪 **ПРОВЕРКА РАБОТЫ:**
 
 ### **Health Check:** ✅
+
 ```bash
 curl https://4719685c0b5b.ngrok.app/health
 # Ответ: {"status":"OK","timestamp":"2025-07-28T06:33:02.358Z"}
 ```
 
-### **Морфинг API:** ✅  
+### **Морфинг API:** ✅
+
 ```bash
 curl -X POST https://4719685c0b5b.ngrok.app/generate/morph-images \
   -H "x-secret-key: test-secret-key" \
@@ -54,25 +58,29 @@ curl -X POST https://4719685c0b5b.ngrok.app/generate/morph-images \
 **Обновите базовый URL в вашем коде:**
 
 ### **JavaScript:**
+
 ```javascript
-const API_BASE_URL = "https://4719685c0b5b.ngrok.app";
+const API_BASE_URL = 'https://4719685c0b5b.ngrok.app'
 ```
 
 ### **React:**
+
 ```javascript
 // .env или .env.local
 REACT_APP_API_BASE_URL=https://4719685c0b5b.ngrok.app
 ```
 
 ### **Автоматическое получение URL:**
+
 ```javascript
 async function getCurrentNgrokUrl() {
   try {
-    const response = await fetch('http://localhost:4040/api/tunnels');
-    const data = await response.json();
-    return data.tunnels.find(t => t.public_url.startsWith('https://')).public_url;
+    const response = await fetch('http://localhost:4040/api/tunnels')
+    const data = await response.json()
+    return data.tunnels.find(t => t.public_url.startsWith('https://'))
+      .public_url
   } catch (error) {
-    return 'https://4719685c0b5b.ngrok.app'; // fallback
+    return 'https://4719685c0b5b.ngrok.app' // fallback
   }
 }
 ```
@@ -82,16 +90,19 @@ async function getCurrentNgrokUrl() {
 ## 🔧 **УТИЛИТЫ:**
 
 ### **Получить актуальный URL:**
+
 ```bash
 node get-ngrok-url.js
 ```
 
 ### **Проверить статус ngrok:**
+
 ```bash
 ps aux | grep ngrok | grep -v grep
 ```
 
 ### **Перезапустить ngrok если нужно:**
+
 ```bash
 pkill ngrok
 ngrok http 4000 &
@@ -101,4 +112,4 @@ ngrok http 4000 &
 
 ## ✅ **СТАТУС: ГОТОВ К ИСПОЛЬЗОВАНИЮ**
 
-**🚀 Можете продолжать тестирование с новым URL!** 
+**🚀 Можете продолжать тестирование с новым URL!**

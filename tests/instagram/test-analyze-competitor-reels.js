@@ -22,18 +22,18 @@ async function testAnalyzeCompetitorReels() {
         metadata: {
           test: 'popular-blogger-analysis',
           timestamp: new Date().toISOString(),
-          description: 'Анализ рилз популярного блогера о саморазвитии'
-        }
-      }
+          description: 'Анализ рилз популярного блогера о саморазвитии',
+        },
+      },
     })
-    
+
     console.log('✅ Event 1 отправлен:', event1.ids[0])
     console.log('🎯 Цель: Анализ engagement и популярных тем')
-    
+
     // Небольшая задержка между тестами
     await new Promise(resolve => setTimeout(resolve, 5000))
 
-    // Тест 2: Анализ бизнес-аккаунта  
+    // Тест 2: Анализ бизнес-аккаунта
     console.log('\n💼 Тест 2: Анализ бизнес-аккаунта...')
     const event2 = await inngest.send({
       name: 'instagram/analyze-reels',
@@ -46,11 +46,11 @@ async function testAnalyzeCompetitorReels() {
         metadata: {
           test: 'business-account-analysis',
           timestamp: new Date().toISOString(),
-          description: 'Анализ бизнес-контента предпринимателя'
-        }
-      }
+          description: 'Анализ бизнес-контента предпринимателя',
+        },
+      },
     })
-    
+
     console.log('✅ Event 2 отправлен:', event2.ids[0])
     console.log('🎯 Цель: Анализ бизнес-контента и стратегий')
 
@@ -70,11 +70,11 @@ async function testAnalyzeCompetitorReels() {
         metadata: {
           test: 'tech-blogger-analysis',
           timestamp: new Date().toISOString(),
-          description: 'Анализ технического контента и обзоров'
-        }
-      }
+          description: 'Анализ технического контента и обзоров',
+        },
+      },
     })
-    
+
     console.log('✅ Event 3 отправлен:', event3.ids[0])
     console.log('🎯 Цель: Анализ технического контента')
 
@@ -97,30 +97,37 @@ async function testAnalyzeCompetitorReels() {
 
     console.log('\n⏱️ Время выполнения: ~30-60 секунд на каждый тест')
     console.log('📊 Мониторинг: Смотри логи Inngest Dashboard')
-    
+
     console.log('\n🚀 Все тесты запущены! Проверяй результаты в базе данных.')
 
     return {
       tests: [
-        { id: event1.ids[0], username: 'alexyanovsky', type: 'popular-blogger' },
+        {
+          id: event1.ids[0],
+          username: 'alexyanovsky',
+          type: 'popular-blogger',
+        },
         { id: event2.ids[0], username: 'garyvee', type: 'business-account' },
-        { id: event3.ids[0], username: 'mkbhd', type: 'tech-blogger' }
+        { id: event3.ids[0], username: 'mkbhd', type: 'tech-blogger' },
       ],
-      message: 'Все 3 теста запущены успешно!'
+      message: 'Все 3 теста запущены успешно!',
     }
-
   } catch (error) {
     console.error('❌ Ошибка при тестировании:', error)
-    
+
     // Детальная диагностика
     if (error.message.includes('RAPIDAPI_INSTAGRAM_KEY')) {
-      console.log('\n🔧 ДИАГНОСТИКА: Проверь переменную окружения RAPIDAPI_INSTAGRAM_KEY')
+      console.log(
+        '\n🔧 ДИАГНОСТИКА: Проверь переменную окружения RAPIDAPI_INSTAGRAM_KEY'
+      )
     }
-    
+
     if (error.message.includes('NEON_DATABASE_URL')) {
-      console.log('\n🔧 ДИАГНОСТИКА: Проверь переменную окружения NEON_DATABASE_URL')
+      console.log(
+        '\n🔧 ДИАГНОСТИКА: Проверь переменную окружения NEON_DATABASE_URL'
+      )
     }
-    
+
     if (error.message.includes('network')) {
       console.log('\n🔧 ДИАГНОСТИКА: Проблемы с сетью или API недоступен')
     }

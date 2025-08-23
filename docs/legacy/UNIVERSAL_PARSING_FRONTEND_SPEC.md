@@ -10,7 +10,9 @@
 ## 🎯 Основные Inngest функции
 
 ### 1. **instagramScraperV2**
+
 Основной парсер похожих пользователей
+
 ```javascript
 // Параметры
 {
@@ -25,9 +27,11 @@
 ```
 
 ### 2. **competitorAutoParser**
+
 Автоматический мониторинг (cron: каждые 24 часа в 08:00 UTC)
 
 ### 3. **createInstagramUser**
+
 Ручное создание пользователя в БД
 
 ---
@@ -37,7 +41,9 @@
 ### **Подписки на конкурентов**
 
 #### `GET /api/competitor-subscriptions`
+
 Получение подписок пользователя
+
 ```javascript
 Query: ?user_telegram_id=user123&bot_name=your_bot
 
@@ -59,7 +65,9 @@ Response: {
 ```
 
 #### `POST /api/competitor-subscriptions`
+
 Создание подписки (лимит: 10 активных на пользователя)
+
 ```javascript
 Request: {
   user_telegram_id: "user123",
@@ -73,9 +81,11 @@ Request: {
 ```
 
 #### `PUT /api/competitor-subscriptions/:id`
+
 Обновление параметров подписки
 
 #### `DELETE /api/competitor-subscriptions/:id`
+
 Удаление подписки
 
 ---
@@ -83,15 +93,17 @@ Request: {
 ## 📊 Схемы данных (Zod)
 
 ### **Основные схемы**
+
 ```typescript
-InstagramUserSchema           // валидация из API
-ValidatedInstagramUserSchema  // для сохранения в БД
-InstagramScrapingEventSchema  // событие парсинга
-RawInstagramReelSchema       // рилс из API
-CreateSubscriptionSchema     // создание подписки
+InstagramUserSchema // валидация из API
+ValidatedInstagramUserSchema // для сохранения в БД
+InstagramScrapingEventSchema // событие парсинга
+RawInstagramReelSchema // рилс из API
+CreateSubscriptionSchema // создание подписки
 ```
 
 ### **База данных**
+
 - `instagram_similar_users` - найденные похожие пользователи
 - `instagram_user_reels` - рилсы пользователей
 - `competitor_subscriptions` - подписки на мониторинг
@@ -101,6 +113,7 @@ CreateSubscriptionSchema     // создание подписки
 ## ⚙️ Универсальный алгоритм парсинга
 
 ### **Процесс:**
+
 1. **Валидация Zod** → входные параметры
 2. **Проверка project_id** → существование в БД
 3. **Instagram API** → retry логика + rate limiting
@@ -111,6 +124,7 @@ CreateSubscriptionSchema     // создание подписки
 8. **Telegram уведомления** → отправка результатов
 
 ### **Обработка ошибок:**
+
 - Rate limiting (429) → автоматический retry
 - Валидация ошибок → детальное описание через Zod
 - БД транзакции → rollback при ошибках
@@ -120,37 +134,40 @@ CreateSubscriptionSchema     // создание подписки
 ## 🎨 Frontend компоненты
 
 ### **1. Универсальная форма парсинга**
+
 ```javascript
 const ParsingForm = {
   targetUsername: { required: true, validation: /^[a-zA-Z0-9._]{1,30}$/ },
-  projectId: { required: true, type: "number", min: 1 },
-  maxUsers: { type: "number", min: 1, max: 100, default: 50 },
-  scrapeReels: { type: "boolean", default: false },
-  maxReelsPerUser: { type: "number", min: 1, max: 200, default: 50 }
+  projectId: { required: true, type: 'number', min: 1 },
+  maxUsers: { type: 'number', min: 1, max: 100, default: 50 },
+  scrapeReels: { type: 'boolean', default: false },
+  maxReelsPerUser: { type: 'number', min: 1, max: 200, default: 50 },
 }
 ```
 
 ### **2. Управление подписками**
+
 ```javascript
 const SubscriptionManager = {
-  list: "GET /api/competitor-subscriptions",
-  create: "POST /api/competitor-subscriptions", 
-  update: "PUT /api/competitor-subscriptions/:id",
-  delete: "DELETE /api/competitor-subscriptions/:id",
-  maxActive: 10 // лимит активных подписок
+  list: 'GET /api/competitor-subscriptions',
+  create: 'POST /api/competitor-subscriptions',
+  update: 'PUT /api/competitor-subscriptions/:id',
+  delete: 'DELETE /api/competitor-subscriptions/:id',
+  maxActive: 10, // лимит активных подписок
 }
 ```
 
 ### **3. Результаты парсинга**
+
 ```javascript
 const ResultsDisplay = {
   competitors: Array, // список найденных конкурентов
   reports: {
-    html: "/reports/analysis.html",
-    excel: "/reports/data.xlsx", 
-    archive: "/reports/full.zip"
+    html: '/reports/analysis.html',
+    excel: '/reports/data.xlsx',
+    archive: '/reports/full.zip',
   },
-  stats: { total: Number, verified: Number }
+  stats: { total: Number, verified: Number },
 }
 ```
 
@@ -159,13 +176,14 @@ const ResultsDisplay = {
 ## 📡 Real-time статусы
 
 ### **WebSocket события:**
+
 ```javascript
 const statuses = {
-  'parsing_started': { eventId, status: 'in_progress' },
-  'parsing_progress': { eventId, progress: 45 },
-  'parsing_completed': { eventId, results },
-  'reports_generated': { eventId, reports },
-  'parsing_failed': { eventId, error }
+  parsing_started: { eventId, status: 'in_progress' },
+  parsing_progress: { eventId, progress: 45 },
+  parsing_completed: { eventId, results },
+  reports_generated: { eventId, reports },
+  parsing_failed: { eventId, error },
 }
 ```
 
@@ -174,19 +192,19 @@ const statuses = {
 ## 🔒 Валидация и безопасность
 
 ### **Rate Limiting:**
+
 - 100 запросов/час на пользователя
 - 10 одновременных задач парсинга
 - Кеширование результатов: 1 час
 
 ### **Валидация:**
+
 ```javascript
 // Username
-const validateUsername = (username) => 
-  /^[a-zA-Z0-9._]{1,30}$/.test(username)
+const validateUsername = username => /^[a-zA-Z0-9._]{1,30}$/.test(username)
 
-// Project ID  
-const validateProjectId = (id) => 
-  Number.isInteger(id) && id > 0
+// Project ID
+const validateProjectId = id => Number.isInteger(id) && id > 0
 ```
 
 ---
@@ -194,11 +212,13 @@ const validateProjectId = (id) =>
 ## 🚀 Интеграции
 
 ### **Instagram API (RapidAPI)**
+
 - Host: `real-time-instagram-scraper-api1.p.rapidapi.com`
 - Endpoints: `/v1/similar_users_v2`, `/v1/user_reels`
 - Auth: RapidAPI key в headers
 
 ### **Telegram Bot**
+
 - Автоотправка результатов
 - Мультиязычность (ru/en)
 - Архивы через download URL
@@ -208,20 +228,21 @@ const validateProjectId = (id) =>
 ## 📈 Оптимизация
 
 ### **Frontend:**
+
 ```javascript
 // Lazy loading
 const Results = lazy(() => import('./Results'))
 const Subscriptions = lazy(() => import('./Subscriptions'))
 
 // Caching
-const useResults = (username, projectId) => 
+const useResults = (username, projectId) =>
   useQuery(['results', username, projectId], fetchResults, {
     staleTime: 1000 * 60 * 60, // 1 hour
-    cacheTime: 1000 * 60 * 60 * 24 // 24 hours
+    cacheTime: 1000 * 60 * 60 * 24, // 24 hours
   })
 
 // Pagination
-const usePaginatedCompetitors = (filters) => 
+const usePaginatedCompetitors = filters =>
   useInfiniteQuery(['competitors', filters], fetchCompetitors)
 ```
 

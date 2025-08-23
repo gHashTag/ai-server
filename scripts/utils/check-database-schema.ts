@@ -10,13 +10,13 @@ async function checkDatabaseSchema() {
   console.log('🔍 === ПРОВЕРКА СХЕМЫ БАЗЫ ДАННЫХ ===\n')
 
   const connectionString = process.env.SUPABASE_URL
-  
+
   if (!connectionString) {
     console.error('❌ Database connection string is required')
     console.error('Please set SUPABASE_URL in your .env file')
     process.exit(1)
   }
-  
+
   const pool = new Pool({
     connectionString,
     ssl: { rejectUnauthorized: false },
@@ -27,7 +27,7 @@ async function checkDatabaseSchema() {
 
   try {
     const client = await pool.connect()
-    
+
     try {
       // Проверяем существующие таблицы
       console.log('📋 Шаг 1: Проверка существующих таблиц...')
@@ -138,17 +138,27 @@ async function checkDatabaseSchema() {
 
       // Создаем индексы для производительности
       console.log('⚡ Создаем индексы для производительности...')
-      await client.query(`CREATE INDEX IF NOT EXISTS idx_reels_analysis_username ON reels_analysis(comp_username)`)
-      await client.query(`CREATE INDEX IF NOT EXISTS idx_reels_analysis_views ON reels_analysis(views_count DESC)`)
-      await client.query(`CREATE INDEX IF NOT EXISTS idx_reels_analysis_date ON reels_analysis(created_at_instagram DESC)`)
-      await client.query(`CREATE INDEX IF NOT EXISTS idx_competitors_query ON competitors(query_username)`)
-      await client.query(`CREATE INDEX IF NOT EXISTS idx_telegram_memory_user ON telegram_memory(user_id, created_at DESC)`)
+      await client.query(
+        `CREATE INDEX IF NOT EXISTS idx_reels_analysis_username ON reels_analysis(comp_username)`
+      )
+      await client.query(
+        `CREATE INDEX IF NOT EXISTS idx_reels_analysis_views ON reels_analysis(views_count DESC)`
+      )
+      await client.query(
+        `CREATE INDEX IF NOT EXISTS idx_reels_analysis_date ON reels_analysis(created_at_instagram DESC)`
+      )
+      await client.query(
+        `CREATE INDEX IF NOT EXISTS idx_competitors_query ON competitors(query_username)`
+      )
+      await client.query(
+        `CREATE INDEX IF NOT EXISTS idx_telegram_memory_user ON telegram_memory(user_id, created_at DESC)`
+      )
 
       console.log('✅ Схема базы данных создана успешно!')
 
       // Вставляем тестовые данные для демонстрации
       console.log('\n🧪 Шаг 3: Добавляем тестовые данные...')
-      
+
       // Тестовые конкуренты
       await client.query(`
         INSERT INTO competitors (query_username, comp_username, followers_count, category, bio, ig_url, project_id) 
@@ -176,10 +186,14 @@ async function checkDatabaseSchema() {
 
       // Проверяем результат
       console.log('\n📊 Шаг 4: Проверка созданных данных...')
-      
-      const reelsCount = await client.query('SELECT COUNT(*) FROM reels_analysis')
-      const competitorsCount = await client.query('SELECT COUNT(*) FROM competitors')
-      
+
+      const reelsCount = await client.query(
+        'SELECT COUNT(*) FROM reels_analysis'
+      )
+      const competitorsCount = await client.query(
+        'SELECT COUNT(*) FROM competitors'
+      )
+
       console.log(`📹 Рилз в базе: ${reelsCount.rows[0].count}`)
       console.log(`👥 Конкурентов в базе: ${competitorsCount.rows[0].count}`)
 
@@ -195,11 +209,12 @@ async function checkDatabaseSchema() {
       sampleReels.rows.forEach((reel, index) => {
         console.log(`${index + 1}. ${reel.comp_username}:`)
         console.log(`   👀 ${reel.views_count?.toLocaleString()} просмотров`)
-        console.log(`   👍 ${reel.likes_count?.toLocaleString()} лайков`) 
-        console.log(`   💬 ${reel.comments_count?.toLocaleString()} комментариев`)
+        console.log(`   👍 ${reel.likes_count?.toLocaleString()} лайков`)
+        console.log(
+          `   💬 ${reel.comments_count?.toLocaleString()} комментариев`
+        )
         console.log(`   📝 ${reel.caption}`)
       })
-
     } finally {
       client.release()
     }
@@ -210,7 +225,6 @@ async function checkDatabaseSchema() {
     console.log('✅ Тестовые данные загружены')
     console.log('')
     console.log('🚀 Теперь можно тестировать функции анализа рилз!')
-
   } catch (error) {
     console.error('❌ Ошибка проверки схемы:', error)
     throw error

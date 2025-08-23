@@ -28,10 +28,10 @@ async function testDailyHealthReport() {
     console.log('✅ Daily Health Report запущен:', result.ids[0])
     console.log('📋 Отчет будет содержать:')
     console.log('   • Статистику за 24 часа')
-    console.log('   • AI анализ логов')  
+    console.log('   • AI анализ логов')
     console.log('   • Интерактивные кнопки')
     console.log('   • Рекомендации по улучшению')
-    
+
     return true
   } catch (error) {
     console.error('❌ Ошибка запуска daily report:', error.message)
@@ -44,11 +44,11 @@ async function testTelegramCallbacks() {
 
   const testCallbacks = [
     'show_detailed_logs',
-    'run_network_check', 
+    'run_network_check',
     'deployment_status',
     'show_errors_only',
     'show_trends',
-    'auto_fix'
+    'auto_fix',
   ]
 
   let successCount = 0
@@ -62,7 +62,7 @@ async function testTelegramCallbacks() {
           chatId: process.env.ADMIN_CHAT_ID || 'test_chat',
           messageId: 123,
           userId: 'admin',
-          source: 'manual_test'
+          source: 'manual_test',
         },
       })
 
@@ -95,12 +95,12 @@ async function testNetworkCheckWithButtons() {
     console.log('✅ Network Check с кнопками запущен:', result.ids[0])
     console.log('🔘 Ожидаемые кнопки в уведомлении:')
     console.log('   • 🔄 Перезапустить проверку')
-    console.log('   • 📊 Подробная статистика')  
+    console.log('   • 📊 Подробная статистика')
     console.log('   • 🛠 Попробовать исправить')
     console.log('   • 📞 Вызвать админа')
     console.log('   • 📈 История проверок')
     console.log('   • 🔍 Детали ошибок')
-    
+
     return true
   } catch (error) {
     console.error('❌ Ошибка network check с кнопками:', error.message)
@@ -128,8 +128,10 @@ async function testPostDeployWithButtons() {
     console.log('✅ Post-Deploy с кнопками запущен:', result.ids[0])
     console.log('🔘 Кнопки зависят от результата:')
     console.log('   Успех: ✅ Отлично! | 📊 Подробности')
-    console.log('   Проблемы: 🔄 Повторить | 🚀 Откатить | 🛠 Исправить | 📞 Вызвать разработчика')
-    
+    console.log(
+      '   Проблемы: 🔄 Повторить | 🚀 Откатить | 🛠 Исправить | 📞 Вызвать разработчика'
+    )
+
     return true
   } catch (error) {
     console.error('❌ Ошибка post-deploy с кнопками:', error.message)
@@ -180,7 +182,7 @@ async function runAllTests() {
     console.log('\n🎉 ВСЕ ТЕСТЫ ИНТЕРАКТИВНОСТИ ПРОЙДЕНЫ!')
     console.log('\n📝 Проверьте Telegram:')
     console.log('1. Ежедневный отчет с кнопками')
-    console.log('2. Network check уведомления с действиями')  
+    console.log('2. Network check уведомления с действиями')
     console.log('3. Post-deploy отчеты с интерактивностью')
     console.log('4. Callback обработка нажатий кнопок')
   } else {
@@ -194,7 +196,10 @@ async function runAllTests() {
 // Запуск тестов
 if (require.main === module) {
   runAllTests().catch(error => {
-    console.error('💥 Критическая ошибка при запуске тестов интерактивности:', error)
+    console.error(
+      '💥 Критическая ошибка при запуске тестов интерактивности:',
+      error
+    )
     process.exit(1)
   })
 }

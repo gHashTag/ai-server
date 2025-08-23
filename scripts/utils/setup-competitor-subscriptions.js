@@ -9,10 +9,10 @@ const path = require('path')
 
 async function setupCompetitorSubscriptions() {
   console.log('🏗️  Настройка системы подписок на конкурентов...')
-  
+
   const pool = new Pool({
     connectionString: process.env.SUPABASE_URL,
-    ssl: process.env.SUPABASE_URL ? { rejectUnauthorized: false } : false
+    ssl: process.env.SUPABASE_URL ? { rejectUnauthorized: false } : false,
   })
 
   try {
@@ -22,16 +22,19 @@ async function setupCompetitorSubscriptions() {
 
     // Читаем SQL скрипт
     const sqlScript = fs.readFileSync(
-      path.join(__dirname, 'src/db/migrations/create_competitor_subscriptions.sql'),
+      path.join(
+        __dirname,
+        'src/db/migrations/create_competitor_subscriptions.sql'
+      ),
       'utf8'
     )
 
     // Выполняем скрипт
     await client.query(sqlScript)
-    
+
     console.log('✅ Таблицы созданы успешно:')
     console.log('   • competitor_subscriptions')
-    console.log('   • competitor_delivery_history')  
+    console.log('   • competitor_delivery_history')
     console.log('   • competitor_profiles')
 
     // Проверяем созданные таблицы
@@ -41,33 +44,38 @@ async function setupCompetitorSubscriptions() {
       WHERE table_name IN ('competitor_subscriptions', 'competitor_delivery_history', 'competitor_profiles')
       ORDER BY table_name
     `)
-    
+
     console.log('\n📋 Подтверждение созданных таблиц:')
     tables.rows.forEach(row => {
       console.log(`   ✓ ${row.table_name}`)
     })
 
     // Создаем тестовую подписку для демонстрации
-    const testSubscription = await client.query(`
+    const testSubscription = await client.query(
+      `
       INSERT INTO competitor_subscriptions 
       (user_telegram_id, bot_name, competitor_username, competitor_display_name, max_reels, min_views, max_age_days, delivery_format)
       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
       ON CONFLICT (user_telegram_id, competitor_username, bot_name) DO NOTHING
       RETURNING id, competitor_username
-    `, [
-      '144022504', // Ваш Telegram ID
-      'neuro_blogger_bot',
-      'yacheslav_nekludov',
-      'Ячеслав Неклюдов',
-      10,
-      1000,
-      7,
-      'digest'
-    ])
+    `,
+      [
+        '144022504', // Ваш Telegram ID
+        'neuro_blogger_bot',
+        'yacheslav_nekludov',
+        'Ячеслав Неклюдов',
+        10,
+        1000,
+        7,
+        'digest',
+      ]
+    )
 
     if (testSubscription.rows.length > 0) {
       console.log('\n🎯 Создана тестовая подписка:')
-      console.log(`   • Конкурент: @${testSubscription.rows[0].competitor_username}`)
+      console.log(
+        `   • Конкурент: @${testSubscription.rows[0].competitor_username}`
+      )
       console.log(`   • ID подписки: ${testSubscription.rows[0].id}`)
     } else {
       console.log('\n📌 Тестовая подписка уже существует')
@@ -96,9 +104,10 @@ async function setupCompetitorSubscriptions() {
     console.log('\n🚀 Следующие шаги:')
     console.log('   1. Запустите сервер: bun dev')
     console.log('   2. Cron будет работать каждые 24 часа в 08:00 UTC')
-    console.log('   3. Используйте API /api/competitor-subscriptions для управления')
+    console.log(
+      '   3. Используйте API /api/competitor-subscriptions для управления'
+    )
     console.log('   4. Для тестирования: POST /trigger-competitor-auto-parse')
-
   } catch (error) {
     console.error('❌ Ошибка настройки:', error.message)
     throw error
@@ -113,7 +122,7 @@ setupCompetitorSubscriptions()
     console.log('\n✅ Настройка завершена успешно!')
     process.exit(0)
   })
-  .catch((error) => {
+  .catch(error => {
     console.error('\n❌ Ошибка:', error.message)
     process.exit(1)
   })

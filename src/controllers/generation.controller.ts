@@ -46,15 +46,22 @@ export class GenerationController {
 
       validateUserParams(req)
       const jobId = `veo3_${telegram_id}_${Date.now()}`
-      
+
       // Создаем job в tracker
       const { createVideoJob } = await import('@/services/videoJobTracker')
-      createVideoJob(jobId, 'veo3-video', telegram_id, bot_name, prompt, 'veo3-fast')
-      
-      res.status(200).json({ 
+      createVideoJob(
+        jobId,
+        'veo3-video',
+        telegram_id,
+        bot_name,
+        prompt,
+        'veo3-fast'
+      )
+
+      res.status(200).json({
         success: true,
         jobId,
-        message: 'Processing Veo 3 video generation' 
+        message: 'Processing Veo 3 video generation',
       })
 
       // Используем существующую функцию generateTextToVideo с моделью veo3-fast
@@ -110,10 +117,10 @@ export class GenerationController {
 
       validateUserParams(req)
       const jobId = `text_to_image_${telegram_id}_${Date.now()}`
-      res.status(200).json({ 
+      res.status(200).json({
         success: true,
         jobId,
-        message: 'Processing started' 
+        message: 'Processing started',
       })
 
       const { bot } = getBotByName(bot_name)
@@ -164,10 +171,10 @@ export class GenerationController {
       validateUserParams(req)
       // Отправляем предварительный ответ клиенту, что обработка началась
       const jobId = `neuro_photo_${telegram_id}_${Date.now()}`
-      res.status(200).json({ 
+      res.status(200).json({
         success: true,
         jobId,
-        message: 'Processing started' 
+        message: 'Processing started',
       })
 
       try {
@@ -247,10 +254,10 @@ export class GenerationController {
       }
 
       const jobId = `neuro_photo_v2_${telegram_id}_${Date.now()}`
-      res.status(200).json({ 
+      res.status(200).json({
         success: true,
         jobId,
-        message: 'Processing started' 
+        message: 'Processing started',
       })
 
       generateNeuroImageV2(
@@ -284,10 +291,10 @@ export class GenerationController {
       validateUserParams(req)
 
       const jobId = `voice_avatar_${telegram_id}_${Date.now()}`
-      res.status(200).json({ 
+      res.status(200).json({
         success: true,
         jobId,
-        message: 'Voice creation started' 
+        message: 'Voice creation started',
       })
 
       const { bot } = getBotByName(bot_name)
@@ -322,10 +329,10 @@ export class GenerationController {
         return
       }
       const jobId = `text_to_speech_${telegram_id}_${Date.now()}`
-      res.status(200).json({ 
+      res.status(200).json({
         success: true,
         jobId,
-        message: 'Processing started' 
+        message: 'Processing started',
       })
 
       const { bot } = getBotByName(bot_name)
@@ -348,8 +355,15 @@ export class GenerationController {
     next: NextFunction
   ): Promise<void> => {
     try {
-      const { prompt, videoModel, telegram_id, username, is_ru, bot_name, duration = 5 } =
-        req.body
+      const {
+        prompt,
+        videoModel,
+        telegram_id,
+        username,
+        is_ru,
+        bot_name,
+        duration = 5,
+      } = req.body
 
       console.log('videoModel', videoModel)
       if (!prompt) {
@@ -363,15 +377,22 @@ export class GenerationController {
 
       validateUserParams(req)
       const jobId = `text_to_video_${telegram_id}_${Date.now()}`
-      
+
       // Создаем job в tracker
       const { createVideoJob } = await import('@/services/videoJobTracker')
-      createVideoJob(jobId, 'text-to-video', telegram_id, bot_name, prompt, videoModel)
-      
-      res.status(200).json({ 
+      createVideoJob(
+        jobId,
+        'text-to-video',
+        telegram_id,
+        bot_name,
+        prompt,
+        videoModel
+      )
+
+      res.status(200).json({
         success: true,
         jobId,
-        message: 'Processing started' 
+        message: 'Processing started',
       })
 
       // Запускаем генерацию асинхронно
@@ -544,10 +565,10 @@ export class GenerationController {
       }
       validateUserParams(req)
       const jobId = `image_to_prompt_${telegram_id}_${Date.now()}`
-      res.status(200).json({ 
+      res.status(200).json({
         success: true,
         jobId,
-        message: 'Processing started' 
+        message: 'Processing started',
       })
       const { bot } = getBotByName(bot_name)
 
@@ -1220,7 +1241,7 @@ export class GenerationController {
   ): Promise<void> => {
     try {
       const { job_id } = req.params
-      
+
       if (!job_id) {
         res.status(400).json({
           message: 'job_id is required',
@@ -1262,7 +1283,7 @@ export class GenerationController {
   ): Promise<void> => {
     try {
       const { telegram_id } = req.params
-      
+
       if (!telegram_id) {
         res.status(400).json({
           message: 'telegram_id is required',

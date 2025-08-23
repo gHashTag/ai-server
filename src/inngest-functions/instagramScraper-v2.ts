@@ -56,11 +56,13 @@ let dbPool: Pool | null = null
 function getDbPool(): Pool {
   if (!dbPool) {
     const connectionString = process.env.SUPABASE_URL
-    
+
     if (!connectionString) {
-      throw new Error('Database connection string is required for Instagram scraping. Please set SUPABASE_URL environment variable.')
+      throw new Error(
+        'Database connection string is required for Instagram scraping. Please set SUPABASE_URL environment variable.'
+      )
     }
-    
+
     dbPool = new Pool({
       connectionString,
       ssl: {
@@ -68,7 +70,7 @@ function getDbPool(): Pool {
       },
     })
   }
-  
+
   return dbPool
 }
 
@@ -958,7 +960,9 @@ export const instagramScraperV2 = inngest.createFunction(
 
     // Устанавливаем дефолтные значения
     const username_or_id = String(eventData.username_or_id)
-    const initial_project_id = eventData.project_id ? Number(eventData.project_id) : undefined
+    const initial_project_id = eventData.project_id
+      ? Number(eventData.project_id)
+      : undefined
     const max_users = Number(eventData.max_users) || 50
     const max_reels_per_user = Number(eventData.max_reels_per_user) || 50
     const scrape_reels = Boolean(eventData.scrape_reels || false)
@@ -992,13 +996,17 @@ export const instagramScraperV2 = inngest.createFunction(
     // Step 1: Validate input and environment
     const validation = await step.run('validate-input', async () => {
       if (!process.env.APIFY_TOKEN || process.env.APIFY_TOKEN.trim() === '') {
-        throw new Error('Apify token is not configured. Please set APIFY_TOKEN environment variable with a valid Apify API token.')
+        throw new Error(
+          'Apify token is not configured. Please set APIFY_TOKEN environment variable with a valid Apify API token.'
+        )
       }
 
       if (!process.env.SUPABASE_URL) {
-        throw new Error('Database URL is not configured. Please set SUPABASE_URL environment variable.')
+        throw new Error(
+          'Database URL is not configured. Please set SUPABASE_URL environment variable.'
+        )
       }
-      
+
       // Log API configuration (without exposing full token)
       log.info('🔧 API Configuration:', {
         apifyTokenPresent: !!process.env.APIFY_TOKEN,
@@ -1016,7 +1024,9 @@ export const instagramScraperV2 = inngest.createFunction(
       async () => {
         // Если нет telegram_id, но есть project_id, пробуем использовать его
         if (!requester_telegram_id && initial_project_id) {
-          const existingProject = await projectManager.getProjectById(initial_project_id)
+          const existingProject = await projectManager.getProjectById(
+            initial_project_id
+          )
           if (existingProject) {
             log.info(
               `✅ Using existing project: ${existingProject.name} (ID: ${existingProject.id})`
@@ -1032,15 +1042,16 @@ export const instagramScraperV2 = inngest.createFunction(
 
         // Если есть telegram_id, создаем или получаем проект
         if (requester_telegram_id) {
-          const { project, created } = await projectManager.validateOrCreateProject(
-            initial_project_id,
-            requester_telegram_id,
-            telegram_username,
-            bot_name
-          )
+          const { project, created } =
+            await projectManager.validateOrCreateProject(
+              initial_project_id,
+              requester_telegram_id,
+              telegram_username,
+              bot_name
+            )
 
           log.info(
-            created 
+            created
               ? `✅ Created new project: ${project.name} (ID: ${project.id})`
               : `✅ Using existing project: ${project.name} (ID: ${project.id})`
           )
@@ -1064,33 +1075,38 @@ export const instagramScraperV2 = inngest.createFunction(
     const project_id = projectValidation.projectId
 
     // Step 3: Call Apify Instagram Scraper (заменили RapidAPI)
-    const apiResult = await step.run('call-apify-instagram-scraper', async () => {
-      log.info('🤖 Starting Apify Instagram scraping instead of RapidAPI...')
+    const apiResult = await step.run(
+      'call-apify-instagram-scraper',
+      async () => {
+        log.info('🤖 Starting Apify Instagram scraping instead of RapidAPI...')
 
-      // Запускаем Apify парсинг
-      const result = await triggerApifyInstagramScraping({
-        username_or_hashtag: username_or_id,
-        project_id: project_id,
-        source_type: 'competitor',
-        max_reels: max_users,
-        requester_telegram_id: 'auto-system', // Системный вызов
-      })
+        // Запускаем Apify парсинг
+        const result = await triggerApifyInstagramScraping({
+          username_or_hashtag: username_or_id,
+          project_id: project_id,
+          source_type: 'competitor',
+          max_reels: max_users,
+          requester_telegram_id: 'auto-system', // Системный вызов
+        })
 
-      // Возвращаем результат в формате совместимом с остальным кодом
-      return {
-        success: true,
-        users: [], // Apify обрабатывает данные асинхронно
-        total: 0,
-        message: 'Apify scraping initiated successfully',
-        apifyEventId: result.eventId
+        // Возвращаем результат в формате совместимом с остальным кодом
+        return {
+          success: true,
+          users: [], // Apify обрабатывает данные асинхронно
+          total: 0,
+          message: 'Apify scraping initiated successfully',
+          apifyEventId: result.eventId,
+        }
       }
-    })
+    )
 
     // Step 4: Apify processing (данные обрабатываются асинхронно)
     const processedUsers = await step.run(
       'apify-processing-status',
       async () => {
-        log.info('🤖 Apify processing initiated. Data will be processed asynchronously.')
+        log.info(
+          '🤖 Apify processing initiated. Data will be processed asynchronously.'
+        )
         log.info(`📋 Apify Event ID: ${apiResult.apifyEventId}`)
 
         // Возвращаем статус, что обработка запущена
@@ -1102,27 +1118,26 @@ export const instagramScraperV2 = inngest.createFunction(
           validationErrors: [],
           apifyEventId: apiResult.apifyEventId,
           status: 'processing',
-          message: 'Data processing via Apify initiated successfully'
+          message: 'Data processing via Apify initiated successfully',
         }
       }
     )
 
     // Step 5: Database status (данные сохраняются через Apify)
-    const saveResult = (await step.run(
-      'database-save-status',
-      async () => {
-        log.info('💾 Database save will be handled by Apify scraper asynchronously')
+    const saveResult = (await step.run('database-save-status', async () => {
+      log.info(
+        '💾 Database save will be handled by Apify scraper asynchronously'
+      )
 
-        // Возвращаем статус что сохранение будет через Apify
-        return {
-          saved: 0,
-          duplicatesSkipped: 0,
-          totalProcessed: 0,
-          status: 'pending_apify',
-          message: 'Data will be saved by Apify scraper'
-        }
+      // Возвращаем статус что сохранение будет через Apify
+      return {
+        saved: 0,
+        duplicatesSkipped: 0,
+        totalProcessed: 0,
+        status: 'pending_apify',
+        message: 'Data will be saved by Apify scraper',
       }
-    )) as DatabaseSaveResult
+    })) as DatabaseSaveResult
 
     // Step 6: Reels processing (выполняется через Apify автоматически)
     const reelsResults: any[] = []
@@ -1142,8 +1157,10 @@ export const instagramScraperV2 = inngest.createFunction(
           `get-reels-for-user-${i}`,
           async () => {
             // Reels scraping временно отключен - Apify обрабатывает это в своём workflow
-            log.warn(`⚠️ Reels scraping for individual users disabled with Apify integration`)
-            
+            log.warn(
+              `⚠️ Reels scraping for individual users disabled with Apify integration`
+            )
+
             return {
               success: false,
               error: 'Reels scraping disabled - handled by Apify workflow',
@@ -1207,7 +1224,6 @@ export const instagramScraperV2 = inngest.createFunction(
       log.info(
         `🎯 Reels scraping complete: ${totalReelsSaved} reels saved, ${totalReelsDuplicates} duplicates across ${reelsResults.length} users`
       )
-
     } else {
       log.info('⏭️ Reels scraping disabled')
     }

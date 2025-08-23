@@ -125,7 +125,9 @@ export const generateVeo3Video = inngest.createFunction(
           // Проверяем доступность Kie.ai
           const isHealthy = await kieAiService.checkHealth()
           if (!isHealthy) {
-            logger.warn('⚠️ Kie.ai API не доступен, используем fallback на Vertex AI')
+            logger.warn(
+              '⚠️ Kie.ai API не доступен, используем fallback на Vertex AI'
+            )
             throw new Error('Kie.ai unavailable, fallback to Vertex AI')
           }
 

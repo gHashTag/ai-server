@@ -113,7 +113,11 @@ export { systemHealthCheck, triggerHealthCheck, healthTestHandler } // 💚 Пр
 export { generateVeo3Video } // 🎬 VEO3 видео генерация через Kie.ai API
 export { reelsMonitor } // 🎬 NEW: Мониторинг новых рилсов каждые 4 часа
 export { networkCheckMonitor, triggerNetworkCheck, postDeployNetworkCheck } // 🌐 Network check функции
-export { deploymentAutoDetector, deploymentRecoverySystem, railwayDeploymentWebhook } // 🚀 Deployment мониторинг
+export {
+  deploymentAutoDetector,
+  deploymentRecoverySystem,
+  railwayDeploymentWebhook,
+} // 🚀 Deployment мониторинг
 export { dailyHealthReport, triggerDailyReport, handleTelegramCallbacks } // 📊 Ежедневные отчеты и интерактивность
 
 // Export everything
