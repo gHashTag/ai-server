@@ -23,9 +23,9 @@ export const sendPaymentNotification = async ({
   try {
     // Защитная проверка бота
     if (!bot || !bot.telegram) {
-      console.error('❌ Bot instance is invalid in sendPaymentNotification');
-      logger.error('[sendPaymentNotification] Bot instance is invalid');
-      return; // Не бросаем ошибку, чтобы не ломать процесс платежа
+      console.error('❌ Bot instance is invalid in sendPaymentNotification')
+      logger.error('[sendPaymentNotification] Bot instance is invalid')
+      return // Не бросаем ошибку, чтобы не ломать процесс платежа
     }
 
     let caption = '' // Инициализируем пустой строкой

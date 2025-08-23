@@ -9,8 +9,8 @@ export const sendCostMessage = async (
 ) => {
   // Защитная проверка бота
   if (!bot || !bot.telegram) {
-    console.error('❌ Bot instance is invalid in sendCostMessage');
-    throw new Error('Bot instance is required');
+    console.error('❌ Bot instance is invalid in sendCostMessage')
+    throw new Error('Bot instance is required')
   }
 
   await bot.telegram.sendMessage(
