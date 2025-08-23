@@ -185,39 +185,42 @@ export class App {
 
     this.app.get('/health', async (_req, res) => {
       try {
-        // Проверяем готовность основных компонентов
-        const health = {
-          status: 'OK',
-          timestamp: new Date().toISOString(),
-          components: {
-            server: 'healthy',
-            inngest: 'healthy', // Предполагаем что готов, если дошли до этого места
-            memory: {
-              used: Math.round(process.memoryUsage().rss / 1024 / 1024),
-              unit: 'MB'
-            }
-          },
-          uptime: Math.round(process.uptime()),
-          environment: process.env.NODE_ENV || 'development'
-        }
-
-        // Быстрая проверка доступности процесса
-        if (process.uptime() < 5) {
-          // Если сервер работает менее 5 секунд, даем время на инициализацию
-          health.status = 'STARTING'
-          health.components.server = 'starting'
-        }
-
-        const statusCode = health.status === 'OK' ? 200 : 503
-        res.status(statusCode).json(health)
+        const uptime = process.uptime()
+        const memoryUsage = process.memoryUsage()
         
+        // Определяем статус с учетом времени запуска
+        let status = 'OK'
+        let statusCode = 200
+        
+        // Если сервер работает менее 5 секунд, даем время на инициализацию
+        if (uptime < 5) {
+          status = 'STARTING'
+          statusCode = 503
+        }
+        
+        res.status(statusCode).json({
+          status,
+          timestamp: new Date().toISOString(),
+          uptime: Math.floor(uptime),
+          environment: process.env.NODE_ENV || 'unknown',
+          version: process.env.npm_package_version || '1.0.0',
+          memory: {
+            used: Math.round(memoryUsage.heapUsed / 1024 / 1024),
+            total: Math.round(memoryUsage.heapTotal / 1024 / 1024),
+          },
+          services: {
+            api: 'healthy',
+            database: 'connected', // TODO: добавить реальную проверку БД
+            inngest: 'initialized',
+          }
+        })
       } catch (error) {
-        logger.error('Healthcheck error:', error)
+        logger.error('Health check failed:', error)
         res.status(503).json({
           status: 'ERROR',
           timestamp: new Date().toISOString(),
           error: 'Health check failed',
-          uptime: Math.round(process.uptime())
+          uptime: Math.floor(process.uptime())
         })
       }
     })
