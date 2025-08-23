@@ -183,13 +183,23 @@ export class App {
       }
     })
 
-    this.app.get('/health', (_req, res) => {
+    this.app.get('/health', async (_req, res) => {
       try {
         const uptime = process.uptime()
         const memoryUsage = process.memoryUsage()
         
-        res.status(200).json({
-          status: 'OK',
+        // Определяем статус с учетом времени запуска
+        let status = 'OK'
+        let statusCode = 200
+        
+        // Если сервер работает менее 5 секунд, даем время на инициализацию
+        if (uptime < 5) {
+          status = 'STARTING'
+          statusCode = 503
+        }
+        
+        res.status(statusCode).json({
+          status,
           timestamp: new Date().toISOString(),
           uptime: Math.floor(uptime),
           environment: process.env.NODE_ENV || 'unknown',
@@ -209,7 +219,8 @@ export class App {
         res.status(503).json({
           status: 'ERROR',
           timestamp: new Date().toISOString(),
-          error: 'Health check failed'
+          error: 'Health check failed',
+          uptime: Math.floor(process.uptime())
         })
       }
     })
