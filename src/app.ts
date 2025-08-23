@@ -5,6 +5,7 @@ import cookieParser from 'cookie-parser'
 import cors from 'cors'
 import helmet from 'helmet'
 import hpp from 'hpp'
+import { createProxyMiddleware } from 'http-proxy-middleware'
 // const server = require('@nexrender/server')
 // const { start } = require('@nexrender/worker')
 import swaggerJSDoc from 'swagger-jsdoc'
@@ -129,6 +130,31 @@ export class App {
     // this.app.head('/api/inngest', (req, res) => {
     //   res.status(200).end()
     // })
+
+    // N8N Proxy - прокси все запросы /n8n/* на N8N сервер
+    const n8nPort = process.env.N8N_PORT || '5678'
+    const n8nHost = process.env.N8N_HOST || 'localhost'
+    
+    this.app.use('/n8n', createProxyMiddleware({
+      target: `http://${n8nHost}:${n8nPort}`,
+      changeOrigin: true,
+      pathRewrite: {
+        '^/n8n': '', // убираем /n8n из пути при проксировании
+      },
+      ws: true, // поддержка WebSocket для N8N
+      logLevel: 'debug',
+      onProxyReq: (proxyReq, req, res) => {
+        getDynamicLogger().info(`N8N Proxy: ${req.method} ${req.url} -> ${proxyReq.getHeader('host')}${proxyReq.path}`)
+      },
+      onError: (err, req, res) => {
+        getDynamicLogger().error(`N8N Proxy Error: ${err.message}`)
+        res.status(503).json({
+          error: 'N8N service unavailable',
+          message: 'N8N server is not responding',
+          hint: 'Make sure N8N is running on port ' + n8nPort
+        })
+      }
+    }))
 
     this.app.use('/api/inngest', inngestRouter)
     this.app.use('/api/upload', new UploadRoute().router)
