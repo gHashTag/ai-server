@@ -42,18 +42,32 @@ async function analyzeNetworkIssueWithAI(
     hour: now.getHours(),
     isWeekend: [0, 6].includes(now.getDay()),
     isBusinessHours: now.getHours() >= 9 && now.getHours() <= 18,
-    timeOfDay: now.getHours() < 6 ? 'ночь' : 
-                now.getHours() < 12 ? 'утро' :
-                now.getHours() < 18 ? 'день' : 'вечер'
+    timeOfDay:
+      now.getHours() < 6
+        ? 'ночь'
+        : now.getHours() < 12
+        ? 'утро'
+        : now.getHours() < 18
+        ? 'день'
+        : 'вечер',
   }
 
-  const failureRate = trends.totalChecks > 0 ? (trends.recentFailures / trends.totalChecks) * 100 : 0
+  const failureRate =
+    trends.totalChecks > 0
+      ? (trends.recentFailures / trends.totalChecks) * 100
+      : 0
 
   const prompt = `Ты опытный DevOps инженер. Анализируешь проблемы с доступностью production системы.
 
 КОНТЕКСТ:
-- Время: ${timeContext.timeOfDay}, ${timeContext.isWeekend ? 'выходной' : 'рабочий день'}
-- ${timeContext.isBusinessHours ? 'Рабочие часы - пользователи активны' : 'Внерабочее время'}
+- Время: ${timeContext.timeOfDay}, ${
+    timeContext.isWeekend ? 'выходной' : 'рабочий день'
+  }
+- ${
+    timeContext.isBusinessHours
+      ? 'Рабочие часы - пользователи активны'
+      : 'Внерабочее время'
+  }
 - ${isPostDeploy ? '⚠️ ПРОБЛЕМА ПОСЛЕ ДЕПЛОЯ!' : 'Плановая проверка'}
 
 ПРОБЛЕМЫ:
@@ -62,7 +76,9 @@ async function analyzeNetworkIssueWithAI(
 - Проблемные эндпоинты: ${trends.problematicEndpoints?.join(', ') || 'все'}
 
 ДЕТАЛИ ОШИБОК:
-${failedChecks.map(check => `- ${check.endpoint}: ${check.error || check.status}`).join('\n')}
+${failedChecks
+  .map(check => `- ${check.endpoint}: ${check.error || check.status}`)
+  .join('\n')}
 
 Проанализируй ситуацию и дай практичные рекомендации. Учитывай время и контекст.
 
@@ -76,13 +92,16 @@ ${failedChecks.map(check => `- ${check.endpoint}: ${check.error || check.status}
 
   try {
     const response = await openai.chat.completions.create({
-      model: process.env.DEEPSEEK_API_KEY ? 'deepseek-chat' : 'gpt-4-turbo-preview',
+      model: process.env.DEEPSEEK_API_KEY
+        ? 'deepseek-chat'
+        : 'gpt-4-turbo-preview',
       messages: [
         {
           role: 'system',
-          content: 'Ты опытный DevOps инженер. Анализируешь production проблемы практично и по делу.'
+          content:
+            'Ты опытный DevOps инженер. Анализируешь production проблемы практично и по делу.',
         },
-        { role: 'user', content: prompt }
+        { role: 'user', content: prompt },
       ],
       response_format: { type: 'json_object' },
       temperature: 0.3,
@@ -90,29 +109,57 @@ ${failedChecks.map(check => `- ${check.endpoint}: ${check.error || check.status}
     })
 
     const result = JSON.parse(response.choices[0].message.content || '{}')
-    
-    return {
-      analysis: result.analysis || 'Обнаружены проблемы с доступностью эндпоинтов',
-      recommendations: result.recommendations || ['Проверить логи сервера', 'Перезапустить сервисы'],
-      severity: result.severity || (failureRate > 50 ? 'critical' : failureRate > 20 ? 'high' : 'medium'),
-      rootCause: result.rootCause || 'Сетевые проблемы или перегрузка сервера'
-    }
 
+    return {
+      analysis:
+        result.analysis || 'Обнаружены проблемы с доступностью эндпоинтов',
+      recommendations: result.recommendations || [
+        'Проверить логи сервера',
+        'Перезапустить сервисы',
+      ],
+      severity:
+        result.severity ||
+        (failureRate > 50 ? 'critical' : failureRate > 20 ? 'high' : 'medium'),
+      rootCause: result.rootCause || 'Сетевые проблемы или перегрузка сервера',
+    }
   } catch (error) {
     logger.error('Error in network issue AI analysis:', error)
-    
+
     // Intelligent fallback
-    const severity = isPostDeploy && failureRate > 30 ? 'critical' :
-                    failureRate > 50 ? 'critical' :
-                    failureRate > 20 ? 'high' : 'medium'
+    const severity =
+      isPostDeploy && failureRate > 30
+        ? 'critical'
+        : failureRate > 50
+        ? 'critical'
+        : failureRate > 20
+        ? 'high'
+        : 'medium'
 
     return {
-      analysis: `${isPostDeploy ? 'После деплоя' : 'В ходе мониторинга'} обнаружены проблемы с доступностью ${trends.recentFailures} из ${trends.totalChecks} проверок (${failureRate.toFixed(1)}%). ${timeContext.isBusinessHours ? 'Это критично - пользователи могут быть затронуты.' : 'Проблема во внерабочее время, но требует внимания.'}`,
-      recommendations: isPostDeploy 
-        ? ['Проверить успешность деплоя', 'Рассмотреть откат изменений', 'Проверить логи приложения']
-        : ['Проверить состояние серверов', 'Изучить системные логи', 'Мониторить нагрузку'],
+      analysis: `${
+        isPostDeploy ? 'После деплоя' : 'В ходе мониторинга'
+      } обнаружены проблемы с доступностью ${trends.recentFailures} из ${
+        trends.totalChecks
+      } проверок (${failureRate.toFixed(1)}%). ${
+        timeContext.isBusinessHours
+          ? 'Это критично - пользователи могут быть затронуты.'
+          : 'Проблема во внерабочее время, но требует внимания.'
+      }`,
+      recommendations: isPostDeploy
+        ? [
+            'Проверить успешность деплоя',
+            'Рассмотреть откат изменений',
+            'Проверить логи приложения',
+          ]
+        : [
+            'Проверить состояние серверов',
+            'Изучить системные логи',
+            'Мониторить нагрузку',
+          ],
       severity,
-      rootCause: isPostDeploy ? 'Проблемы связанные с деплоем' : 'Возможная перегрузка или сетевые проблемы'
+      rootCause: isPostDeploy
+        ? 'Проблемы связанные с деплоем'
+        : 'Возможная перегрузка или сетевые проблемы',
     }
   }
 }
@@ -133,10 +180,17 @@ interface DeploymentInfo {
 
 // Критичные эндпоинты для проверки
 const CRITICAL_ENDPOINTS = [
-  { url: process.env.APP_URL || 'https://ai-server-production-4a5f.up.railway.app', name: 'Main API' },
+  {
+    url:
+      process.env.APP_URL || 'https://ai-server-production-4a5f.up.railway.app',
+    name: 'Main API',
+  },
   { url: `${process.env.APP_URL}/health`, name: 'Health Check' },
   { url: `${process.env.APP_URL}/api/user/balance`, name: 'User Balance API' },
-  { url: `${process.env.APP_URL}/api/generation/status`, name: 'Generation Status' },
+  {
+    url: `${process.env.APP_URL}/api/generation/status`,
+    name: 'Generation Status',
+  },
 ]
 
 /**
@@ -158,7 +212,7 @@ async function checkNetworkEndpoints(): Promise<NetworkCheckResult[]> {
         signal: controller.signal,
         headers: {
           'User-Agent': 'NetworkMonitor/1.0',
-        }
+        },
       })
 
       clearTimeout(timeoutId)
@@ -169,18 +223,17 @@ async function checkNetworkEndpoints(): Promise<NetworkCheckResult[]> {
         status: response.ok ? 'success' : 'failure',
         responseTime,
         error: response.ok ? undefined : `HTTP ${response.status}`,
-        timestamp: new Date()
+        timestamp: new Date(),
       }
-
     } catch (error: any) {
       const responseTime = Date.now() - startTime
-      
+
       result = {
         endpoint: endpoint.name,
         status: error.name === 'AbortError' ? 'timeout' : 'failure',
         responseTime,
         error: error.message,
-        timestamp: new Date()
+        timestamp: new Date(),
       }
     }
 
@@ -196,7 +249,7 @@ async function checkNetworkEndpoints(): Promise<NetworkCheckResult[]> {
 async function checkRecentDeployments(): Promise<DeploymentInfo | null> {
   try {
     const client = await dbPool.connect()
-    
+
     // Проверяем последние события деплоя в логах (если они есть)
     const deployQuery = await client.query(`
       SELECT 
@@ -216,7 +269,7 @@ async function checkRecentDeployments(): Promise<DeploymentInfo | null> {
       return {
         version: row.version,
         deployedAt: new Date(row.created_at),
-        successful: row.status === 'success'
+        successful: row.status === 'success',
       }
     }
 
@@ -230,29 +283,36 @@ async function checkRecentDeployments(): Promise<DeploymentInfo | null> {
 /**
  * Сохранение результатов проверки в БД
  */
-async function saveNetworkCheckResults(results: NetworkCheckResult[]): Promise<void> {
+async function saveNetworkCheckResults(
+  results: NetworkCheckResult[]
+): Promise<void> {
   try {
     const client = await dbPool.connect()
 
     for (const result of results) {
-      await client.query(`
+      await client.query(
+        `
         INSERT INTO network_check_history 
         (endpoint, status, response_time, error_message, checked_at)
         VALUES ($1, $2, $3, $4, $5)
         ON CONFLICT DO NOTHING
-      `, [
-        result.endpoint,
-        result.status,
-        result.responseTime,
-        result.error,
-        result.timestamp
-      ])
+      `,
+        [
+          result.endpoint,
+          result.status,
+          result.responseTime,
+          result.error,
+          result.timestamp,
+        ]
+      )
     }
 
     client.release()
   } catch (error) {
     // Если таблица не существует, создаем её
-    if (error.message.includes('relation "network_check_history" does not exist')) {
+    if (
+      error.message.includes('relation "network_check_history" does not exist')
+    ) {
       await createNetworkCheckTable()
       // Повторяем попытку
       await saveNetworkCheckResults(results)
@@ -318,13 +378,14 @@ async function analyzeNetworkTrends(): Promise<{
     const row = trendQuery.rows[0]
     const totalChecks = parseInt(row.total_checks) || 0
     const recentFailures = parseInt(row.recent_failures) || 0
-    const failureRate = totalChecks > 0 ? (recentFailures / totalChecks) * 100 : 0
+    const failureRate =
+      totalChecks > 0 ? (recentFailures / totalChecks) * 100 : 0
 
     return {
       recentFailures,
       totalChecks,
       failureRate,
-      problematicEndpoints: row.problematic_endpoints || []
+      problematicEndpoints: row.problematic_endpoints || [],
     }
   } catch (error) {
     logger.error('Failed to analyze network trends:', error)
@@ -332,7 +393,7 @@ async function analyzeNetworkTrends(): Promise<{
       recentFailures: 0,
       totalChecks: 0,
       failureRate: 0,
-      problematicEndpoints: []
+      problematicEndpoints: [],
     }
   }
 }
@@ -373,8 +434,9 @@ export const networkCheckMonitor = inngest.createFunction(
     // Step 5: Определение критичности
     const failedChecks = checkResults.filter(r => r.status !== 'success')
     const isCritical = failedChecks.length > 0
-    const isPostDeploy = deploymentInfo && 
-      (Date.now() - deploymentInfo.deployedAt.getTime()) < 30 * 60 * 1000 // 30 минут после деплоя
+    const isPostDeploy =
+      deploymentInfo &&
+      Date.now() - deploymentInfo.deployedAt.getTime() < 30 * 60 * 1000 // 30 минут после деплоя
 
     // Step 6: Отправка уведомлений
     if (isCritical || (isPostDeploy && trends.failureRate > 10)) {
@@ -393,19 +455,29 @@ export const networkCheckMonitor = inngest.createFunction(
         }
 
         message += `🕐 Время: ${new Date().toLocaleString('ru-RU')}\n`
-        
+
         if (deploymentInfo && isPostDeploy) {
-          message += `🚀 Деплой: ${deploymentInfo.version || 'Unknown'} (${Math.round((Date.now() - deploymentInfo.deployedAt.getTime()) / 1000 / 60)} мин назад)\n`
+          message += `🚀 Деплой: ${
+            deploymentInfo.version || 'Unknown'
+          } (${Math.round(
+            (Date.now() - deploymentInfo.deployedAt.getTime()) / 1000 / 60
+          )} мин назад)\n`
         }
 
         message += `\n📊 Статистика за 2 часа:\n`
         message += `• Всего проверок: ${trends.totalChecks}\n`
-        message += `• Неудачных: ${trends.recentFailures} (${trends.failureRate.toFixed(1)}%)\n\n`
+        message += `• Неудачных: ${
+          trends.recentFailures
+        } (${trends.failureRate.toFixed(1)}%)\n\n`
 
         message += `🔍 Результаты проверки:\n`
         checkResults.forEach(result => {
-          const statusEmoji = result.status === 'success' ? '✅' : 
-                             result.status === 'timeout' ? '⏰' : '❌'
+          const statusEmoji =
+            result.status === 'success'
+              ? '✅'
+              : result.status === 'timeout'
+              ? '⏰'
+              : '❌'
           message += `${statusEmoji} ${result.endpoint} (${result.responseTime}ms)\n`
           if (result.error) {
             message += `   └ ${result.error}\n`
@@ -413,14 +485,20 @@ export const networkCheckMonitor = inngest.createFunction(
         })
 
         if (trends.problematicEndpoints.length > 0) {
-          message += `\n⚠️ Проблемные эндпоинты:\n${trends.problematicEndpoints.map(e => `• ${e}`).join('\n')}\n`
+          message += `\n⚠️ Проблемные эндпоинты:\n${trends.problematicEndpoints
+            .map(e => `• ${e}`)
+            .join('\n')}\n`
         }
 
         // Получаем AI анализ ситуации
-        const aiContext = await analyzeNetworkIssueWithAI(failedChecks, trends, isPostDeploy)
-        
+        const aiContext = await analyzeNetworkIssueWithAI(
+          failedChecks,
+          trends,
+          isPostDeploy
+        )
+
         message += `\n🤖 АНАЛИЗ AI:\n${aiContext.analysis}\n`
-        
+
         if (aiContext.recommendations.length > 0) {
           message += `\n💡 РЕКОМЕНДАЦИИ:\n`
           aiContext.recommendations.forEach((rec, i) => {
@@ -438,25 +516,31 @@ export const networkCheckMonitor = inngest.createFunction(
         const keyboard = {
           inline_keyboard: [
             [
-              { text: '🔄 Перезапустить проверку', callback_data: 'rerun_network_check' },
-              { text: '📊 Подробная статистика', callback_data: 'network_stats' }
+              {
+                text: '🔄 Перезапустить проверку',
+                callback_data: 'rerun_network_check',
+              },
+              {
+                text: '📊 Подробная статистика',
+                callback_data: 'network_stats',
+              },
             ],
             [
               { text: '🛠 Попробовать исправить', callback_data: 'attempt_fix' },
-              { text: '📞 Вызвать админа', callback_data: 'call_admin' }
+              { text: '📞 Вызвать админа', callback_data: 'call_admin' },
             ],
             [
               { text: '📈 История проверок', callback_data: 'check_history' },
-              { text: '🔍 Детали ошибок', callback_data: 'error_details' }
-            ]
-          ]
+              { text: '🔍 Детали ошибок', callback_data: 'error_details' },
+            ],
+          ],
         }
 
         await bot.api.sendMessage(process.env.ADMIN_CHAT_ID!, message, {
           reply_markup: keyboard,
-          parse_mode: 'HTML'
+          parse_mode: 'HTML',
         })
-        
+
         if (isCritical) {
           // Дублируем критические ошибки
           await bot.api.sendMessage(
@@ -465,10 +549,10 @@ export const networkCheckMonitor = inngest.createFunction(
           )
         }
 
-        logger.info('🚨 Network check alert отправлен', { 
-          critical: isCritical, 
+        logger.info('🚨 Network check alert отправлен', {
+          critical: isCritical,
           failedEndpoints: failedChecks.length,
-          postDeploy: isPostDeploy 
+          postDeploy: isPostDeploy,
         })
       })
     }
@@ -481,7 +565,7 @@ export const networkCheckMonitor = inngest.createFunction(
       failedChecks: failedChecks.length,
       trends,
       deploymentInfo,
-      alertSent: isCritical || (isPostDeploy && trends.failureRate > 10)
+      alertSent: isCritical || (isPostDeploy && trends.failureRate > 10),
     }
   }
 )
@@ -504,7 +588,7 @@ export const triggerNetworkCheck = inngest.createFunction(
       data: {
         function_id: 'network-check-monitor',
         trigger: 'manual',
-        userId: event.data.userId
+        userId: event.data.userId,
       },
     })
 
@@ -539,9 +623,9 @@ export const postDeployNetworkCheck = inngest.createFunction(
       const results = await step.run(`post-deploy-check-${i + 1}`, async () => {
         return await checkNetworkEndpoints()
       })
-      
+
       allResults.push(results)
-      
+
       if (i < 2) {
         await step.sleep(`wait-between-checks-${i}`, '1m')
       }
@@ -558,7 +642,9 @@ export const postDeployNetworkCheck = inngest.createFunction(
 
       let message = '🚀 POST-DEPLOY NETWORK CHECK REPORT\n\n'
       message += `📦 Версия: ${event.data.version || 'Unknown'}\n`
-      message += `🕐 Время деплоя: ${new Date(event.data.deployedAt || Date.now()).toLocaleString('ru-RU')}\n\n`
+      message += `🕐 Время деплоя: ${new Date(
+        event.data.deployedAt || Date.now()
+      ).toLocaleString('ru-RU')}\n\n`
 
       message += `📊 Результат 3-х проверок:\n`
       message += `• Всего проверок: ${flatResults.length}\n`
@@ -570,7 +656,9 @@ export const postDeployNetworkCheck = inngest.createFunction(
         message += `❌ Проблемные эндпоинты:\n`
         const problematicEndpoints = new Set(failedResults.map(r => r.endpoint))
         problematicEndpoints.forEach(endpoint => {
-          const endpointFailures = failedResults.filter(r => r.endpoint === endpoint).length
+          const endpointFailures = failedResults.filter(
+            r => r.endpoint === endpoint
+          ).length
           message += `• ${endpoint}: ${endpointFailures}/3 неудач\n`
         })
         message += '\n'
@@ -587,43 +675,70 @@ export const postDeployNetworkCheck = inngest.createFunction(
       }
 
       message += status
-      message += `\n\n#post_deploy #network_check #${failureRate === 0 ? 'success' : failureRate < 30 ? 'warning' : 'critical'}`
+      message += `\n\n#post_deploy #network_check #${
+        failureRate === 0
+          ? 'success'
+          : failureRate < 30
+          ? 'warning'
+          : 'critical'
+      }`
 
       // Кнопки для post-deploy отчета
       const postDeployKeyboard = {
-        inline_keyboard: failureRate === 0 
-          ? [
-              [
-                { text: '✅ Отлично!', callback_data: 'deploy_success_ack' },
-                { text: '📊 Подробности', callback_data: 'post_deploy_details' }
+        inline_keyboard:
+          failureRate === 0
+            ? [
+                [
+                  { text: '✅ Отлично!', callback_data: 'deploy_success_ack' },
+                  {
+                    text: '📊 Подробности',
+                    callback_data: 'post_deploy_details',
+                  },
+                ],
               ]
-            ]
-          : [
-              [
-                { text: '🔄 Повторить проверку', callback_data: 'retry_post_deploy' },
-                { text: '🚀 Откатить деплой', callback_data: 'rollback_deployment' }
+            : [
+                [
+                  {
+                    text: '🔄 Повторить проверку',
+                    callback_data: 'retry_post_deploy',
+                  },
+                  {
+                    text: '🚀 Откатить деплой',
+                    callback_data: 'rollback_deployment',
+                  },
+                ],
+                [
+                  {
+                    text: '🛠 Попробовать исправить',
+                    callback_data: 'fix_post_deploy',
+                  },
+                  {
+                    text: '📞 Вызвать разработчика',
+                    callback_data: 'call_developer',
+                  },
+                ],
               ],
-              [
-                { text: '🛠 Попробовать исправить', callback_data: 'fix_post_deploy' },
-                { text: '📞 Вызвать разработчика', callback_data: 'call_developer' }
-              ]
-            ]
       }
 
       await bot.api.sendMessage(process.env.ADMIN_CHAT_ID!, message, {
         reply_markup: postDeployKeyboard,
-        parse_mode: 'HTML'
+        parse_mode: 'HTML',
       })
 
       // Критические проблемы дублируем админу
       if (failureRate >= 30) {
         await bot.api.sendMessage(
           process.env.ADMIN_TELEGRAM_ID!,
-          `🚨 КРИТИЧЕСКИЕ ПРОБЛЕМЫ ПОСЛЕ ДЕПЛОЯ!\n\nПроцент неудач: ${failureRate.toFixed(1)}%\n\nРекомендуется откат!`
+          `🚨 КРИТИЧЕСКИЕ ПРОБЛЕМЫ ПОСЛЕ ДЕПЛОЯ!\n\nПроцент неудач: ${failureRate.toFixed(
+            1
+          )}%\n\nРекомендуется откат!`
         )
       }
 
-      logger.info('📋 Post-deploy report отправлен', { failureRate, version: event.data.version })
+      logger.info('📋 Post-deploy report отправлен', {
+        failureRate,
+        version: event.data.version,
+      })
     })
 
     return {
@@ -632,7 +747,12 @@ export const postDeployNetworkCheck = inngest.createFunction(
       totalChecks: flatResults.length,
       failedChecks: failedResults.length,
       failureRate,
-      status: failureRate === 0 ? 'success' : failureRate < 30 ? 'warning' : 'critical'
+      status:
+        failureRate === 0
+          ? 'success'
+          : failureRate < 30
+          ? 'warning'
+          : 'critical',
     }
   }
 )

@@ -10,7 +10,7 @@ This guide documents common administrative tasks requiring manual SQL execution 
 
 **Method:** Insert a record directly into the `payments_v2` table.
 
-**Core Logic:** The system identifies the user's subscription status based on the `subscription_type` field of their *last completed* payment record in `payments_v2`. For `NEUROTESTER`, access is granted permanently regardless of the payment date or star balance. For other types, date checks apply.
+**Core Logic:** The system identifies the user's subscription status based on the `subscription_type` field of their _last completed_ payment record in `payments_v2`. For `NEUROTESTER`, access is granted permanently regardless of the payment date or star balance. For other types, date checks apply.
 
 **Steps:**
 
@@ -63,9 +63,10 @@ This guide documents common administrative tasks requiring manual SQL execution 
       EXTRACT(EPOCH FROM NOW())::bigint     -- << ADJUST THIS inv_id generation (provides basic uniqueness)
     );
     ```
+
 5.  **Execute Query:** Run the prepared `INSERT` statement in the Supabase SQL Editor.
 6.  **Verify:** Optionally, query the `payments_v2` table again for the user to confirm the record was inserted correctly. The user should now have access based on the granted `NEUROTESTER` status.
-7.  **Invalidate Cache (Optional but Recommended):** If your system uses balance caching (like `getUserBalance.ts` does), manually invalidate the cache for this user if the operation *could* affect balance (though `NEUROTESTER` grant usually doesn't). This might involve calling a specific function or clearing a cache key if accessible.
+7.  **Invalidate Cache (Optional but Recommended):** If your system uses balance caching (like `getUserBalance.ts` does), manually invalidate the cache for this user if the operation _could_ affect balance (though `NEUROTESTER` grant usually doesn't). This might involve calling a specific function or clearing a cache key if accessible.
 
 **Example for user `1483886716` (using defaults, ADJUST AS NEEDED):**
 
@@ -76,4 +77,4 @@ VALUES ('1483886716', 'system_grant', 0, 0, 'SYSTEM', 'COMPLETED', 'BONUS', 'Man
 
 ---
 
-*Remember: With great power comes great responsibility. Use manual SQL modifications wisely.* 
+_Remember: With great power comes great responsibility. Use manual SQL modifications wisely._

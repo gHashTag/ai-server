@@ -1,8 +1,10 @@
-const { triggerApifyInstagramScraping } = require('./dist/inngest-functions/instagramApifyScraper')
+const {
+  triggerApifyInstagramScraping,
+} = require('./dist/inngest-functions/instagramApifyScraper')
 
 async function testFullAutomationCycle() {
   console.log('🧪 Тестируем полный цикл автоматизации: парсинг → доставка')
-  
+
   try {
     // Запускаем парсинг с auto-system (это должно автоматически запустить доставку)
     const parseResult = await triggerApifyInstagramScraping({
@@ -11,27 +13,31 @@ async function testFullAutomationCycle() {
       source_type: 'competitor',
       max_reels: 5,
       requester_telegram_id: 'auto-system', // КЛЮЧЕВОЙ параметр для автоматического триггера
-      bot_name: 'neuro_blogger_bot'
+      bot_name: 'neuro_blogger_bot',
     })
-    
+
     console.log('✅ Парсинг запущен:', parseResult.eventId)
-    console.log('⏳ Парсинг должен автоматически запустить доставку после завершения')
+    console.log(
+      '⏳ Парсинг должен автоматически запустить доставку после завершения'
+    )
     console.log('📊 Event ID для отслеживания:', parseResult.eventId)
-    
+
     // Проверяем статус через 2 минуты
     setTimeout(async () => {
       try {
         const fetch = (await import('node-fetch')).default
-        const response = await fetch(`http://localhost:8288/v1/events/${parseResult.eventId}/runs`)
+        const response = await fetch(
+          `http://localhost:8288/v1/events/${parseResult.eventId}/runs`
+        )
         const runs = await response.json()
-        
+
         if (runs && runs.data && runs.data.length > 0) {
           const run = runs.data[0]
           console.log('\n📊 Статус выполнения через 2 минуты:')
           console.log(`• Status: ${run.status}`)
           console.log(`• Started: ${run.run_started_at}`)
           console.log(`• Ended: ${run.ended_at || 'Still running'}`)
-          
+
           if (run.status === 'Completed') {
             console.log('✅ Парсинг завершен! Проверим доставки...')
             checkDeliveryHistory()
@@ -43,12 +49,11 @@ async function testFullAutomationCycle() {
         console.error('❌ Ошибка проверки статуса:', error.message)
       }
     }, 120000) // 2 минуты
-    
+
     // Проверяем доставки через 5 минут
     setTimeout(() => {
       checkDeliveryHistory()
     }, 300000) // 5 минут
-    
   } catch (error) {
     console.error('❌ Ошибка запуска теста:', error.message)
   }
@@ -57,20 +62,21 @@ async function testFullAutomationCycle() {
 async function checkDeliveryHistory() {
   try {
     console.log('\n🔍 Проверяем историю доставок...')
-    
+
     const { Pool } = require('pg')
     const dbPool = new Pool({
       connectionString: process.env.NEON_DATABASE_URL,
-      ssl: { rejectUnauthorized: false }
+      ssl: { rejectUnauthorized: false },
     })
-    
+
     const client = await dbPool.connect()
-    
+
     // Проверяем доставки за последние 30 минут
     const thirtyMinutesAgo = new Date()
     thirtyMinutesAgo.setMinutes(thirtyMinutesAgo.getMinutes() - 30)
-    
-    const result = await client.query(`
+
+    const result = await client.query(
+      `
       SELECT 
         cdh.*,
         cs.competitor_username,
@@ -79,12 +85,16 @@ async function checkDeliveryHistory() {
       LEFT JOIN competitor_subscriptions cs ON cdh.subscription_id = cs.id
       WHERE cdh.created_at >= $1
       ORDER BY cdh.created_at DESC
-    `, [thirtyMinutesAgo])
-    
+    `,
+      [thirtyMinutesAgo]
+    )
+
     client.release()
-    
-    console.log(`📬 Найдено доставок за последние 30 минут: ${result.rows.length}`)
-    
+
+    console.log(
+      `📬 Найдено доставок за последние 30 минут: ${result.rows.length}`
+    )
+
     if (result.rows.length > 0) {
       console.log('\n📋 Детали доставок:')
       result.rows.forEach((delivery, index) => {
@@ -107,7 +117,6 @@ async function checkDeliveryHistory() {
       console.log('  2. Работу competitorDelivery функции')
       console.log('  3. Логи Inngest')
     }
-    
   } catch (error) {
     console.error('❌ Ошибка проверки доставок:', error.message)
   }
@@ -119,9 +128,9 @@ async function showCurrentSubscriptions() {
     const { Pool } = require('pg')
     const dbPool = new Pool({
       connectionString: process.env.NEON_DATABASE_URL,
-      ssl: { rejectUnauthorized: false }
+      ssl: { rejectUnauthorized: false },
     })
-    
+
     const client = await dbPool.connect()
     const result = await client.query(`
       SELECT 
@@ -134,7 +143,7 @@ async function showCurrentSubscriptions() {
       WHERE is_active = true
     `)
     client.release()
-    
+
     console.log('\n📋 Активные подписки:')
     result.rows.forEach((sub, index) => {
       console.log(`${index + 1}. @${sub.competitor_username}`)
@@ -142,7 +151,6 @@ async function showCurrentSubscriptions() {
       console.log(`   • Max reels: ${sub.max_reels}`)
       console.log(`   • Format: ${sub.delivery_format}`)
     })
-    
   } catch (error) {
     console.error('❌ Ошибка получения подписок:', error.message)
   }

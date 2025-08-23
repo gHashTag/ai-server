@@ -201,7 +201,7 @@ async function analyzeProcessVideoGeneration() {
       })
       
       // Ищем строку с принудительной конвертацией
-      const forceConvertMatch = content.match(/veoAspectRatio.*=.*'16:9'.*(?:\\/\\/.*)?/g)
+      const forceConvertMatch = content.match(/veoAspectRatio.*=.*'16:9'.*(?:\/\/.*)?/g)
       if (forceConvertMatch) {
         console.log('\\n🚨 НАЙДЕНА ПРОБЛЕМА:')
         console.log(`   ${forceConvertMatch[0]}`)
@@ -245,7 +245,7 @@ function suggestSolutions() {
   console.log('\\n🚀 НЕМЕДЛЕННОЕ ДЕЙСТВИЕ:')
   console.log('   curl -X POST http://localhost:4000/generate/text-to-video \\\\')
   console.log('     -H "Content-Type: application/json" \\\\')
-  console.log('     -d \\'{')  
+  console.log('     -d \\'{\\\\
   console.log('       "prompt": "Beautiful sunset, vertical shot",')
   console.log('       "videoModel": "haiper-video-2",')
   console.log('       "duration": 3,')

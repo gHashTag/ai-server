@@ -162,7 +162,9 @@ export const competitorDelivery = inngest.createFunction(
             const { bot } = getBotByName(subscriber.bot_name)
 
             if (!bot) {
-              log.error(`❌ Bot not found for subscriber: ${subscriber.bot_name}`)
+              log.error(
+                `❌ Bot not found for subscriber: ${subscriber.bot_name}`
+              )
               continue
             }
 

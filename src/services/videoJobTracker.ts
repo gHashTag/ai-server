@@ -57,13 +57,17 @@ export function createVideoJob(
     created_at: new Date(),
     progress: {
       stage: 'Initializing',
-      percentage: 0
-    }
+      percentage: 0,
+    },
   }
 
   videoJobs.set(jobId, job)
-  logger.info(`📹 Created video job: ${jobId}`, { type, telegram_id, video_model })
-  
+  logger.info(`📹 Created video job: ${jobId}`, {
+    type,
+    telegram_id,
+    video_model,
+  })
+
   return job
 }
 
@@ -83,7 +87,7 @@ export function updateVideoJobStatus(
 
   // Обновляем статус
   job.status = status
-  
+
   // Устанавливаем временные метки
   if (status === 'processing' && !job.started_at) {
     job.started_at = new Date()
@@ -97,7 +101,7 @@ export function updateVideoJobStatus(
 
   videoJobs.set(jobId, job)
   logger.info(`📹 Updated video job: ${jobId}`, { status, updates })
-  
+
   return job
 }
 
@@ -113,15 +117,17 @@ export function getVideoJobStatus(jobId: string): VideoJob | null {
  */
 export function getUserVideoJobs(telegram_id: string): VideoJob[] {
   const userJobs: VideoJob[] = []
-  
+
   for (const job of videoJobs.values()) {
     if (job.telegram_id === telegram_id) {
       userJobs.push(job)
     }
   }
-  
+
   // Сортируем по времени создания (новые сначала)
-  return userJobs.sort((a, b) => b.created_at.getTime() - a.created_at.getTime())
+  return userJobs.sort(
+    (a, b) => b.created_at.getTime() - a.created_at.getTime()
+  )
 }
 
 /**
@@ -158,7 +164,7 @@ export function updateVideoJobProgress(
 
   job.progress = { ...job.progress, ...progress }
   videoJobs.set(jobId, job)
-  
+
   return job
 }
 
@@ -170,13 +176,13 @@ export function setVideoJobProvider(
   provider: VideoJob['provider'],
   provider_job_id?: string
 ): VideoJob | null {
-  return updateVideoJobStatus(jobId, 'processing', { 
-    provider, 
+  return updateVideoJobStatus(jobId, 'processing', {
+    provider,
     provider_job_id,
     progress: {
       stage: `Processing with ${provider}`,
-      percentage: 10
-    }
+      percentage: 10,
+    },
   })
 }
 
@@ -191,19 +197,20 @@ export function getVideoJobsStats() {
     completed: 0,
     failed: 0,
     by_type: {} as Record<string, number>,
-    by_provider: {} as Record<string, number>
+    by_provider: {} as Record<string, number>,
   }
 
   for (const job of videoJobs.values()) {
     // Статусы
     stats[job.status]++
-    
+
     // По типам
     stats.by_type[job.type] = (stats.by_type[job.type] || 0) + 1
-    
+
     // По провайдерам
     if (job.provider) {
-      stats.by_provider[job.provider] = (stats.by_provider[job.provider] || 0) + 1
+      stats.by_provider[job.provider] =
+        (stats.by_provider[job.provider] || 0) + 1
     }
   }
 
@@ -218,7 +225,10 @@ export function cleanupOldVideoJobs(): number {
   let deletedCount = 0
 
   for (const [jobId, job] of videoJobs.entries()) {
-    if (job.created_at < oneDayAgo && (job.status === 'completed' || job.status === 'failed')) {
+    if (
+      job.created_at < oneDayAgo &&
+      (job.status === 'completed' || job.status === 'failed')
+    ) {
       videoJobs.delete(jobId)
       deletedCount++
     }

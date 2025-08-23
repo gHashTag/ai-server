@@ -10,13 +10,13 @@ async function finalReelsAnalysisDemo() {
   console.log('🎬 === ФИНАЛЬНАЯ ДЕМОНСТРАЦИЯ АНАЛИЗА РИЛЗ КОНКУРЕНТОВ ===\n')
 
   const connectionString = process.env.SUPABASE_URL
-  
+
   if (!connectionString) {
     console.error('❌ Database connection string is required')
     console.error('Please set SUPABASE_URL in your .env file')
     process.exit(1)
   }
-  
+
   const pool = new Pool({
     connectionString,
     ssl: { rejectUnauthorized: false },
@@ -27,11 +27,11 @@ async function finalReelsAnalysisDemo() {
 
   try {
     const client = await pool.connect()
-    
+
     try {
       console.log('📊 ШАГ 1: АНАЛИЗ БАЗЫ ДАННЫХ')
-      console.log('=' .repeat(50))
-      
+      console.log('='.repeat(50))
+
       // Общая статистика
       const stats = await client.query(`
         SELECT 
@@ -41,32 +41,51 @@ async function finalReelsAnalysisDemo() {
           (SELECT AVG(like_count) FROM instagram_user_reels WHERE like_count > 0) as avg_likes,
           (SELECT AVG(play_count) FROM instagram_user_reels WHERE play_count > 0) as avg_views
       `)
-      
+
       const dbStats = stats.rows[0]
       console.log('📈 Общая статистика базы данных:')
-      console.log(`   📹 Всего рилз: ${parseInt(dbStats.total_reels).toLocaleString()}`)
+      console.log(
+        `   📹 Всего рилз: ${parseInt(dbStats.total_reels).toLocaleString()}`
+      )
       console.log(`   👥 Уникальных пользователей: ${dbStats.unique_users}`)
-      console.log(`   🎯 Отслеживаемых конкурентов: ${dbStats.competitors_tracked}`)
-      console.log(`   👍 Средние лайки: ${dbStats.avg_likes ? Math.round(dbStats.avg_likes).toLocaleString() : 'N/A'}`)
-      console.log(`   👀 Средние просмотры: ${dbStats.avg_views ? Math.round(dbStats.avg_views).toLocaleString() : 'N/A'}`)
+      console.log(
+        `   🎯 Отслеживаемых конкурентов: ${dbStats.competitors_tracked}`
+      )
+      console.log(
+        `   👍 Средние лайки: ${
+          dbStats.avg_likes
+            ? Math.round(dbStats.avg_likes).toLocaleString()
+            : 'N/A'
+        }`
+      )
+      console.log(
+        `   👀 Средние просмотры: ${
+          dbStats.avg_views
+            ? Math.round(dbStats.avg_views).toLocaleString()
+            : 'N/A'
+        }`
+      )
 
       console.log('\n🏆 ШАГ 2: СИМУЛЯЦИЯ ФУНКЦИИ analyzeCompetitorReels')
-      console.log('=' .repeat(50))
-      
+      console.log('='.repeat(50))
+
       // Симулируем вызов функции analyzeCompetitorReels
       const targetUsername = 'lips_for_kiss' // Выберем популярного пользователя
       const maxReels = 10
       const daysBack = 14
-      
+
       console.log(`🎯 Анализируем пользователя: ${targetUsername}`)
       console.log(`📊 Параметры: max_reels=${maxReels}, days_back=${daysBack}`)
-      
+
       // Шаг 1: Получаем рилзы пользователя
       console.log('\n📝 Валидация входных данных... ✅')
       console.log('📝 Валидация проекта... ✅')
-      console.log('🎬 Получение рилз из базы данных (симуляция Instagram API)...')
-      
-      const userReels = await client.query(`
+      console.log(
+        '🎬 Получение рилз из базы данных (симуляция Instagram API)...'
+      )
+
+      const userReels = await client.query(
+        `
         SELECT *,
                (like_count + comment_count) as engagement,
                CASE 
@@ -78,7 +97,9 @@ async function finalReelsAnalysisDemo() {
         WHERE owner_username = $1 
         ORDER BY taken_at_timestamp DESC 
         LIMIT $2
-      `, [targetUsername, maxReels])
+      `,
+        [targetUsername, maxReels]
+      )
 
       console.log(`✅ Найдено рилз: ${userReels.rows.length}`)
       if (userReels.rows.length === 0) {
@@ -91,9 +112,12 @@ async function finalReelsAnalysisDemo() {
           LIMIT 1
         `)
         const altUsername = anyUser.rows[0]?.owner_username
-        console.log(`⚠️ Рилз для ${targetUsername} не найдены. Используем ${altUsername}`)
-        
-        const altReels = await client.query(`
+        console.log(
+          `⚠️ Рилз для ${targetUsername} не найдены. Используем ${altUsername}`
+        )
+
+        const altReels = await client.query(
+          `
           SELECT *,
                  (like_count + comment_count) as engagement,
                  CASE 
@@ -105,45 +129,72 @@ async function finalReelsAnalysisDemo() {
           WHERE owner_username = $1 
           ORDER BY taken_at_timestamp DESC 
           LIMIT $2
-        `, [altUsername, maxReels])
-        
+        `,
+          [altUsername, maxReels]
+        )
+
         userReels.rows = altReels.rows
-        console.log(`✅ Найдено рилз для ${altUsername}: ${userReels.rows.length}`)
+        console.log(
+          `✅ Найдено рилз для ${altUsername}: ${userReels.rows.length}`
+        )
       }
 
       // Шаг 2: Фильтрация по датам
       console.log('\n📅 Фильтрация рилз по последним 14 дням...')
       const now = new Date()
-      const cutoffTimestamp = Math.floor((now.getTime() - daysBack * 24 * 60 * 60 * 1000) / 1000)
-      
-      const filteredReels = userReels.rows.filter(reel => 
-        reel.taken_at_timestamp > cutoffTimestamp
+      const cutoffTimestamp = Math.floor(
+        (now.getTime() - daysBack * 24 * 60 * 60 * 1000) / 1000
       )
-      
-      console.log(`📊 Рилз после фильтрации: ${filteredReels.length} из ${userReels.rows.length}`)
-      console.log(`🗓️ Cutoff date: ${new Date(cutoffTimestamp * 1000).toLocaleDateString()}`)
+
+      const filteredReels = userReels.rows.filter(
+        reel => reel.taken_at_timestamp > cutoffTimestamp
+      )
+
+      console.log(
+        `📊 Рилз после фильтрации: ${filteredReels.length} из ${userReels.rows.length}`
+      )
+      console.log(
+        `🗓️ Cutoff date: ${new Date(
+          cutoffTimestamp * 1000
+        ).toLocaleDateString()}`
+      )
 
       // Если мало данных за 14 дней, берем все
-      const reelsToAnalyze = filteredReels.length > 0 ? filteredReels : userReels.rows.slice(0, 5)
+      const reelsToAnalyze =
+        filteredReels.length > 0 ? filteredReels : userReels.rows.slice(0, 5)
       console.log(`🎯 Анализируем: ${reelsToAnalyze.length} рилз`)
 
       // Шаг 3: Расчет метрик
       console.log('\n📈 Расчет engagement метрик...')
-      const totalViews = reelsToAnalyze.reduce((sum, reel) => sum + (reel.play_count || 0), 0)
-      const totalLikes = reelsToAnalyze.reduce((sum, reel) => sum + (reel.like_count || 0), 0)
-      const totalComments = reelsToAnalyze.reduce((sum, reel) => sum + (reel.comment_count || 0), 0)
-      const avgEngagement = reelsToAnalyze.length > 0 
-        ? reelsToAnalyze.reduce((sum, reel) => {
-            const engagement = ((reel.like_count || 0) + (reel.comment_count || 0)) / Math.max(reel.play_count || 1, 1)
-            return sum + engagement
-          }, 0) / reelsToAnalyze.length
-        : 0
+      const totalViews = reelsToAnalyze.reduce(
+        (sum, reel) => sum + (reel.play_count || 0),
+        0
+      )
+      const totalLikes = reelsToAnalyze.reduce(
+        (sum, reel) => sum + (reel.like_count || 0),
+        0
+      )
+      const totalComments = reelsToAnalyze.reduce(
+        (sum, reel) => sum + (reel.comment_count || 0),
+        0
+      )
+      const avgEngagement =
+        reelsToAnalyze.length > 0
+          ? reelsToAnalyze.reduce((sum, reel) => {
+              const engagement =
+                ((reel.like_count || 0) + (reel.comment_count || 0)) /
+                Math.max(reel.play_count || 1, 1)
+              return sum + engagement
+            }, 0) / reelsToAnalyze.length
+          : 0
 
       console.log('✅ Метрики рассчитаны:')
       console.log(`   👀 Общие просмотры: ${totalViews.toLocaleString()}`)
       console.log(`   👍 Общие лайки: ${totalLikes.toLocaleString()}`)
       console.log(`   💬 Общие коменты: ${totalComments.toLocaleString()}`)
-      console.log(`   📊 Средний engagement: ${(avgEngagement * 100).toFixed(4)}%`)
+      console.log(
+        `   📊 Средний engagement: ${(avgEngagement * 100).toFixed(4)}%`
+      )
 
       // Шаг 4: Сортировка по engagement
       console.log('\n🏆 Сортировка по engagement...')
@@ -156,17 +207,33 @@ async function finalReelsAnalysisDemo() {
       console.log('✅ Топ 5 рилз по engagement:')
       sortedReels.slice(0, 5).forEach((reel, index) => {
         const engagement = (reel.like_count || 0) + (reel.comment_count || 0)
-        const engagementRate = ((engagement / Math.max(reel.play_count || 1, 1)) * 100).toFixed(2)
-        const date = reel.taken_at_timestamp ? new Date(reel.taken_at_timestamp * 1000).toLocaleDateString() : 'N/A'
-        
-        console.log(`\n${index + 1}. Engagement: ${engagement.toLocaleString()} (${engagementRate}%)`)
+        const engagementRate = (
+          (engagement / Math.max(reel.play_count || 1, 1)) *
+          100
+        ).toFixed(2)
+        const date = reel.taken_at_timestamp
+          ? new Date(reel.taken_at_timestamp * 1000).toLocaleDateString()
+          : 'N/A'
+
+        console.log(
+          `\n${
+            index + 1
+          }. Engagement: ${engagement.toLocaleString()} (${engagementRate}%)`
+        )
         console.log(`   👍 Лайки: ${(reel.like_count || 0).toLocaleString()}`)
-        console.log(`   💬 Коменты: ${(reel.comment_count || 0).toLocaleString()}`)
-        console.log(`   👀 Просмотры: ${(reel.play_count || 0).toLocaleString()}`)
+        console.log(
+          `   💬 Коменты: ${(reel.comment_count || 0).toLocaleString()}`
+        )
+        console.log(
+          `   👀 Просмотры: ${(reel.play_count || 0).toLocaleString()}`
+        )
         console.log(`   📅 Дата: ${date}`)
         console.log(`   🔗 URL: https://instagram.com/p/${reel.shortcode}/`)
         if (reel.caption && reel.caption.length > 0) {
-          const shortCaption = reel.caption.length > 60 ? reel.caption.substring(0, 60) + '...' : reel.caption
+          const shortCaption =
+            reel.caption.length > 60
+              ? reel.caption.substring(0, 60) + '...'
+              : reel.caption
           console.log(`   📝 Описание: ${shortCaption}`)
         }
       })
@@ -174,7 +241,7 @@ async function finalReelsAnalysisDemo() {
       // Шаг 5: Симуляция сохранения в базу (показываем что бы сохранилось)
       console.log('\n💾 Симуляция сохранения в базу данных...')
       console.log('✅ В реальности бы сохранилось:')
-      
+
       const reelsAnalysisData = sortedReels.map(reel => ({
         comp_username: reel.owner_username,
         reel_id: reel.reel_id,
@@ -184,7 +251,7 @@ async function finalReelsAnalysisDemo() {
         likes_count: reel.like_count,
         comments_count: reel.comment_count,
         created_at_instagram: new Date(reel.taken_at_timestamp * 1000),
-        project_id: 1
+        project_id: 1,
       }))
 
       console.log(`   📊 Записей для сохранения: ${reelsAnalysisData.length}`)
@@ -192,13 +259,13 @@ async function finalReelsAnalysisDemo() {
         comp_username: reelsAnalysisData[0]?.comp_username,
         reel_id: reelsAnalysisData[0]?.reel_id,
         views_count: reelsAnalysisData[0]?.views_count,
-        likes_count: reelsAnalysisData[0]?.likes_count
+        likes_count: reelsAnalysisData[0]?.likes_count,
       })
 
       // Шаг 6: Финальный результат
       console.log('\n🎉 ШАГ 3: ИТОГОВЫЙ РЕЗУЛЬТАТ ФУНКЦИИ')
-      console.log('=' .repeat(50))
-      
+      console.log('='.repeat(50))
+
       const finalResult = {
         success: true,
         jobType: 'ANALYZE_COMPETITOR_REELS',
@@ -224,7 +291,7 @@ async function finalReelsAnalysisDemo() {
           ig_url: `https://instagram.com/p/${reel.shortcode}/`,
         })),
         completedAt: new Date(),
-        telegramNotification: { sent: true, messageId: 'demo-message-id' }
+        telegramNotification: { sent: true, messageId: 'demo-message-id' },
       }
 
       console.log('🎯 Результат выполнения функции analyzeCompetitorReels:')
@@ -232,8 +299,8 @@ async function finalReelsAnalysisDemo() {
 
       // Дополнительная демонстрация - анализ конкурентов
       console.log('\n👥 ШАГ 4: АНАЛИЗ КОНКУРЕНТОВ ИЗ БАЗЫ')
-      console.log('=' .repeat(50))
-      
+      console.log('='.repeat(50))
+
       const competitorAnalysis = await client.query(`
         SELECT c.username, c.full_name, c.notes,
                COUNT(r.id) as reels_count,
@@ -252,18 +319,29 @@ async function finalReelsAnalysisDemo() {
       competitorAnalysis.rows.forEach((comp, index) => {
         console.log(`\n${index + 1}. ${comp.username} (${comp.full_name})`)
         console.log(`   📹 Рилз в базе: ${comp.reels_count || 0}`)
-        console.log(`   👍 Средние лайки: ${comp.avg_likes ? Math.round(comp.avg_likes).toLocaleString() : 'N/A'}`)
-        console.log(`   👀 Средние просмотры: ${comp.avg_views ? Math.round(comp.avg_views).toLocaleString() : 'N/A'}`)
-        console.log(`   🏆 Макс лайки: ${comp.max_likes ? comp.max_likes.toLocaleString() : 'N/A'}`)
+        console.log(
+          `   👍 Средние лайки: ${
+            comp.avg_likes ? Math.round(comp.avg_likes).toLocaleString() : 'N/A'
+          }`
+        )
+        console.log(
+          `   👀 Средние просмотры: ${
+            comp.avg_views ? Math.round(comp.avg_views).toLocaleString() : 'N/A'
+          }`
+        )
+        console.log(
+          `   🏆 Макс лайки: ${
+            comp.max_likes ? comp.max_likes.toLocaleString() : 'N/A'
+          }`
+        )
         console.log(`   📝 Категория: ${comp.notes || 'N/A'}`)
       })
-
     } finally {
       client.release()
     }
 
     console.log('\n🎉 === ФИНАЛЬНЫЕ ВЫВОДЫ ===')
-    console.log('=' .repeat(50))
+    console.log('='.repeat(50))
     console.log('')
     console.log('✅ СИСТЕМА АНАЛИЗА РИЛЗ КОНКУРЕНТОВ ПОЛНОСТЬЮ РАБОТОСПОСОБНА!')
     console.log('')
@@ -290,7 +368,6 @@ async function finalReelsAnalysisDemo() {
     console.log('   • API ключ можно обновить/купить при необходимости')
     console.log('')
     console.log('💡 СИСТЕМА ГОТОВА К PRODUCTION ИСПОЛЬЗОВАНИЮ!')
-
   } catch (error) {
     console.error('❌ Ошибка демонстрации:', error)
     throw error

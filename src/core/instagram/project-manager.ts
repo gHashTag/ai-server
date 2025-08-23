@@ -51,11 +51,13 @@ let dbPool: Pool | null = null
 function getDbPool(): Pool {
   if (!dbPool) {
     const connectionString = process.env.SUPABASE_URL
-    
+
     if (!connectionString) {
-      throw new Error('Database connection string is required. Please set SUPABASE_URL environment variable.')
+      throw new Error(
+        'Database connection string is required. Please set SUPABASE_URL environment variable.'
+      )
     }
-    
+
     dbPool = new Pool({
       connectionString,
       ssl: {
@@ -63,7 +65,7 @@ function getDbPool(): Pool {
       },
     })
   }
-  
+
   return dbPool
 }
 
@@ -130,11 +132,14 @@ export class ProjectManager {
 
       if (existingProject.rows.length > 0) {
         const project = existingProject.rows[0]
-        log.info(`✅ Found existing project for telegram_id: ${input.telegram_id}`, {
-          project_id: project.id,
-          project_name: project.name
-        })
-        
+        log.info(
+          `✅ Found existing project for telegram_id: ${input.telegram_id}`,
+          {
+            project_id: project.id,
+            project_name: project.name,
+          }
+        )
+
         return ProjectSchema.parse({
           ...project,
           created_at: new Date(project.created_at),
@@ -143,9 +148,12 @@ export class ProjectManager {
       }
 
       // Создаем новый проект
-      const projectName = input.project_name || 
-        (input.telegram_username ? `@${input.telegram_username}'s Project` : `Project for ${input.telegram_id}`)
-      
+      const projectName =
+        input.project_name ||
+        (input.telegram_username
+          ? `@${input.telegram_username}'s Project`
+          : `Project for ${input.telegram_id}`)
+
       const newProject = await client.query(
         `INSERT INTO projects 
          (name, telegram_id, telegram_username, bot_name, description, metadata)
@@ -157,14 +165,14 @@ export class ProjectManager {
           input.telegram_username || null,
           input.bot_name || null,
           input.description || `Auto-created project for Instagram parsing`,
-          JSON.stringify(input.metadata || {})
+          JSON.stringify(input.metadata || {}),
         ]
       )
 
       const createdProject = newProject.rows[0]
       log.info(`✅ Created new project for telegram_id: ${input.telegram_id}`, {
         project_id: createdProject.id,
-        project_name: createdProject.name
+        project_name: createdProject.name,
       })
 
       return ProjectSchema.parse({
@@ -225,7 +233,7 @@ export class ProjectManager {
       if (existingProject) {
         return { project: existingProject, created: false }
       }
-      
+
       log.warn(`Project with ID ${projectId} not found, will create new one`)
     }
 
@@ -238,13 +246,15 @@ export class ProjectManager {
       telegram_id: telegramId,
       telegram_username: telegramUsername,
       bot_name: botName,
-      project_name: `Instagram Analytics ${telegramUsername ? `@${telegramUsername}` : telegramId}`,
+      project_name: `Instagram Analytics ${
+        telegramUsername ? `@${telegramUsername}` : telegramId
+      }`,
       description: 'Auto-created for Instagram competitor analysis',
       metadata: {
         source: 'instagram-scraper-v2',
         auto_created: true,
-        created_at: new Date().toISOString()
-      }
+        created_at: new Date().toISOString(),
+      },
     })
 
     return { project, created: true }
@@ -265,11 +275,13 @@ export class ProjectManager {
         [telegramId]
       )
 
-      return result.rows.map(row => ProjectSchema.parse({
-        ...row,
-        created_at: new Date(row.created_at),
-        updated_at: new Date(row.updated_at),
-      }))
+      return result.rows.map(row =>
+        ProjectSchema.parse({
+          ...row,
+          created_at: new Date(row.created_at),
+          updated_at: new Date(row.updated_at),
+        })
+      )
     } catch (error: any) {
       log.error('Error getting user projects:', error.message)
       throw error

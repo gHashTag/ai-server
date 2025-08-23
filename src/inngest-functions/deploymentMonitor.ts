@@ -5,10 +5,10 @@
 import { inngest } from '@/core/inngest/clients'
 import { logger } from '@/utils/logger'
 import { getBotByName } from '@/core/bot'
-import { 
-  detectDeployment, 
-  notifyDeploymentComplete, 
-  waitForHealthySystem 
+import {
+  detectDeployment,
+  notifyDeploymentComplete,
+  waitForHealthySystem,
 } from '@/utils/deploymentReporter'
 
 /**
@@ -27,10 +27,12 @@ export const deploymentAutoDetector = inngest.createFunction(
 
     // Step 1: Получаем текущую версию
     const currentVersion = await step.run('get-current-version', async () => {
-      return process.env.RAILWAY_DEPLOYMENT_ID || 
-             process.env.DOCKER_IMAGE_TAG || 
-             process.env.npm_package_version || 
-             'unknown'
+      return (
+        process.env.RAILWAY_DEPLOYMENT_ID ||
+        process.env.DOCKER_IMAGE_TAG ||
+        process.env.npm_package_version ||
+        'unknown'
+      )
     })
 
     // Step 2: Проверяем, изменилась ли версия с последней проверки
@@ -39,7 +41,7 @@ export const deploymentAutoDetector = inngest.createFunction(
         // В реальной реализации здесь должна быть проверка с Redis/БД
         // Пока используем простую проверку времени запуска процесса
         const uptime = process.uptime()
-        
+
         // Если процесс запустился менее 10 минут назад, считаем что был деплой
         return uptime < 10 * 60 // 10 минут в секундах
       } catch (error) {
@@ -69,14 +71,14 @@ export const deploymentAutoDetector = inngest.createFunction(
               branch: deploymentInfo.branch,
               deployedAt: deploymentInfo.startedAt.toISOString(),
               environment: deploymentInfo.environment,
-              autoDetected: true
-            }
+              autoDetected: true,
+            },
           })
         })
 
-        logger.info('🚀 Deployment detected and processed', { 
+        logger.info('🚀 Deployment detected and processed', {
           version: deploymentInfo.version,
-          environment: deploymentInfo.environment
+          environment: deploymentInfo.environment,
         })
       }
     }
@@ -85,7 +87,7 @@ export const deploymentAutoDetector = inngest.createFunction(
       success: true,
       currentVersion,
       versionChanged,
-      timestamp: new Date()
+      timestamp: new Date(),
     }
   }
 )
@@ -102,21 +104,24 @@ export const deploymentRecoverySystem = inngest.createFunction(
   { event: 'deployment/recovery-needed' },
   async ({ event, step }) => {
     const { version, failureRate, criticalEndpoints } = event.data
-    
-    logger.info('🛠 Deployment Recovery System активирован', { 
-      version, 
-      failureRate, 
-      criticalEndpoints 
+
+    logger.info('🛠 Deployment Recovery System активирован', {
+      version,
+      failureRate,
+      criticalEndpoints,
     })
 
     // Step 1: Уведомляем о начале процедуры восстановления
     await step.run('notify-recovery-start', async () => {
       const { bot } = getBotByName('neuro_blogger_bot')
 
-      const message = `🛠 АВТОМАТИЧЕСКОЕ ВОССТАНОВЛЕНИЕ ЗАПУЩЕНО\n\n` +
+      const message =
+        `🛠 АВТОМАТИЧЕСКОЕ ВОССТАНОВЛЕНИЕ ЗАПУЩЕНО\n\n` +
         `📦 Проблемная версия: ${version}\n` +
         `📊 Процент неудач: ${failureRate}%\n` +
-        `⚠️ Критичные эндпоинты: ${criticalEndpoints?.join(', ') || 'Все'}\n\n` +
+        `⚠️ Критичные эндпоинты: ${
+          criticalEndpoints?.join(', ') || 'Все'
+        }\n\n` +
         `🔄 Начинаю процедуру восстановления...`
 
       await bot.api.sendMessage(process.env.ADMIN_CHAT_ID!, message)
@@ -140,13 +145,13 @@ export const deploymentRecoverySystem = inngest.createFunction(
         return {
           success: true,
           method: 'service_restart',
-          message: 'Сервисы перезапущены'
+          message: 'Сервисы перезапущены',
         }
       } catch (error) {
         return {
           success: false,
           error: error.message,
-          message: 'Не удалось перезапустить сервисы'
+          message: 'Не удалось перезапустить сервисы',
         }
       }
     })
@@ -155,16 +160,20 @@ export const deploymentRecoverySystem = inngest.createFunction(
     await step.sleep('wait-for-stabilization', '2m')
 
     // Step 4: Проверяем результат восстановления
-    const healthCheckResult = await step.run('check-recovery-result', async () => {
-      return await waitForHealthySystem(5) // 5 минут ожидания
-    })
+    const healthCheckResult = await step.run(
+      'check-recovery-result',
+      async () => {
+        return await waitForHealthySystem(5) // 5 минут ожидания
+      }
+    )
 
     // Step 5: Если восстановление не помогло, рекомендуем откат
     if (!healthCheckResult.healthy) {
       await step.run('recommend-rollback', async () => {
         const { bot } = getBotByName('neuro_blogger_bot')
 
-        const message = `🚨 ВОССТАНОВЛЕНИЕ НЕ ПОМОГЛО!\n\n` +
+        const message =
+          `🚨 ВОССТАНОВЛЕНИЕ НЕ ПОМОГЛО!\n\n` +
           `❌ ${healthCheckResult.message}\n\n` +
           `📋 РЕКОМЕНДУЕМЫЕ ДЕЙСТВИЯ:\n` +
           `1. 🔄 Откатить к предыдущей версии\n` +
@@ -174,7 +183,7 @@ export const deploymentRecoverySystem = inngest.createFunction(
           `⚡ ТРЕБУЕТСЯ НЕМЕДЛЕННОЕ ВМЕШАТЕЛЬСТВО!`
 
         await bot.api.sendMessage(process.env.ADMIN_CHAT_ID!, message)
-        
+
         // Отправляем критическое уведомление админу
         await bot.api.sendMessage(
           process.env.ADMIN_TELEGRAM_ID!,
@@ -186,7 +195,8 @@ export const deploymentRecoverySystem = inngest.createFunction(
       await step.run('notify-recovery-success', async () => {
         const { bot } = getBotByName('neuro_blogger_bot')
 
-        const message = `✅ ВОССТАНОВЛЕНИЕ УСПЕШНО!\n\n` +
+        const message =
+          `✅ ВОССТАНОВЛЕНИЕ УСПЕШНО!\n\n` +
           `📦 Версия: ${version}\n` +
           `🛠 Метод: ${restartResult.method}\n` +
           `⏱ ${healthCheckResult.message}\n\n` +
@@ -201,7 +211,7 @@ export const deploymentRecoverySystem = inngest.createFunction(
       recovered: healthCheckResult.healthy,
       restartResult,
       healthCheckResult,
-      timestamp: new Date()
+      timestamp: new Date(),
     }
   }
 )
@@ -210,8 +220,8 @@ export const deploymentRecoverySystem = inngest.createFunction(
  * Функция для запуска восстановления при критических проблемах
  */
 export const triggerRecoveryIfNeeded = async (
-  version: string, 
-  failureRate: number, 
+  version: string,
+  failureRate: number,
   criticalEndpoints?: string[]
 ): Promise<void> => {
   // Запускаем восстановление если процент неудач > 50%
@@ -222,14 +232,14 @@ export const triggerRecoveryIfNeeded = async (
         version,
         failureRate,
         criticalEndpoints,
-        timestamp: new Date().toISOString()
-      }
+        timestamp: new Date().toISOString(),
+      },
     })
 
-    logger.warn('🛠 Recovery system triggered', { 
-      version, 
-      failureRate, 
-      criticalEndpoints 
+    logger.warn('🛠 Recovery system triggered', {
+      version,
+      failureRate,
+      criticalEndpoints,
     })
   }
 }
@@ -246,10 +256,10 @@ export const railwayDeploymentWebhook = inngest.createFunction(
   async ({ event, step }) => {
     const { status, deploymentId, service, environment } = event.data
 
-    logger.info('🚂 Railway deployment webhook received', { 
-      status, 
-      deploymentId, 
-      service 
+    logger.info('🚂 Railway deployment webhook received', {
+      status,
+      deploymentId,
+      service,
     })
 
     if (status === 'SUCCESS') {
@@ -262,8 +272,8 @@ export const railwayDeploymentWebhook = inngest.createFunction(
             deployedAt: new Date().toISOString(),
             environment,
             service,
-            source: 'railway_webhook'
-          }
+            source: 'railway_webhook',
+          },
         })
       })
     } else if (status === 'FAILED') {
@@ -271,7 +281,8 @@ export const railwayDeploymentWebhook = inngest.createFunction(
       await step.run('notify-failed-deployment', async () => {
         const { bot } = getBotByName('neuro_blogger_bot')
 
-        const message = `❌ ДЕПЛОЙ НЕУДАЧЕН\n\n` +
+        const message =
+          `❌ ДЕПЛОЙ НЕУДАЧЕН\n\n` +
           `🚂 Railway Service: ${service}\n` +
           `📦 Deployment ID: ${deploymentId}\n` +
           `🌍 Environment: ${environment}\n` +
@@ -287,7 +298,7 @@ export const railwayDeploymentWebhook = inngest.createFunction(
       success: true,
       status,
       deploymentId,
-      processed: true
+      processed: true,
     }
   }
 )

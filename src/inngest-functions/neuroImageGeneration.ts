@@ -69,7 +69,9 @@ export const neuroImageGeneration = inngest.createFunction(
           telegram_id,
           error: botData.error,
         })
-        throw new Error(`Bot instance not found: ${botData.error || 'Unknown error'}`)
+        throw new Error(
+          `Bot instance not found: ${botData.error || 'Unknown error'}`
+        )
       } else {
         logger.info({
           message: '✅ Bot instance found',

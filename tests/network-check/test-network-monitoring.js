@@ -88,7 +88,9 @@ async function testRecoverySystem() {
     })
 
     console.log('✅ Recovery system запущен:', result.ids[0])
-    console.log('⚠️ Внимание: Этот тест может отправить уведомления в Telegram!')
+    console.log(
+      '⚠️ Внимание: Этот тест может отправить уведомления в Telegram!'
+    )
     return true
   } catch (error) {
     console.error('❌ Ошибка запуска recovery system:', error.message)

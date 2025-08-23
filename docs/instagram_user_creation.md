@@ -9,11 +9,13 @@
 ### Компоненты
 
 1. **Inngest Function**: `createInstagramUser`
+
    - ID: `create-instagram-user`
    - Event: `instagram/create-user`
    - Concurrency: 5
 
 2. **Database Class**: `InstagramDatabase.createSingleUser()`
+
    - Валидация проекта
    - Проверка дубликатов
    - Создание записи
@@ -30,20 +32,21 @@
 import { triggerCreateInstagramUser } from '../src/inngest-functions/instagramScraper-v2'
 
 const userData = {
-  pk: '1234567890',                    // Instagram PK (обязательно)
-  username: 'my_username',             // Username (обязательно)
-  full_name: 'My Full Name',           // Полное имя (опционально)
-  is_private: false,                   // Приватный аккаунт (опционально)
-  is_verified: true,                   // Верифицирован (опционально)
-  profile_pic_url: 'https://...',     // URL аватара (опционально)
+  pk: '1234567890', // Instagram PK (обязательно)
+  username: 'my_username', // Username (обязательно)
+  full_name: 'My Full Name', // Полное имя (опционально)
+  is_private: false, // Приватный аккаунт (опционально)
+  is_verified: true, // Верифицирован (опционально)
+  profile_pic_url: 'https://...', // URL аватара (опционально)
   profile_chaining_secondary_label: 'Label', // Дополнительное описание (опционально)
-  social_context: 'Some context',     // Контекст (опционально)
-  project_id: 1,                      // ID проекта (обязательно)
-  requester_telegram_id: '123456',    // ID инициатора (опционально)
-  metadata: {                         // Метаданные (опционально)
+  social_context: 'Some context', // Контекст (опционально)
+  project_id: 1, // ID проекта (обязательно)
+  requester_telegram_id: '123456', // ID инициатора (опционально)
+  metadata: {
+    // Метаданные (опционально)
     source: 'manual',
-    created_by: 'admin'
-  }
+    created_by: 'admin',
+  },
 }
 
 const result = await triggerCreateInstagramUser(userData)
@@ -64,19 +67,19 @@ node scripts/test-create-instagram-user.js --multiple
 
 ### Входные данные (CreateInstagramUserEvent)
 
-| Поле | Тип | Обязательно | Описание |
-|------|-----|-------------|----------|
-| `pk` | string | ✅ | Instagram PK (уникальный ID) |
-| `username` | string | ✅ | Username пользователя |
-| `full_name` | string | ❌ | Полное имя |
-| `is_private` | boolean | ❌ | Приватный аккаунт (default: false) |
-| `is_verified` | boolean | ❌ | Верифицирован (default: false) |
-| `profile_pic_url` | string | ❌ | URL аватара |
-| `profile_chaining_secondary_label` | string | ❌ | Дополнительное описание |
-| `social_context` | string | ❌ | Контекст |
-| `project_id` | number | ✅ | ID проекта (должен существовать) |
-| `requester_telegram_id` | string | ❌ | ID инициатора |
-| `metadata` | object | ❌ | Дополнительные метаданные |
+| Поле                               | Тип     | Обязательно | Описание                           |
+| ---------------------------------- | ------- | ----------- | ---------------------------------- |
+| `pk`                               | string  | ✅          | Instagram PK (уникальный ID)       |
+| `username`                         | string  | ✅          | Username пользователя              |
+| `full_name`                        | string  | ❌          | Полное имя                         |
+| `is_private`                       | boolean | ❌          | Приватный аккаунт (default: false) |
+| `is_verified`                      | boolean | ❌          | Верифицирован (default: false)     |
+| `profile_pic_url`                  | string  | ❌          | URL аватара                        |
+| `profile_chaining_secondary_label` | string  | ❌          | Дополнительное описание            |
+| `social_context`                   | string  | ❌          | Контекст                           |
+| `project_id`                       | number  | ✅          | ID проекта (должен существовать)   |
+| `requester_telegram_id`            | string  | ❌          | ID инициатора                      |
+| `metadata`                         | object  | ❌          | Дополнительные метаданные          |
 
 ### Результат (CreateUserResult)
 
@@ -137,6 +140,7 @@ node scripts/test-create-instagram-user.js --multiple
 ### Логирование
 
 Все операции логируются с соответствующими эмодзи:
+
 - 🚀 Старт функции
 - ✅ Успешные операции
 - 👤 Пользователь уже существует
@@ -148,6 +152,7 @@ node scripts/test-create-instagram-user.js --multiple
 ### Inngest Dashboard
 
 Отслеживайте выполнение функций:
+
 - Local: http://localhost:8288
 - Cloud: Inngest Dashboard
 
@@ -183,7 +188,7 @@ const testUser = {
   username: `test_user_${Date.now()}`,
   full_name: 'Test User',
   project_id: 1,
-  requester_telegram_id: '144022504'
+  requester_telegram_id: '144022504',
 }
 
 const result = await triggerCreateInstagramUser(testUser)
@@ -198,7 +203,7 @@ const verifiedUser = {
   full_name: 'Verified User',
   is_verified: true,
   profile_pic_url: 'https://example.com/avatar.jpg',
-  project_id: 1
+  project_id: 1,
 }
 
 const result = await triggerCreateInstagramUser(verifiedUser)
@@ -213,7 +218,7 @@ const privateUser = {
   full_name: 'Private User',
   is_private: true,
   social_context: 'Private account user',
-  project_id: 1
+  project_id: 1,
 }
 
 const result = await triggerCreateInstagramUser(privateUser)
@@ -223,11 +228,12 @@ const result = await triggerCreateInstagramUser(privateUser)
 
 ## 🕉️ Мудрость
 
-*"Как семя, посаженное в плодородную почву, даёт плоды, так и правильно структурированные данные порождают мудрость."*
+_"Как семя, посаженное в плодородную почву, даёт плоды, так и правильно структурированные данные порождают мудрость."_
 
 Функция создания пользователей следует принципам:
+
 - **Валидация** данных через Zod
 - **Идемпотентность** (повторные запросы безопасны)
 - **Логирование** всех операций
 - **Обработка ошибок** на всех уровнях
-- **Типобезопасность** TypeScript 
+- **Типобезопасность** TypeScript

@@ -31,8 +31,9 @@ await bot.telegram.sendMessage(...)
 ```
 
 ### **📍 Исправленные места в `morphImages.ts`:**
+
 1. **`check-balance`** - уведомления об ошибках баланса ✅
-2. **`notify-start`** - начальное уведомление пользователю ✅  
+2. **`notify-start`** - начальное уведомление пользователю ✅
 3. **`deduct-balance`** - уведомление об успешном завершении ✅
 4. **`handle-error`** - уведомления об ошибках ✅
 
@@ -41,6 +42,7 @@ await bot.telegram.sendMessage(...)
 ## 🧪 **Результаты тестирования:**
 
 ### **REST API Endpoint: ✅ РАБОТАЕТ**
+
 ```bash
 curl -X POST https://c156b0d97b4a.ngrok.app/generate/morph-images \
   -H "x-secret-key: test-secret-key" \
@@ -56,40 +58,46 @@ curl -X POST https://c156b0d97b4a.ngrok.app/generate/morph-images \
 ```
 
 **Ответ:**
+
 ```json
 {
   "message": "Морфинг отправлен на обработку",
-  "job_id": "morph_144022504_1753627376556", 
+  "job_id": "morph_144022504_1753627376556",
   "status": "processing",
   "estimated_time": "5-10 минут"
 }
 ```
 
 ### **Inngest Function: ✅ ИСПРАВЛЕНА**
+
 - Событие: `morph/images.requested`
-- Функция: `🧬 Image Morphing` 
+- Функция: `🧬 Image Morphing`
 - Статус: Исправления внесены, ошибки bot.telegram.sendMessage устранены
 
 ---
 
 ## 🌐 **Актуальные URLs:**
 
-### **Ngrok URL:** 
+### **Ngrok URL:**
+
 ```
 https://c156b0d97b4a.ngrok.app
 ```
 
 ### **Морфинг API:**
+
 ```
 https://c156b0d97b4a.ngrok.app/generate/morph-images
 ```
 
 ### **Inngest Dashboard:**
+
 ```
 http://localhost:8288/runs
 ```
 
 ### **Получить актуальный ngrok URL:**
+
 ```bash
 node get-ngrok-url.js
 ```
@@ -99,11 +107,11 @@ node get-ngrok-url.js
 ## 📋 **Для проверки исправлений:**
 
 1. **Откройте Inngest Dashboard:** http://localhost:8288/runs
-2. **Найдите** последние выполнения функции **"🧬 Image Morphing"**  
+2. **Найдите** последние выполнения функции **"🧬 Image Morphing"**
 3. **Проверьте** отсутствие ошибки **`bot.telegram.sendMessage is not a function`**
 4. **Убедитесь** что все шаги выполняются успешно:
    - ✅ check-user-exists
-   - ✅ check-balance  
+   - ✅ check-balance
    - ✅ notify-start
    - ✅ execute-morphing
    - ✅ deduct-balance
@@ -113,16 +121,19 @@ node get-ngrok-url.js
 ## 🔧 **Дополнительные инструменты:**
 
 ### **Прямой тест Inngest события:**
+
 ```bash
 node test-morphing-fixed.js
 ```
 
 ### **Получение ngrok URL:**
-```bash  
+
+```bash
 node get-ngrok-url.js
 ```
 
 ### **Тест REST API:**
+
 ```bash
 curl -X POST $(node get-ngrok-url.js | grep "Ngrok URL:" | cut -d' ' -f4)/generate/morph-images \
   -H "x-secret-key: test-secret-key" \
@@ -146,4 +157,4 @@ curl -X POST $(node get-ngrok-url.js | grep "Ngrok URL:" | cut -d' ' -f4)/genera
 **✅ Готов к тестированию с фронт-энда**  
 **✅ Документация и примеры обновлены**
 
-**🚀 Можно переходить к интеграции с фронт-эндом!** 
+**🚀 Можно переходить к интеграции с фронт-эндом!**

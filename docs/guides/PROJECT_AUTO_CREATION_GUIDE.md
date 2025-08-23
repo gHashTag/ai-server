@@ -11,11 +11,13 @@
 ### 1️⃣ **Автоматическое создание проекта (НОВОЕ!)**
 
 Если клиент не передает `project_id`, система автоматически:
+
 1. Создает новый проект на основе `telegram_id` пользователя
 2. Привязывает проект к конкретному боту
 3. Сохраняет все данные парсинга в этом проекте
 
 **Пример запроса БЕЗ project_id:**
+
 ```json
 {
   "username_or_id": "cristiano",
@@ -29,6 +31,7 @@
 ```
 
 **Результат:**
+
 - ✅ Автоматически создастся проект: "Instagram Analytics @john_doe"
 - ✅ Проект получит уникальный ID (например, 42)
 - ✅ Все данные сохранятся с привязкой к этому проекту
@@ -42,13 +45,14 @@
 ```json
 {
   "username_or_id": "messi",
-  "requester_telegram_id": "123456789",  // Тот же telegram_id
-  "bot_name": "neuro_blogger_bot",       // Тот же бот
+  "requester_telegram_id": "123456789", // Тот же telegram_id
+  "bot_name": "neuro_blogger_bot", // Тот же бот
   "max_users": 30
 }
 ```
 
 **Результат:**
+
 - ✅ Найдется существующий проект пользователя
 - ✅ Новые данные добавятся к существующим
 - ✅ История парсинга сохранится
@@ -62,7 +66,7 @@
 ```json
 {
   "username_or_id": "neymarjr",
-  "project_id": 37,  // Явно указанный ID
+  "project_id": 37, // Явно указанный ID
   "max_users": 25
 }
 ```
@@ -96,11 +100,11 @@ CREATE TABLE projects (
 ```javascript
 // Клиент запускает парсинг впервые
 const event = {
-  "username_or_id": "nike",
-  "requester_telegram_id": "987654321",
-  "telegram_username": "maria_marketing",
-  "max_users": 100,
-  "scrape_reels": true
+  username_or_id: 'nike',
+  requester_telegram_id: '987654321',
+  telegram_username: 'maria_marketing',
+  max_users: 100,
+  scrape_reels: true,
 }
 
 // Результат:
@@ -114,9 +118,9 @@ const event = {
 ```javascript
 // Тот же клиент парсит другой аккаунт
 const event = {
-  "username_or_id": "adidas",
-  "requester_telegram_id": "987654321",  // Тот же telegram_id
-  "max_users": 50
+  username_or_id: 'adidas',
+  requester_telegram_id: '987654321', // Тот же telegram_id
+  max_users: 50,
 }
 
 // Результат:
@@ -130,10 +134,10 @@ const event = {
 ```javascript
 // Клиент использует другого бота
 const event = {
-  "username_or_id": "puma",
-  "requester_telegram_id": "987654321",  // Тот же telegram_id
-  "bot_name": "analytics_pro_bot",       // Другой бот!
-  "max_users": 75
+  username_or_id: 'puma',
+  requester_telegram_id: '987654321', // Тот же telegram_id
+  bot_name: 'analytics_pro_bot', // Другой бот!
+  max_users: 75,
 }
 
 // Результат:
@@ -147,16 +151,19 @@ const event = {
 ## 📊 Преимущества автоматических проектов
 
 1. **🎯 Простота для клиентов**
+
    - Не нужно помнить project_id
    - Не нужно создавать проект вручную
    - Система сама все организует
 
 2. **🔐 Изоляция данных**
+
    - Каждый пользователь имеет свой проект
    - Данные не смешиваются
    - Легко управлять доступом
 
 3. **📈 История и аналитика**
+
    - Все парсинги сохраняются в одном проекте
    - Можно анализировать историю
    - Легко строить отчеты
@@ -171,6 +178,7 @@ const event = {
 ## 🛠️ API ProjectManager
 
 ### **getOrCreateProject()**
+
 ```typescript
 const project = await projectManager.getOrCreateProject({
   telegram_id: "123456789",
@@ -194,14 +202,16 @@ const project = await projectManager.getOrCreateProject({
 ```
 
 ### **getUserProjects()**
+
 ```typescript
 // Получить все проекты пользователя
-const projects = await projectManager.getUserProjects("123456789");
+const projects = await projectManager.getUserProjects('123456789')
 
 // Возвращает массив проектов пользователя
 ```
 
 ### **validateOrCreateProject()**
+
 ```typescript
 // Умная функция: проверяет project_id, если не найден - создает новый
 const { project, created } = await projectManager.validateOrCreateProject(
@@ -209,7 +219,7 @@ const { project, created } = await projectManager.validateOrCreateProject(
   telegramId,
   telegramUsername,
   botName
-);
+)
 ```
 
 ---
@@ -232,6 +242,7 @@ BOT_TOKEN_NEURO_BLOGGER=bot_token_here
 ## 📝 Примеры для тестирования
 
 ### **Тест 1: Без project_id (автосоздание)**
+
 ```bash
 # Через Inngest Dashboard
 {
@@ -246,6 +257,7 @@ BOT_TOKEN_NEURO_BLOGGER=bot_token_here
 ```
 
 ### **Тест 2: С существующим project_id**
+
 ```bash
 {
   "data": {
@@ -257,6 +269,7 @@ BOT_TOKEN_NEURO_BLOGGER=bot_token_here
 ```
 
 ### **Тест 3: Полный набор параметров**
+
 ```bash
 {
   "data": {

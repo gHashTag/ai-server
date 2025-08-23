@@ -8,7 +8,7 @@
 import { triggerCreateInstagramUser } from '../src/inngest-functions/instagramScraper-v2.js'
 
 console.log('🚀 Testing Instagram User Creation Function...')
-console.log('='=50)
+console.log('='.repeat(50))
 
 async function testCreateUser() {
   try {
@@ -27,8 +27,8 @@ async function testCreateUser() {
       metadata: {
         source: 'manual_creation',
         created_by: 'test_script',
-        timestamp: new Date().toISOString()
-      }
+        timestamp: new Date().toISOString(),
+      },
     }
 
     console.log('📝 Данные пользователя для создания:')
@@ -37,7 +37,7 @@ async function testCreateUser() {
 
     console.log('⏳ Отправка события в Inngest...')
     const result = await triggerCreateInstagramUser(userData)
-    
+
     console.log('✅ Событие отправлено успешно!')
     console.log('📋 Event ID:', result.eventId)
     console.log()
@@ -51,7 +51,6 @@ async function testCreateUser() {
     console.log('   - Создание записи в таблице instagram_similar_users')
     console.log('   - Или уведомление о том, что пользователь уже существует')
     console.log()
-
   } catch (error) {
     console.error('❌ Ошибка при тестировании:', error.message)
     console.error('🔍 Детали ошибки:', error)
@@ -67,37 +66,39 @@ async function testCreateMultipleUsers() {
       username: 'user_one',
       full_name: 'User One',
       project_id: 1,
-      requester_telegram_id: '144022504'
+      requester_telegram_id: '144022504',
     },
     {
-      pk: '2222222222', 
+      pk: '2222222222',
       username: 'user_two',
       full_name: 'User Two',
       is_verified: true,
       project_id: 1,
-      requester_telegram_id: '144022504'
+      requester_telegram_id: '144022504',
     },
     {
       pk: '3333333333',
-      username: 'user_three', 
+      username: 'user_three',
       full_name: 'User Three',
       is_private: true,
       project_id: 1,
-      requester_telegram_id: '144022504'
-    }
+      requester_telegram_id: '144022504',
+    },
   ]
 
   console.log('🔄 Тестирование создания нескольких пользователей...')
-  console.log('='=50)
+  console.log('='.repeat(50))
 
   for (let i = 0; i < users.length; i++) {
     const user = users[i]
-    console.log(`📝 Создание пользователя ${i + 1}/${users.length}: ${user.username}`)
-    
+    console.log(
+      `📝 Создание пользователя ${i + 1}/${users.length}: ${user.username}`
+    )
+
     try {
       const result = await triggerCreateInstagramUser(user)
       console.log(`✅ Event ID: ${result.eventId}`)
-      
+
       // Добавляем небольшую задержку между запросами
       if (i < users.length - 1) {
         console.log('⏳ Ожидание 2 секунды...')
@@ -106,24 +107,24 @@ async function testCreateMultipleUsers() {
     } catch (error) {
       console.error(`❌ Ошибка при создании ${user.username}:`, error.message)
     }
-    
+
     console.log()
   }
-  
+
   console.log('🎉 Тестирование множественного создания завершено!')
 }
 
 // Запуск тестов
 async function main() {
   const args = process.argv.slice(2)
-  
+
   if (args.includes('--multiple')) {
     await testCreateMultipleUsers()
   } else {
     await testCreateUser()
   }
-  
+
   console.log('🏁 Тестирование завершено!')
 }
 
-main().catch(console.error) 
+main().catch(console.error)

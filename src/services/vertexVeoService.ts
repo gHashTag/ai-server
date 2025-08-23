@@ -90,7 +90,7 @@ export class VertexVeoService {
       seed,
       storageUri,
       duration,
-      image
+      image,
     } = options
 
     const endpoint = `https://${this.location}-aiplatform.googleapis.com/v1/projects/${this.projectId}/locations/${this.location}/publishers/google/models/${modelId}:predictLongRunning`
@@ -123,7 +123,7 @@ export class VertexVeoService {
 
     // Добавляем duration для Veo 3 (поддерживает 1-10 секунд)
     if (duration !== undefined && modelId.includes('veo-3')) {
-      requestBody.parameters.duration = Math.max(1, Math.min(10, duration)); // ограничиваем 1-10 секунд
+      requestBody.parameters.duration = Math.max(1, Math.min(10, duration)) // ограничиваем 1-10 секунд
     }
 
     // Добавляем изображение для image-to-video

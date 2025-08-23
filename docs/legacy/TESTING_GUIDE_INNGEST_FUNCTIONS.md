@@ -18,6 +18,7 @@
 ### 1. **analyzeCompetitorReels** - Анализ рилсов конкурентов
 
 #### Шаги функции:
+
 1. **Валидация входных данных** (Zod)
 2. **Валидация проекта** (БД)
 3. **Вызов Instagram Reels API**
@@ -27,6 +28,7 @@
 7. **Уведомление в Telegram**
 
 #### Тестовый сценарий:
+
 ```typescript
 // Тест 1: Успешный анализ
 const event1 = await inngest.send({
@@ -78,6 +80,7 @@ const event3 = await inngest.send({
 ```
 
 #### Проверка результатов:
+
 ```bash
 # Проверка логов
 grep "ANALYZE-REELS" logs.txt
@@ -96,6 +99,7 @@ psql $NEON_DATABASE_URL -c "SELECT * FROM reels_analysis WHERE project_id = 1 OR
 ### 2. **findCompetitors** - Поиск конкурентов
 
 #### Шаги функции:
+
 1. **Валидация входных данных** (Zod)
 2. **Валидация проекта** (БД)
 3. **Вызов Instagram Similar Users API**
@@ -105,6 +109,7 @@ psql $NEON_DATABASE_URL -c "SELECT * FROM reels_analysis WHERE project_id = 1 OR
 7. **Уведомление в Telegram**
 
 #### Тестовый сценарий:
+
 ```typescript
 // Тест 1: Поиск конкурентов с фильтрацией
 const event1 = await inngest.send({
@@ -139,6 +144,7 @@ const event2 = await inngest.send({
 ```
 
 #### Проверка результатов:
+
 ```bash
 # Проверка логов
 grep "FIND-COMPETITORS" logs.txt
@@ -156,6 +162,7 @@ psql $NEON_DATABASE_URL -c "SELECT comp_username, followers_count FROM competito
 ### 3. **extractTopContent** - Извлечение топового контента
 
 #### Шаги функции:
+
 1. **Валидация входных данных** (Zod)
 2. **Валидация проекта** (БД)
 3. **Запрос данных из reels_analysis**
@@ -164,6 +171,7 @@ psql $NEON_DATABASE_URL -c "SELECT comp_username, followers_count FROM competito
 6. **Уведомление в Telegram**
 
 #### Тестовый сценарий:
+
 ```typescript
 // Подготовка: Сначала запустим analyzeCompetitorReels
 await inngest.send({
@@ -195,17 +203,18 @@ const event = await inngest.send({
 ```
 
 #### Проверка результатов:
+
 ```bash
 # Проверка логов
 grep "EXTRACT-TOP" logs.txt
 
 # Проверка SQL запроса
 psql $NEON_DATABASE_URL -c "
-SELECT reel_id, caption, likes_count, views_count 
-FROM reels_analysis 
-WHERE comp_username = 'alexyanovsky' 
-AND project_id = 1 
-ORDER BY likes_count DESC 
+SELECT reel_id, caption, likes_count, views_count
+FROM reels_analysis
+WHERE comp_username = 'alexyanovsky'
+AND project_id = 1
+ORDER BY likes_count DESC
 LIMIT 10"
 
 # Ожидаемые результаты:
@@ -218,6 +227,7 @@ LIMIT 10"
 ### 4. **generateContentScripts** - Генерация сценариев
 
 #### Шаги функции:
+
 1. **Валидация входных данных** (Zod)
 2. **Валидация проекта** (БД)
 3. **Получение данных рилса**
@@ -228,6 +238,7 @@ LIMIT 10"
 8. **Уведомление в Telegram**
 
 #### Тестовый сценарий:
+
 ```typescript
 // Тест: Генерация сценариев
 const event = await inngest.send({
@@ -246,6 +257,7 @@ const event = await inngest.send({
 ```
 
 #### Проверка результатов:
+
 ```bash
 # Проверка логов
 grep "GENERATE-SCRIPTS" logs.txt
@@ -267,6 +279,7 @@ psql $NEON_DATABASE_URL -c "SELECT reel_id, script_v1, script_v2, script_v3 FROM
 ### 5. **instagramScraperV2** - Основной скрапер
 
 #### Шаги функции:
+
 1. **Диагностика переменных окружения**
 2. **Валидация входных данных** (Zod)
 3. **Валидация проекта** (БД)
@@ -277,6 +290,7 @@ psql $NEON_DATABASE_URL -c "SELECT reel_id, script_v1, script_v2, script_v3 FROM
 8. **Финальный отчет**
 
 #### Тестовый сценарий:
+
 ```typescript
 // Тест: Полный скрапинг с рилсами
 const event = await inngest.send({
@@ -297,6 +311,7 @@ const event = await inngest.send({
 ```
 
 #### Проверка результатов:
+
 ```bash
 # Проверка логов
 grep "Instagram Scraper V2" logs.txt
@@ -402,7 +417,9 @@ async function runComprehensiveTest() {
   console.log('- Scraper:', scraper.ids[0])
 
   console.log('\n🔍 Monitor at: http://localhost:8288')
-  console.log('⏱️ Wait 2-3 minutes for completion, then run verification queries')
+  console.log(
+    '⏱️ Wait 2-3 minutes for completion, then run verification queries'
+  )
 }
 
 runComprehensiveTest().catch(console.error)
@@ -419,14 +436,14 @@ runComprehensiveTest().catch(console.error)
 SELECT COUNT(*) as competitors_count FROM competitors WHERE project_id = 1;
 
 -- 2. Проверка анализа рилсов
-SELECT COUNT(*) as reels_count, AVG(likes_count) as avg_likes 
+SELECT COUNT(*) as reels_count, AVG(likes_count) as avg_likes
 FROM reels_analysis WHERE project_id = 1;
 
 -- 3. Проверка топового контента
-SELECT reel_id, caption, likes_count, views_count 
-FROM reels_analysis 
-WHERE project_id = 1 
-ORDER BY likes_count DESC 
+SELECT reel_id, caption, likes_count, views_count
+FROM reels_analysis
+WHERE project_id = 1
+ORDER BY likes_count DESC
 LIMIT 5;
 
 -- 4. Проверка сценариев
@@ -465,15 +482,19 @@ grep "Instagram Scraper V2" logs.txt
 ## 🚨 Troubleshooting
 
 ### Проблема: "API rate limit exceeded"
+
 **Решение:** Увеличить задержки между вызовами API в функциях
 
 ### Проблема: "Database connection failed"
+
 **Решение:** Проверить `NEON_DATABASE_URL` и доступность БД
 
 ### Проблема: "OpenAI API key not found"
+
 **Решение:** Настроить `OPENAI_API_KEY` для generateContentScripts
 
 ### Проблема: "Project validation failed"
+
 **Решение:** Создать проект в БД или использовать существующий ID
 
 ---
@@ -483,12 +504,14 @@ grep "Instagram Scraper V2" logs.txt
 После успешного тестирования всех функций:
 
 1. **База данных содержит:**
+
    - ✅ Реальные профили Instagram в `competitors`
    - ✅ Реальные метрики рилсов в `reels_analysis`
    - ✅ Сгенерированные сценарии в `content_scripts`
    - ✅ Пользователи и рилсы в соответствующих таблицах
 
 2. **Логи показывают:**
+
    - ✅ Успешные API вызовы к Instagram
    - ✅ Валидацию Zod без ошибок
    - ✅ Сохранения в PostgreSQL
@@ -499,4 +522,4 @@ grep "Instagram Scraper V2" logs.txt
    - ✅ Деплою в production
    - ✅ Масштабированию
 
-**Система полностью протестирована и готова к использованию!** 🎉 
+**Система полностью протестирована и готова к использованию!** 🎉

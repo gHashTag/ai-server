@@ -13,22 +13,22 @@
 ### 🎯 Основное событие
 
 ```javascript
-const inngest = new Inngest({ id: 'telegram-bot-client' });
+const inngest = new Inngest({ id: 'telegram-bot-client' })
 
 const result = await inngest.send({
   name: 'instagram/scraper-v2',
   data: {
     // ОБЯЗАТЕЛЬНЫЕ ПАРАМЕТРЫ
-    username_or_id: 'target_username',      // Instagram username для анализа
-    project_id: 37,                         // ID проекта пользователя
-    
+    username_or_id: 'target_username', // Instagram username для анализа
+    project_id: 37, // ID проекта пользователя
+
     // ОПЦИОНАЛЬНЫЕ ПАРАМЕТРЫ
-    max_users: 10,                          // Количество конкурентов (по умолчанию: 50)
-    max_reels_per_user: 5,                  // Рилсов на конкурента (по умолчанию: 50)  
-    scrape_reels: true,                     // Парсить рилсы (по умолчанию: false)
-    requester_telegram_id: '144022504'      // Telegram ID пользователя (по умолчанию: '')
-  }
-});
+    max_users: 10, // Количество конкурентов (по умолчанию: 50)
+    max_reels_per_user: 5, // Рилсов на конкурента (по умолчанию: 50)
+    scrape_reels: true, // Парсить рилсы (по умолчанию: false)
+    requester_telegram_id: '144022504', // Telegram ID пользователя (по умолчанию: '')
+  },
+})
 ```
 
 ---
@@ -37,19 +37,19 @@ const result = await inngest.send({
 
 ### ✅ Обязательные
 
-| Параметр | Тип | Описание | Пример |
-|----------|-----|----------|---------|
-| `username_or_id` | `string` | Instagram username (без @) | `"vyacheslav_nekludov"` |
-| `project_id` | `number` | ID проекта, положительное число | `37` |
+| Параметр         | Тип      | Описание                        | Пример                  |
+| ---------------- | -------- | ------------------------------- | ----------------------- |
+| `username_or_id` | `string` | Instagram username (без @)      | `"vyacheslav_nekludov"` |
+| `project_id`     | `number` | ID проекта, положительное число | `37`                    |
 
 ### ⚙️ Опциональные
 
-| Параметр | Тип | По умолчанию | Описание |
-|----------|-----|-------------|----------|
-| `max_users` | `number` | `50` | Максимальное количество конкурентов (1-100) |
-| `max_reels_per_user` | `number` | `50` | Максимальное количество рилсов на пользователя (1-200) |
-| `scrape_reels` | `boolean` | `false` | Включить анализ рилсов конкурентов |
-| `requester_telegram_id` | `string` | `""` | Telegram ID пользователя, сделавшего запрос |
+| Параметр                | Тип       | По умолчанию | Описание                                               |
+| ----------------------- | --------- | ------------ | ------------------------------------------------------ |
+| `max_users`             | `number`  | `50`         | Максимальное количество конкурентов (1-100)            |
+| `max_reels_per_user`    | `number`  | `50`         | Максимальное количество рилсов на пользователя (1-200) |
+| `scrape_reels`          | `boolean` | `false`      | Включить анализ рилсов конкурентов                     |
+| `requester_telegram_id` | `string`  | `""`         | Telegram ID пользователя, сделавшего запрос            |
 
 ---
 
@@ -62,9 +62,9 @@ await inngest.send({
   name: 'instagram/scraper-v2',
   data: {
     username_or_id: 'target_account',
-    project_id: 123
-  }
-});
+    project_id: 123,
+  },
+})
 ```
 
 ### 🎬 Полный анализ (конкуренты + рилсы)
@@ -78,9 +78,9 @@ await inngest.send({
     max_users: 10,
     max_reels_per_user: 5,
     scrape_reels: true,
-    requester_telegram_id: '144022504'
-  }
-});
+    requester_telegram_id: '144022504',
+  },
+})
 ```
 
 ### ⚡ Быстрый тест (3 конкурента)
@@ -92,9 +92,9 @@ await inngest.send({
     username_or_id: 'test_account',
     project_id: 1,
     max_users: 3,
-    scrape_reels: false
-  }
-});
+    scrape_reels: false,
+  },
+})
 ```
 
 ---
@@ -114,7 +114,7 @@ await inngest.send({
   usersSaved: 10,
   usersSkipped: 2,
   validationErrors: [],
-  
+
   // Информация о рилсах
   reelsEnabled: true,
   reelsScraped: 25,
@@ -128,8 +128,8 @@ await inngest.send({
       totalProcessed: 6
     }
   ],
-  
-  // 🆕 НОВОЕ: Информация об отчётах  
+
+  // 🆕 НОВОЕ: Информация об отчётах
   reports: {
     generated: true,
     htmlReport: "/path/to/instagram_analysis_vyacheslav_nekludov_1234567890.html",
@@ -138,7 +138,7 @@ await inngest.send({
     archiveFileName: "instagram_competitors_vyacheslav_nekludov_1234567890.zip",
     error: null
   },
-  
+
   mode: "REAL_API_V2_WITH_NEON_DB_SIMPLIFIED_WITH_REPORTS"
 }
 ```
@@ -159,7 +159,7 @@ await inngest.send({
 ### 📁 Пути к файлам:
 
 - **HTML:** `./output/instagram_analysis_{username}_{timestamp}.html`
-- **Excel:** `./output/instagram_data_{username}_{timestamp}.xlsx` 
+- **Excel:** `./output/instagram_data_{username}_{timestamp}.xlsx`
 - **ZIP:** `./output/instagram_competitors_{username}_{timestamp}.zip`
 
 ---
@@ -191,7 +191,7 @@ CREATE TABLE instagram_similar_users (
 
 ### 🎬 Таблица: `instagram_user_reels` (если scrape_reels = true)
 
-```sql  
+```sql
 CREATE TABLE instagram_user_reels (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   scraped_for_user_pk VARCHAR(255) NOT NULL,   -- Для какого пользователя собрано
@@ -219,7 +219,7 @@ CREATE TABLE instagram_user_reels (
 // Отсутствует username_or_id
 throw new Error('username_or_id is required')
 
-// Неверный project_id  
+// Неверный project_id
 throw new Error('project_id must be a positive number')
 
 // Неверный формат данных
@@ -231,12 +231,12 @@ throw new Error('Event data must be an object')
 ```javascript
 // Логируется в Inngest:
 log.info('✅ Event data parsed successfully:', {
-  username_or_id: "vyacheslav_nekludov",
+  username_or_id: 'vyacheslav_nekludov',
   project_id: 37,
   max_users: 10,
   max_reels_per_user: 5,
   scrape_reels: true,
-  requester_telegram_id: "144022504"
+  requester_telegram_id: '144022504',
 })
 ```
 
@@ -248,28 +248,28 @@ log.info('✅ Event data parsed successfully:', {
 
 ```javascript
 #!/usr/bin/env node
-const { Inngest } = require('inngest');
+const { Inngest } = require('inngest')
 
 async function testInstagramScraper() {
-  const inngest = new Inngest({ id: 'test-client' });
-  
+  const inngest = new Inngest({ id: 'test-client' })
+
   const result = await inngest.send({
     name: 'instagram/scraper-v2',
     data: {
       username_or_id: 'vyacheslav_nekludov',
       project_id: 37,
-      max_users: 3,                     // Быстрый тест
+      max_users: 3, // Быстрый тест
       max_reels_per_user: 5,
       scrape_reels: true,
-      requester_telegram_id: '144022504'
-    }
-  });
-  
-  console.log('Event ID:', result.ids[0]);
-  console.log('Ожидайте результаты через 3-5 минут');
+      requester_telegram_id: '144022504',
+    },
+  })
+
+  console.log('Event ID:', result.ids[0])
+  console.log('Ожидайте результаты через 3-5 минут')
 }
 
-testInstagramScraper();
+testInstagramScraper()
 ```
 
 ---
@@ -281,21 +281,21 @@ testInstagramScraper();
 ```javascript
 // В обработчике команды Telegram бота
 async function handleInstagramAnalysis(ctx, userData) {
-  const inngest = new Inngest({ id: 'telegram-bot' });
-  
+  const inngest = new Inngest({ id: 'telegram-bot' })
+
   const result = await inngest.send({
     name: 'instagram/scraper-v2',
     data: {
-      username_or_id: userData.targetUsername,      // Получено от пользователя
-      project_id: userData.projectId,               // ID пользователя в системе  
-      max_users: userData.maxCompetitors || 10,     // Выбор пользователя
+      username_or_id: userData.targetUsername, // Получено от пользователя
+      project_id: userData.projectId, // ID пользователя в системе
+      max_users: userData.maxCompetitors || 10, // Выбор пользователя
       max_reels_per_user: 5,
       scrape_reels: userData.includeReels || false, // Checkbox пользователя
-      requester_telegram_id: ctx.from.id.toString()// Telegram ID
-    }
-  });
-  
-  return result.ids[0]; // Event ID для отслеживания
+      requester_telegram_id: ctx.from.id.toString(), // Telegram ID
+    },
+  })
+
+  return result.ids[0] // Event ID для отслеживания
 }
 ```
 
@@ -304,16 +304,20 @@ async function handleInstagramAnalysis(ctx, userData) {
 ```javascript
 // Через 3-5 минут получить результат и отправить архив
 async function sendReportToUser(ctx, eventId, scrapingData) {
-  const reportInfo = await getReportInfo(eventId);
-  
+  const reportInfo = await getReportInfo(eventId)
+
   if (reportInfo && reportInfo.generated) {
-    await ctx.replyWithDocument({
-      source: reportInfo.archivePath,
-      filename: reportInfo.archiveFileName
-    }, {
-      caption: `📦 Анализ конкурентов для @${scrapingData.targetUsername}\n` +
-               `📊 HTML отчёт + Excel данные + README инструкция`
-    });
+    await ctx.replyWithDocument(
+      {
+        source: reportInfo.archivePath,
+        filename: reportInfo.archiveFileName,
+      },
+      {
+        caption:
+          `📦 Анализ конкурентов для @${scrapingData.targetUsername}\n` +
+          `📊 HTML отчёт + Excel данные + README инструкция`,
+      }
+    )
   }
 }
 ```
@@ -323,7 +327,7 @@ async function sendReportToUser(ctx, eventId, scrapingData) {
 ## ⏱️ Время выполнения
 
 - **Только конкуренты:** 1-2 минуты
-- **Конкуренты + рилсы:** 3-5 минут  
+- **Конкуренты + рилсы:** 3-5 минут
 - **С отчётами:** +30-60 секунд
 
 ---
@@ -346,4 +350,4 @@ INNGEST_EVENT_KEY=your-event-key
 
 ## 🎯 Готово к интеграции!
 
-Используйте эту спецификацию для интеграции в Telegram бот. Все примеры кода готовы для копирования и использования! 
+Используйте эту спецификацию для интеграции в Telegram бот. Все примеры кода готовы для копирования и использования!
