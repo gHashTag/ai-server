@@ -16,6 +16,7 @@ import { ReplicateWebhookRoute } from './replicateWebhook.route'
 import { DownloadRoute } from './download.route'
 import { CompetitorSubscriptionsRoute } from './competitor-subscriptions.route'
 import { UniversalWebhookRoute } from './universalWebhook.route'
+import N8nRoute from './n8n.route'
 
 export const routes = [
   new UploadRoute(),
@@ -36,4 +37,5 @@ export const routes = [
   new DownloadRoute(),
   new CompetitorSubscriptionsRoute(),
   new UniversalWebhookRoute(), // Универсальный webhook для всех AI провайдеров
+  new N8nRoute(), // N8N Workflow Administration Interface
 ]

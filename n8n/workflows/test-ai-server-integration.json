@@ -1,0 +1,109 @@
+{
+  "name": "Test AI Server Integration",
+  "nodes": [
+    {
+      "parameters": {
+        "resource": "instagram",
+        "operation": "scrapeProfile",
+        "username": "test_user"
+      },
+      "id": "b5a85ee4-1a37-4059-9d1b-2ab8bb0c936f",
+      "name": "Instagram Scraper",
+      "type": "aiServerApi",
+      "typeVersion": 1,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "resource": "generation",
+        "operation": "generateNeuroImage",
+        "prompt": "Beautiful landscape with mountains",
+        "model": "flux-schnell",
+        "aspectRatio": "16:9"
+      },
+      "id": "c7d3a221-4f67-4fc2-b894-8cd5f8e9b723",
+      "name": "Generate Image",
+      "type": "aiServerApi",
+      "typeVersion": 1,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "test-webhook",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "d8f4c332-5a78-4de3-a995-9def0123f456",
+      "name": "Webhook",
+      "type": "webhook",
+      "typeVersion": 1,
+      "position": [20, 300],
+      "webhookId": "test-ai-server-webhook"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { success: true, data: $json } }}"
+      },
+      "id": "e9a5d443-6b89-4ef4-ba06-afdc1234g567",
+      "name": "Respond to Webhook",
+      "type": "respondToWebhook",
+      "typeVersion": 1,
+      "position": [680, 300]
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Instagram Scraper",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Instagram Scraper": {
+      "main": [
+        [
+          {
+            "node": "Generate Image",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate Image": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "b4b8e832-1c47-48e7-bb8d-8db7e8f9c123",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "your-instance-id"
+  },
+  "id": "test-ai-server-workflow",
+  "tags": [
+    {
+      "createdAt": "2025-08-23T10:00:00.000Z",
+      "updatedAt": "2025-08-23T10:00:00.000Z",
+      "id": "test-tag",
+      "name": "AI Server Integration"
+    }
+  ]
+}

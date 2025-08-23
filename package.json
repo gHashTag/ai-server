@@ -30,7 +30,13 @@
     "tunnel": "ssh -R 80:localhost:4000 localhost.run",
     "mcp:server": "npm run build && node dist/mcp/index.js",
     "mcp:server:direct": "node dist/mcp/index.js",
-    "mcp:dev": "nodemon --exec \"npm run build && node dist/mcp/index.js\" --watch src/mcp --ext ts"
+    "mcp:dev": "nodemon --exec \"npm run build && node dist/mcp/index.js\" --watch src/mcp --ext ts",
+    "n8n:start": "./scripts/start-n8n-integration.sh",
+    "n8n:stop": "./scripts/start-n8n-integration.sh stop",
+    "n8n:restart": "./scripts/start-n8n-integration.sh restart",
+    "n8n:test": "./scripts/start-n8n-integration.sh test",
+    "n8n:logs": "./scripts/start-n8n-integration.sh logs",
+    "n8n:status": "./scripts/start-n8n-integration.sh status"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.12.0",
