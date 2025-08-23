@@ -14,7 +14,6 @@ import path from 'path'
 // Используем основной Inngest клиент
 import { inngest } from '@/core/inngest/clients'
 
-
 // Импортируем Apify функцию для замены RapidAPI
 import { triggerApifyInstagramScraping } from './instagramApifyScraper'
 
@@ -73,6 +72,12 @@ function getDbPool(): Pool {
   return dbPool
 }
 
+<<<<<<< HEAD
+// УДАЛЁН: Instagram API класс заменён на Apify integration
+// Вся логика теперь работает через triggerApifyInstagramScraping в Step 3
+
+=======
+>>>>>>> origin/main
 // Database operations with Zod validation
 class InstagramDatabase {
   /**
@@ -928,7 +933,10 @@ export const instagramScraperV2 = inngest.createFunction(
       APIFY_TOKEN: process.env.APIFY_TOKEN
         ? `${process.env.APIFY_TOKEN.substring(0, 10)}...`
         : 'НЕ НАЙДЕН',
+<<<<<<< HEAD
+=======
       SUPABASE_URL: process.env.SUPABASE_URL ? 'НАЙДЕН' : 'НЕ НАЙДЕН',
+>>>>>>> origin/main
       NODE_ENV: process.env.NODE_ENV || 'НЕ НАЙДЕН',
     })
 
@@ -1000,7 +1008,11 @@ export const instagramScraperV2 = inngest.createFunction(
         throw new Error('Database URL is not configured. Please set SUPABASE_URL environment variable.')
       }
       
+<<<<<<< HEAD
+      // Log API configuration (without exposing full key)
+=======
       // Log API configuration (without exposing full token)
+>>>>>>> origin/main
       log.info('🔧 API Configuration:', {
         apifyTokenPresent: !!process.env.APIFY_TOKEN,
         apifyTokenLength: process.env.APIFY_TOKEN?.length || 0,
@@ -1085,7 +1097,11 @@ export const instagramScraperV2 = inngest.createFunction(
         message: 'Apify scraping initiated successfully',
         apifyEventId: result.eventId
       }
+<<<<<<< HEAD
+    })
+=======
 
+>>>>>>> origin/main
 
     // Step 4: Apify processing (данные обрабатываются асинхронно)
     const processedUsers = await step.run(
