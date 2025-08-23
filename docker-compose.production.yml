@@ -30,7 +30,7 @@ services:
       # Redis for caching
       - REDIS_URL=redis://redis:6379
       # Monitoring Bot Token
-      - MONITORING_BOT_TOKEN=7667727700:AAEJIvtBWxgy_cj_Le_dGMpqA_dz7Pwhj0c
+      - MONITORING_BOT_TOKEN=${MONITORING_BOT_TOKEN}
       - ADMIN_TELEGRAM_ID=${ADMIN_TELEGRAM_ID}
     volumes:
       - ./logs:/app/logs

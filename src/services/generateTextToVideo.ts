@@ -204,6 +204,12 @@ export const generateTextToVideo = async (
       await updateUserLevelPlusOne(telegram_id, level)
     }
     const { bot } = getBotByName(bot_name)
+    
+    // Проверяем что бот найден
+    if (!bot) {
+      throw new Error(`Bot with name '${bot_name}' not found. Please check bot configuration.`)
+    }
+    
     // Проверка баланса для всех изображений
     const balanceResult = await processBalanceVideoOperation({
       videoModel,
