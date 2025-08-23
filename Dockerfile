@@ -25,15 +25,8 @@ RUN apk add --no-cache \
 COPY package*.json ./
 RUN npm install --omit=dev
 
-# Install N8N globally for production use
-RUN npm install -g n8n@latest
-
 # Copy built assets from builder
 COPY --from=builder /app/dist ./dist
-
-# Copy production startup script
-COPY scripts/start-production.sh ./scripts/
-RUN chmod +x ./scripts/start-production.sh
 
 # Set log directory environment variable
 ENV LOG_DIR=/app/logs
@@ -53,10 +46,10 @@ RUN mkdir -p /app/logs && \
 # Switch to non-root user
 USER node
 
-EXPOSE 3000 5678
+EXPOSE 3000
 
 # Add healthcheck with longer start period for Railway
 HEALTHCHECK --interval=30s --timeout=30s --start-period=60s --retries=3 \
     CMD node -e "const port = process.env.PORT || 3000; require('http').get(\`http://localhost:\${port}/health\`, (r) => r.statusCode === 200 ? process.exit(0) : process.exit(1))"
 
-CMD ["./scripts/start-production.sh"]
+CMD ["node", "dist/server.js"]
