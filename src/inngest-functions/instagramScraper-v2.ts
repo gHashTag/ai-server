@@ -68,6 +68,22 @@ function getDbPool(): Pool {
       ssl: {
         rejectUnauthorized: false,
       },
+      // Timeout и connection pool конфигурация
+      connectionTimeoutMillis: 30000, // 30 секунд на подключение
+      idleTimeoutMillis: 30000, // 30 секунд idle timeout
+      queryTimeout: 60000, // 60 секунд на выполнение запроса
+      max: 10, // Максимум 10 соединений в пуле
+      min: 2, // Минимум 2 соединения
+      acquireTimeoutMillis: 20000, // 20 секунд на получение соединения из пула
+    })
+
+    // Обработка ошибок подключения
+    dbPool.on('error', err => {
+      log.error('Instagram PostgreSQL pool error:', err.message)
+    })
+
+    dbPool.on('connect', client => {
+      log.info('New Instagram PostgreSQL client connected')
     })
   }
 
