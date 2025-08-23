@@ -620,19 +620,169 @@ export class DartAIController {
   }
 
   /**
+   * Получить конкретную задачу по ID
+   * GET /api/dart-ai/tasks/:id
+   */
+  public getTask = async (req: Request, res: Response): Promise<void> => {
+    try {
+      const { id } = req.params
+
+      if (!id) {
+        res.status(400).json({
+          success: false,
+          error: 'Missing required parameter: id'
+        })
+        return
+      }
+
+      const task = await this.dartAIService.getTaskById(id)
+
+      if (!task) {
+        res.status(404).json({
+          success: false,
+          error: 'Task not found'
+        })
+        return
+      }
+
+      res.json({
+        success: true,
+        task
+      })
+    } catch (error) {
+      logger.error('Failed to get task', { error: error.message })
+      res.status(500).json({
+        success: false,
+        error: error.message
+      })
+    }
+  }
+
+  /**
+   * Создать новую задачу
+   * POST /api/dart-ai/tasks
+   */
+  public createTask = async (req: Request, res: Response): Promise<void> => {
+    try {
+      const taskData = req.body
+
+      if (!taskData.title) {
+        res.status(400).json({
+          success: false,
+          error: 'Missing required field: title'
+        })
+        return
+      }
+
+      const task = await this.dartAIService.createTask(taskData)
+
+      if (!task) {
+        res.status(500).json({
+          success: false,
+          error: 'Failed to create task'
+        })
+        return
+      }
+
+      res.status(201).json({
+        success: true,
+        message: 'Task created successfully',
+        task
+      })
+    } catch (error) {
+      logger.error('Failed to create task', { error: error.message })
+      res.status(500).json({
+        success: false,
+        error: error.message
+      })
+    }
+  }
+
+  /**
+   * Обновить задачу
+   * PUT /api/dart-ai/tasks/:id
+   */
+  public updateTask = async (req: Request, res: Response): Promise<void> => {
+    try {
+      const { id } = req.params
+      const updates = req.body
+
+      if (!id) {
+        res.status(400).json({
+          success: false,
+          error: 'Missing required parameter: id'
+        })
+        return
+      }
+
+      const task = await this.dartAIService.updateTask(id, updates)
+
+      if (!task) {
+        res.status(404).json({
+          success: false,
+          error: 'Task not found or update failed'
+        })
+        return
+      }
+
+      res.json({
+        success: true,
+        message: 'Task updated successfully',
+        task
+      })
+    } catch (error) {
+      logger.error('Failed to update task', { error: error.message })
+      res.status(500).json({
+        success: false,
+        error: error.message
+      })
+    }
+  }
+
+  /**
+   * Удалить задачу
+   * DELETE /api/dart-ai/tasks/:id
+   */
+  public deleteTask = async (req: Request, res: Response): Promise<void> => {
+    try {
+      const { id } = req.params
+
+      if (!id) {
+        res.status(400).json({
+          success: false,
+          error: 'Missing required parameter: id'
+        })
+        return
+      }
+
+      const deleted = await this.dartAIService.deleteTask(id)
+
+      if (!deleted) {
+        res.status(404).json({
+          success: false,
+          error: 'Task not found or delete failed'
+        })
+        return
+      }
+
+      res.json({
+        success: true,
+        message: 'Task deleted successfully'
+      })
+    } catch (error) {
+      logger.error('Failed to delete task', { error: error.message })
+      res.status(500).json({
+        success: false,
+        error: error.message
+      })
+    }
+  }
+
+  /**
    * Получить данные задачи Dart AI
    */
   private async getDartAITaskData(taskId: string): Promise<any> {
-    // Используем сервис для получения задачи
-    // Пока что возвращаем mock-данные
-    return {
-      id: taskId,
-      title: 'Mock Task',
-      description: 'Mock task description',
-      status: 'open',
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    }
+    return await this.dartAIService.getTaskById(taskId)
   }
 
   /**

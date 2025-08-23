@@ -2,17 +2,29 @@ import axios, { AxiosInstance, AxiosRequestConfig } from 'axios'
 import { logger } from '@utils/logger'
 
 interface DartAITask {
-  duid: string
+  id: string
+  htmlUrl?: string
   title: string
-  description?: any // Rich text format from Dart AI
-  statusDuid?: string
-  spaceDuid: string
-  kind?: string
+  description?: string
+  parentId?: string
+  dartboard?: string
+  type?: string
+  status?: 'To-do' | 'Doing' | 'Done' | null
   assignee?: string
+  assignees?: string[]
+  tags?: string[]
+  priority?: string
+  startAt?: string
+  dueAt?: string
+  size?: string
+  timeTracking?: string
+  customProperties?: Record<string, any>
+  taskRelationships?: Record<string, any>
+  // Дополнительные поля для интеграции
   github_issue_number?: number
   github_repository?: string
-  createdAt: string
-  updatedAt: string
+  createdAt?: string
+  updatedAt?: string
   metadata?: Record<string, any>
 }
 
@@ -204,7 +216,7 @@ export class DartAIService {
 
     try {
       logger.info('📝 Создаю GitHub Issue из задачи Dart AI', {
-        task_id: task.duid,
+        task_id: task.id,
         repository,
         title: task.title,
       })
@@ -240,16 +252,16 @@ export class DartAIService {
 
       logger.info('✅ GitHub Issue создан', {
         issue_number: issue.number,
-        task_id: task.duid,
+        task_id: task.id,
       })
 
       // Обновляем задачу в Dart AI с информацией о GitHub Issue
-      await this.updateTaskWithGitHubInfo(task.duid, issue)
+      await this.updateTaskWithGitHubInfo(task.id, issue)
 
       return issue
     } catch (error) {
       logger.error('💥 Ошибка создания GitHub Issue', {
-        task_id: task.duid,
+        task_id: task.id,
         repository,
         error: error.message,
       })
@@ -320,7 +332,7 @@ export class DartAIService {
           logger.info(
             '🔄 Задача синхронизирована с существующим GitHub Issue',
             {
-              task_id: task.duid,
+              task_id: task.id,
               issue_number: existingIssueNumber,
               processing_time_ms: processingTime,
             }
@@ -341,7 +353,7 @@ export class DartAIService {
           const processingTime = Date.now() - startTime
 
           logger.info('📝 Новый GitHub Issue создан из задачи', {
-            task_id: task.duid,
+            task_id: task.id,
             issue_number: newIssue.number,
             processing_time_ms: processingTime,
           })
@@ -362,7 +374,7 @@ export class DartAIService {
     } catch (error) {
       this.syncStats.failed_syncs++
       logger.error('💥 Ошибка синхронизации задачи в GitHub', {
-        task_id: task.duid,
+        task_id: task.id,
         error: error.message,
       })
 
@@ -376,16 +388,185 @@ export class DartAIService {
   }
 
   /**
-   * Получить информацию о задаче по DUID
+   * Получить информацию о задаче по ID
    */
-  public async getTaskByDuid(duid: string): Promise<DartAITask | null> {
+  public async getTaskById(id: string): Promise<DartAITask | null> {
     try {
-      const response = await this.apiClient.get(`/tasks/${duid}`)
-      return response.data
+      logger.debug('📋 Получаю задачу по ID', { id })
+      
+      const response = await this.apiClient.get(`/public/tasks/${id}`)
+      const task = response.data.item
+
+      logger.info('✅ Задача получена', {
+        id: task.id,
+        title: task.title,
+        status: task.status
+      })
+
+      return {
+        id: task.id,
+        htmlUrl: task.htmlUrl,
+        title: task.title,
+        description: task.description,
+        parentId: task.parentId,
+        dartboard: task.dartboard,
+        type: task.type,
+        status: task.status,
+        assignee: task.assignee,
+        tags: task.tags,
+        priority: task.priority,
+        startAt: task.startAt,
+        dueAt: task.dueAt,
+        size: task.size,
+        timeTracking: task.timeTracking,
+        customProperties: task.customProperties,
+        taskRelationships: task.taskRelationships
+      }
     } catch (error) {
-      logger.warn('Не удалось получить задачу', {
-        duid,
-        error: error.message
+      logger.error('💥 Не удалось получить задачу', {
+        id,
+        error: error.message,
+        status: error.response?.status
+      })
+      return null
+    }
+  }
+
+  /**
+   * Обновить задачу
+   */
+  public async updateTask(id: string, updates: Partial<DartAITask>): Promise<DartAITask | null> {
+    try {
+      logger.info('📝 Обновляю задачу', { id, updates: Object.keys(updates) })
+
+      const updateData = {
+        item: {
+          id,
+          ...updates
+        }
+      }
+
+      const response = await this.apiClient.put(`/public/tasks/${id}`, updateData)
+      const updatedTask = response.data.item
+
+      logger.info('✅ Задача обновлена', {
+        id: updatedTask.id,
+        title: updatedTask.title,
+        status: updatedTask.status
+      })
+
+      return {
+        id: updatedTask.id,
+        htmlUrl: updatedTask.htmlUrl,
+        title: updatedTask.title,
+        description: updatedTask.description,
+        parentId: updatedTask.parentId,
+        dartboard: updatedTask.dartboard,
+        type: updatedTask.type,
+        status: updatedTask.status,
+        assignee: updatedTask.assignee,
+        tags: updatedTask.tags,
+        priority: updatedTask.priority,
+        startAt: updatedTask.startAt,
+        dueAt: updatedTask.dueAt,
+        size: updatedTask.size,
+        timeTracking: updatedTask.timeTracking,
+        customProperties: updatedTask.customProperties,
+        taskRelationships: updatedTask.taskRelationships
+      }
+    } catch (error) {
+      logger.error('💥 Ошибка обновления задачи', {
+        id,
+        error: error.message,
+        response_data: error.response?.data
+      })
+      return null
+    }
+  }
+
+  /**
+   * Удалить задачу
+   */
+  public async deleteTask(id: string): Promise<boolean> {
+    try {
+      logger.info('🗑️ Удаляю задачу', { id })
+
+      await this.apiClient.delete(`/public/tasks/${id}`)
+
+      logger.info('✅ Задача удалена', { id })
+      return true
+    } catch (error) {
+      logger.error('💥 Ошибка удаления задачи', {
+        id,
+        error: error.message,
+        status: error.response?.status
+      })
+      return false
+    }
+  }
+
+  /**
+   * Создать задачу с полными параметрами
+   */
+  public async createTask(taskData: Partial<DartAITask>): Promise<DartAITask | null> {
+    try {
+      logger.info('📝 Создаю новую задачу', {
+        title: taskData.title,
+        status: taskData.status,
+        tags: taskData.tags
+      })
+
+      const createData = {
+        item: {
+          title: taskData.title,
+          description: taskData.description,
+          parentId: taskData.parentId,
+          dartboard: taskData.dartboard,
+          type: taskData.type,
+          status: taskData.status,
+          assignee: taskData.assignee,
+          assignees: taskData.assignees,
+          tags: taskData.tags,
+          priority: taskData.priority,
+          startAt: taskData.startAt,
+          dueAt: taskData.dueAt,
+          size: taskData.size,
+          customProperties: taskData.customProperties
+        }
+      }
+
+      const response = await this.apiClient.post('/public/tasks', createData)
+      const createdTask = response.data.item
+
+      logger.info('✅ Задача создана', {
+        id: createdTask.id,
+        title: createdTask.title,
+        url: createdTask.htmlUrl
+      })
+
+      return {
+        id: createdTask.id,
+        htmlUrl: createdTask.htmlUrl,
+        title: createdTask.title,
+        description: createdTask.description,
+        parentId: createdTask.parentId,
+        dartboard: createdTask.dartboard,
+        type: createdTask.type,
+        status: createdTask.status,
+        assignee: createdTask.assignee,
+        tags: createdTask.tags,
+        priority: createdTask.priority,
+        startAt: createdTask.startAt,
+        dueAt: createdTask.dueAt,
+        size: createdTask.size,
+        timeTracking: createdTask.timeTracking,
+        customProperties: createdTask.customProperties,
+        taskRelationships: createdTask.taskRelationships
+      }
+    } catch (error) {
+      logger.error('💥 Ошибка создания задачи', {
+        error: error.message,
+        response_data: error.response?.data
       })
       return null
     }
@@ -549,30 +730,47 @@ export class DartAIService {
    * Форматировать описание задачи для GitHub Issue
    */
   private formatTaskDescription(task: DartAITask): string {
-    const description = this.extractDescriptionText(task.description) || 'Без описания'
+    const description = task.description || 'Без описания'
 
     let formattedDescription = description
     
     formattedDescription += `\n\n---
 ## 🎯 Dart AI Task Info
 `
-    formattedDescription += `**Task ID:** \`${task.duid}\`\n`
-    formattedDescription += `**Space:** ${task.spaceDuid}\n`
+    formattedDescription += `**Task ID:** \`${task.id}\`\n`
+    formattedDescription += `**URL:** [${task.htmlUrl}](${task.htmlUrl})\n`
     
-    if (task.kind) {
-      formattedDescription += `**Type:** ${task.kind}\n`
+    if (task.dartboard) {
+      formattedDescription += `**Dartboard:** ${task.dartboard}\n`
     }
     
-    if (task.statusDuid) {
-      formattedDescription += `**Status DUID:** ${task.statusDuid}\n`
+    if (task.type) {
+      formattedDescription += `**Type:** ${task.type}\n`
+    }
+    
+    if (task.status) {
+      formattedDescription += `**Status:** ${task.status}\n`
     }
 
     if (task.assignee) {
-      formattedDescription += `**Исполнитель:** ${task.assignee}\n`
+      formattedDescription += `**Assignee:** ${task.assignee}\n`
     }
-    
-    formattedDescription += `**Создано:** ${task.createdAt}\n`
-    formattedDescription += `**Обновлено:** ${task.updatedAt}\n`
+
+    if (task.tags && task.tags.length > 0) {
+      formattedDescription += `**Tags:** ${task.tags.join(', ')}\n`
+    }
+
+    if (task.priority) {
+      formattedDescription += `**Priority:** ${task.priority}\n`
+    }
+
+    if (task.startAt) {
+      formattedDescription += `**Start Date:** ${task.startAt}\n`
+    }
+
+    if (task.dueAt) {
+      formattedDescription += `**Due Date:** ${task.dueAt}\n`
+    }
 
     formattedDescription += `\n> 🔗 *Синхронизировано из Dart AI: ${new Date().toLocaleString('ru-RU')}*`
 
@@ -670,13 +868,19 @@ export class DartAIService {
 
       // Конвертируем в наш интерфейс DartAITask
       const dartTask: DartAITask = {
-        duid: createdTask.id,
+        id: createdTask.id,
+        htmlUrl: createdTask.htmlUrl,
         title: createdTask.title,
         description: createdTask.description,
-        statusDuid: createdTask.status,
-        spaceDuid: createdTask.dartboard,
-        kind: 'task',
+        dartboard: createdTask.dartboard,
+        type: createdTask.type,
+        status: createdTask.status,
         assignee: createdTask.assignee,
+        tags: createdTask.tags,
+        startAt: createdTask.startAt,
+        dueAt: createdTask.dueAt,
+        customProperties: createdTask.customProperties,
+        taskRelationships: createdTask.taskRelationships,
         github_issue_number: issue.number,
         github_repository: issue.repository,
         createdAt: new Date().toISOString(),
