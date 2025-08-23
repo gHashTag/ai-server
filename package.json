@@ -7,7 +7,7 @@
   "scripts": {
     "start": "cross-env NODE_ENV=production node dist/server.js",
     "start:build": "npm run build && cross-env NODE_ENV=production node dist/server.js",
-    "dev": "nodemon --config nodemon.json",
+    "dev": "node scripts/dev-full.js",
     "dev:server": "npm run build && cross-env NODE_ENV=development node dist/server.js",
     "dev:inngest": "npx inngest-cli@latest dev -u http://localhost:4000/api/inngest --port 8289 --log-level warn",
     "dev:full": "node scripts/dev-full.js",
@@ -36,7 +36,9 @@
     "n8n:restart": "./scripts/start-n8n-integration.sh restart",
     "n8n:test": "./scripts/start-n8n-integration.sh test",
     "n8n:logs": "./scripts/start-n8n-integration.sh logs",
-    "n8n:status": "./scripts/start-n8n-integration.sh status"
+    "n8n:status": "./scripts/start-n8n-integration.sh status",
+    "n8n:standalone": "docker run --rm -p 5678:5678 -v n8n_dev_data:/home/node/.n8n -e N8N_BASIC_AUTH_ACTIVE=true -e N8N_BASIC_AUTH_USER=admin -e N8N_BASIC_AUTH_PASSWORD=admin123 docker.n8n.io/n8nio/n8n:latest",
+    "test:ecosystem": "./scripts/test-dev-ecosystem.sh"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.12.0",
