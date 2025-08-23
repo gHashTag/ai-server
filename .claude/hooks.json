@@ -1,0 +1,30 @@
+{
+  "hooks": {
+    "PostTaskCompletion": [
+      {
+        "description": "Автоматическая очистка PR от вспомогательных файлов",
+        "matcher": "создать|пиар|pr|pull request|коммит|commit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/pr-cleanup.sh",
+            "timeout": 30000
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "description": "Очистка после создания множественных файлов",
+        "matcher": "Write.*\\.md$",
+        "hooks": [
+          {
+            "type": "command", 
+            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/docs-cleanup.sh",
+            "timeout": 15000
+          }
+        ]
+      }
+    ]
+  }
+}
