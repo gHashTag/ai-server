@@ -20,10 +20,44 @@ services:
       - INNGEST_SIGNING_KEY=${INNGEST_SIGNING_KEY}
       - INNGEST_EVENT_KEY=${INNGEST_EVENT_KEY}
       - INNGEST_APP_URL=https://ai-server-production-production-8e2d.up.railway.app
+      # N8N Integration
+      - N8N_WEBHOOK_URL=http://n8n:5678
     volumes:
       - ./persistent_uploads:/app/dist/uploads
       - ./logs:/app/logs
+    depends_on:
+      - n8n
     restart: always
+
+  n8n:
+    container_name: n8n-admin
+    image: docker.n8n.io/n8nio/n8n:latest
+    ports:
+      - '5678:5678'
+    environment:
+      - N8N_BASIC_AUTH_ACTIVE=true
+      - N8N_BASIC_AUTH_USER=admin
+      - N8N_BASIC_AUTH_PASSWORD=${N8N_ADMIN_PASSWORD:-admin123}
+      - N8N_HOST=0.0.0.0
+      - N8N_PORT=5678
+      - N8N_PROTOCOL=http
+      - WEBHOOK_URL=http://localhost:5678
+      - GENERIC_TIMEZONE=Europe/Moscow
+      - N8N_METRICS=true
+      - N8N_LOG_LEVEL=info
+      # Database
+      - DB_TYPE=sqlite
+      - DB_SQLITE_DATABASE=/home/node/.n8n/database.sqlite
+      # Custom nodes path
+      - N8N_CUSTOM_EXTENSIONS=/home/node/.n8n/custom
+    volumes:
+      - n8n_data:/home/node/.n8n
+      - ./n8n/custom-nodes:/home/node/.n8n/custom
+      - ./n8n/workflows:/home/node/.n8n/workflows
+    restart: always
+
+volumes:
+  n8n_data:
 
   proxy:
     container_name: proxy
