@@ -29,6 +29,8 @@ NODE_ENV = "testing"
 APP_ENV = "testing"
 PORT = "${{ PORT }}"
 LOG_DIR = "/tmp/ai-server-logs"
+# N8N Service URL для тестирования - будет указывать на отдельный N8N сервис
+N8N_SERVICE_URL = "https://n8n-testing.up.railway.app"
 
 # Переменные для продакшн окружения (production branch)  
 [environments.production.variables]
@@ -36,3 +38,5 @@ NODE_ENV = "production"
 APP_ENV = "production" 
 PORT = "${{ PORT }}"
 LOG_DIR = "/tmp/ai-server-logs"
+# N8N Service URL для продакшена - будет указывать на отдельный N8N сервис
+N8N_SERVICE_URL = "https://n8n-production.up.railway.app"

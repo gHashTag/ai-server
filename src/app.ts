@@ -5,7 +5,7 @@ import cookieParser from 'cookie-parser'
 import cors from 'cors'
 import helmet from 'helmet'
 import hpp from 'hpp'
-// import { createProxyMiddleware } from 'http-proxy-middleware' // Временно отключен
+import { createProxyMiddleware } from 'http-proxy-middleware'
 // const server = require('@nexrender/server')
 // const { start } = require('@nexrender/worker')
 import swaggerJSDoc from 'swagger-jsdoc'
@@ -69,12 +69,19 @@ export class App {
       logger.info(`   POST /api/upload     - File upload`)
       logger.info(`   GET  /api-docs       - Swagger documentation`)
       logger.info(`   GET  /uploads/*      - Static files`)
+      logger.info(`   ALL  /n8n/*          - N8N Workflow Automation (Proxy)`)
       logger.info(`=================================`)
       logger.info(`🔧 DEVELOPMENT TOOLS:`)
       logger.info(`   📊 Inngest Dashboard: http://localhost:8289`)
       logger.info(`   🔗 Inngest Functions: http://localhost:8289/functions`)
       logger.info(`   ⚡ Inngest Events: http://localhost:8289/events`)
       logger.info(`   📖 API Docs: http://localhost:${this.port}/api-docs`)
+      logger.info(`=================================`)
+      logger.info(`🎨 N8N WORKFLOW AUTOMATION:`)
+      const n8nServiceUrl = process.env.N8N_SERVICE_URL || 'http://localhost:5678'
+      logger.info(`   🎯 N8N Target: ${n8nServiceUrl}`)
+      logger.info(`   🌐 N8N Proxy: http://localhost:${this.port}/n8n`)
+      logger.info(`   📝 N8N Direct: ${n8nServiceUrl}`)
       logger.info(`=================================`)
     })
     return this.server
@@ -131,23 +138,38 @@ export class App {
     //   res.status(200).end()
     // })
 
-    // N8N Proxy - временно отключен для стабильности
-    // TODO: Включить после настройки N8N сервера
-    this.app.get('/n8n', (req, res) => {
-      res.status(503).json({
-        error: 'N8N service temporarily unavailable',
-        message: 'N8N is being configured for production deployment',
-        status: 'coming_soon'
-      })
+    // N8N Proxy Configuration
+    const n8nTarget = process.env.N8N_SERVICE_URL || 'http://localhost:5678'
+    
+    // N8N proxy middleware with proper configuration
+    const n8nProxy = createProxyMiddleware({
+      target: n8nTarget,
+      changeOrigin: true,
+      pathRewrite: {
+        '^/n8n': '', // Remove /n8n prefix when forwarding to N8N
+      },
+      ws: true, // Enable WebSocket support for N8N real-time features
+      secure: false, // Allow HTTP in development
+      logLevel: 'info',
+      onError: (err, req, res) => {
+        logger.error('N8N Proxy Error:', err.message)
+        if (res && !res.headersSent) {
+          res.status(502).json({
+            error: 'N8N service unavailable',
+            message: 'Unable to connect to N8N service. Please ensure N8N is running.',
+            target: n8nTarget,
+            path: req.url
+          })
+        }
+      },
+      onProxyReq: (proxyReq, req) => {
+        // Log proxy requests for debugging
+        logger.info(`[N8N Proxy] ${req.method} ${req.url} -> ${n8nTarget}${req.url?.replace('/n8n', '')}`)
+      }
     })
     
-    this.app.all('/n8n/*', (req, res) => {
-      res.status(503).json({
-        error: 'N8N service temporarily unavailable', 
-        message: 'N8N is being configured for production deployment',
-        status: 'coming_soon'
-      })
-    })
+    // Apply N8N proxy to all /n8n/* routes
+    this.app.use('/n8n', n8nProxy)
 
     this.app.use('/api/inngest', inngestRouter)
     this.app.use('/api/upload', new UploadRoute().router)
