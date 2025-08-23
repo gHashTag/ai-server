@@ -4,42 +4,48 @@
 
 ### `npm run dev` или `bun dev`
 - Собирает проект
-- Запускает все сервисы через PM2
+- Запускает всю экосистему разработки:
+  - AI Server (порт 4000)
+  - Inngest Dev Server (порт 8289)  
+  - N8N Workflow Admin (порт 5678)
 - **Автоматически показывает логи в реальном времени**
 
-### `npm run dev:restart` или `bun dev:restart`
-- Пересобирает проект
-- Перезапускает все сервисы
-- Показывает логи
+### `npm run dev:full`
+- То же самое что `npm run dev` - запускает полную экосистему
 
-### `npm run dev:logs` или `bun dev:logs`
-- Показывает логи всех запущенных сервисов
-- Используйте если нужно снова посмотреть логи
+### `npm run dev:server`
+- Запускает только AI Server без Inngest и N8N
 
-### `npm run dev:stop` или `bun dev:stop`
-- Останавливает все сервисы PM2
+### `npm run dev:inngest`
+- Запускает только Inngest Dev Server
 
-## Сервисы в PM2
+## Новая Экосистема Сервисов
 
 После запуска `npm run dev` будут работать:
 
-1. **ai-server-main** (порт 4000)
+1. **AI Server** (порт 4000)
    - Основной Express сервер
    - API эндпоинты
    - Inngest роуты
+   - N8N интеграция
 
-2. **ai-server-mcp** 
-   - MCP сервер для интеграции с Cursor/Claude
+2. **Inngest Dev Server** (порт 8289)
+   - Workflow автоматизация
+   - Dashboard: http://localhost:8289
 
-3. **ai-server-inngest** (порт 8288)
-   - Inngest Dev Server
-   - Dashboard доступен на http://localhost:8288
+3. **N8N Workflow Admin** (порт 5678)
+   - Визуальный редактор workflow'ов
+   - Админка для управления автоматизацией
+   - Dashboard: http://localhost:5678
+   - Логин: admin / admin123
 
 ## Полезные URL
 
 - **Основной сервер:** http://localhost:4000
-- **Inngest Dashboard:** http://localhost:8288
+- **Inngest Dashboard:** http://localhost:8289
 - **Inngest API:** http://localhost:4000/api/inngest
+- **N8N Admin Panel:** http://localhost:5678 (admin/admin123)
+- **N8N API:** http://localhost:4000/api/n8n/*
 
 ## Логи
 
@@ -51,30 +57,63 @@
 ## Примеры использования
 
 ```bash
-# Запуск в режиме разработки с логами
+# Запуск полной экосистемы разработки (AI Server + Inngest + N8N)
 bun dev
+# или
+npm run dev
 
-# Перезапуск с новыми изменениями
-bun dev:restart
+# Запуск только AI Server
+npm run dev:server
 
-# Просмотр только логов (если сервисы уже запущены)
-bun dev:logs
+# Запуск только Inngest
+npm run dev:inngest
 
-# Остановка всех сервисов
-bun dev:stop
+# N8N команды
+npm run n8n:standalone    # Запуск только N8N отдельно
+npm run n8n:test         # Тестирование N8N интеграции
+npm run n8n:status       # Статус N8N контейнера
 
 # Проверка статуса
-npm run status
+docker ps | grep n8n-dev
+```
+
+## N8N Workflow Commands
+
+```bash
+# Быстрый тест N8N webhook'а
+curl -X POST http://localhost:5678/webhook/test-webhook \
+  -H "Content-Type: application/json" \
+  -d '{"test": "data"}'
+
+# Проверка N8N API через AI Server
+curl http://localhost:4000/api/n8n/health
+
+# Получение списка workflow'ов
+curl http://localhost:4000/api/n8n/workflows
 ```
 
 ## Что показывают логи
 
 После запуска `bun dev` вы увидите:
 - Процесс сборки проекта
-- Статус запуска каждого сервиса PM2
-- **Реальные логи всех сервисов в одном окне**
+- Запуск AI Server на порту 4000
+- Запуск Inngest Dev Server на порту 8289  
+- Запуск N8N контейнера на порту 5678
+- **Реальные логи всех сервисов в одном окне с префиксами:**
+  - `[SERVER]` - логи AI Server
+  - `[INNGEST]` - логи Inngest 
+  - `[N8N]` - логи N8N
 - Ошибки и предупреждения
 - Inngest события и выполнение функций
+- N8N workflow выполнения
 - HTTP запросы к серверу
 
 Для выхода из просмотра логов используйте `Ctrl+C`.
+
+## N8N Особенности
+
+- N8N запускается через 3 секунды после AI Server для корректной инициализации
+- Автоматически очищается предыдущий `n8n-dev` контейнер при запуске  
+- Доступен сразу после запуска на http://localhost:5678
+- Интегрирован с AI Server API через http://localhost:4000/api/n8n/*
+- Данные сохраняются в Docker volume `n8n_dev_data`
