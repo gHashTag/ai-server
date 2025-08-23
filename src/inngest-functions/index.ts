@@ -39,6 +39,11 @@ import {
   deploymentRecoverySystem,
   railwayDeploymentWebhook,
 } from './deploymentMonitor'
+import {
+  dailyHealthReport,
+  triggerDailyReport,
+  handleTelegramCallbacks,
+} from './dailyHealthReport'
 
 // Export all functions in array (for Inngest registration)
 export const functions = [
@@ -76,6 +81,9 @@ export const functions = [
   deploymentAutoDetector, // 🔍 Автоматическое обнаружение деплоев
   deploymentRecoverySystem, // 🛠 Система автоматического восстановления
   railwayDeploymentWebhook, // 🚂 Webhook для уведомлений Railway
+  dailyHealthReport, // 📊 Ежедневный отчет о состоянии системы
+  triggerDailyReport, // 🔄 Ручной запуск ежедневного отчета
+  handleTelegramCallbacks, // 🔘 Обработчик интерактивных кнопок Telegram
 ]
 
 // Individual exports for compatibility
@@ -103,6 +111,7 @@ export { systemHealthCheck, triggerHealthCheck, healthTestHandler } // 💚 Пр
 export { generateVeo3Video } // 🎬 VEO3 видео генерация через Kie.ai API
 export { networkCheckMonitor, triggerNetworkCheck, postDeployNetworkCheck } // 🌐 Network check функции
 export { deploymentAutoDetector, deploymentRecoverySystem, railwayDeploymentWebhook } // 🚀 Deployment мониторинг
+export { dailyHealthReport, triggerDailyReport, handleTelegramCallbacks } // 📊 Ежедневные отчеты и интерактивность
 
 // Export everything
 export * from './helloworld'
@@ -128,5 +137,6 @@ export * from './systemHealthCheck' // 💚 Проверка здоровья с
 export * from './generateVeo3Video' // 🎬 VEO3 видео генерация через Kie.ai API
 export * from './networkCheckMonitor' // 🌐 Network check мониторинг
 export * from './deploymentMonitor' // 🚀 Deployment мониторинг
+export * from './dailyHealthReport' // 📊 Ежедневные отчеты и интерактивность
 
 export default functions

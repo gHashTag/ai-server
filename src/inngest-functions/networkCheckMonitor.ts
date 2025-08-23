@@ -325,7 +325,28 @@ export const networkCheckMonitor = inngest.createFunction(
 
         message += `\n#network_check #monitoring #${isCritical ? 'critical' : 'warning'}`
 
-        await bot.api.sendMessage(process.env.ADMIN_CHAT_ID!, message)
+        // Создаем интерактивные кнопки
+        const keyboard = {
+          inline_keyboard: [
+            [
+              { text: '🔄 Перезапустить проверку', callback_data: 'rerun_network_check' },
+              { text: '📊 Подробная статистика', callback_data: 'network_stats' }
+            ],
+            [
+              { text: '🛠 Попробовать исправить', callback_data: 'attempt_fix' },
+              { text: '📞 Вызвать админа', callback_data: 'call_admin' }
+            ],
+            [
+              { text: '📈 История проверок', callback_data: 'check_history' },
+              { text: '🔍 Детали ошибок', callback_data: 'error_details' }
+            ]
+          ]
+        }
+
+        await bot.api.sendMessage(process.env.ADMIN_CHAT_ID!, message, {
+          reply_markup: keyboard,
+          parse_mode: 'HTML'
+        })
         
         if (isCritical) {
           // Дублируем критические ошибки
@@ -459,7 +480,31 @@ export const postDeployNetworkCheck = inngest.createFunction(
       message += status
       message += `\n\n#post_deploy #network_check #${failureRate === 0 ? 'success' : failureRate < 30 ? 'warning' : 'critical'}`
 
-      await bot.api.sendMessage(process.env.ADMIN_CHAT_ID!, message)
+      // Кнопки для post-deploy отчета
+      const postDeployKeyboard = {
+        inline_keyboard: failureRate === 0 
+          ? [
+              [
+                { text: '✅ Отлично!', callback_data: 'deploy_success_ack' },
+                { text: '📊 Подробности', callback_data: 'post_deploy_details' }
+              ]
+            ]
+          : [
+              [
+                { text: '🔄 Повторить проверку', callback_data: 'retry_post_deploy' },
+                { text: '🚀 Откатить деплой', callback_data: 'rollback_deployment' }
+              ],
+              [
+                { text: '🛠 Попробовать исправить', callback_data: 'fix_post_deploy' },
+                { text: '📞 Вызвать разработчика', callback_data: 'call_developer' }
+              ]
+            ]
+      }
+
+      await bot.api.sendMessage(process.env.ADMIN_CHAT_ID!, message, {
+        reply_markup: postDeployKeyboard,
+        parse_mode: 'HTML'
+      })
 
       // Критические проблемы дублируем админу
       if (failureRate >= 30) {
