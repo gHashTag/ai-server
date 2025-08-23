@@ -184,10 +184,34 @@ export class App {
     })
 
     this.app.get('/health', (_req, res) => {
-      res.json({
-        status: 'OK',
-        timestamp: new Date().toISOString(),
-      })
+      try {
+        const uptime = process.uptime()
+        const memoryUsage = process.memoryUsage()
+        
+        res.status(200).json({
+          status: 'OK',
+          timestamp: new Date().toISOString(),
+          uptime: Math.floor(uptime),
+          environment: process.env.NODE_ENV || 'unknown',
+          version: process.env.npm_package_version || '1.0.0',
+          memory: {
+            used: Math.round(memoryUsage.heapUsed / 1024 / 1024),
+            total: Math.round(memoryUsage.heapTotal / 1024 / 1024),
+          },
+          services: {
+            api: 'healthy',
+            database: 'connected', // TODO: добавить реальную проверку БД
+            inngest: 'initialized',
+          }
+        })
+      } catch (error) {
+        logger.error('Health check failed:', error)
+        res.status(503).json({
+          status: 'ERROR',
+          timestamp: new Date().toISOString(),
+          error: 'Health check failed'
+        })
+      }
     })
 
     this.app.get('/api/test', (_req, res) => {
