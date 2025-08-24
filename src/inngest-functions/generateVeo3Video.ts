@@ -19,6 +19,95 @@ import { errorMessage, errorMessageAdmin } from '@/helpers'
 import { logger } from '@/utils/logger'
 import { PaymentType } from '@/interfaces/payments.interface'
 import { ModeEnum } from '@/interfaces/modes'
+
+// Вспомогательные функции для обработки ошибок
+function categorizeError(error: any): { type: string; critical: boolean } {
+  const message = error.message?.toLowerCase() || ''
+  const status = error.response?.status
+
+  if (
+    status === 401 ||
+    message.includes('api key') ||
+    message.includes('unauthorized')
+  ) {
+    return { type: 'authentication', critical: true }
+  }
+
+  if (
+    status === 402 ||
+    message.includes('insufficient') ||
+    message.includes('credits') ||
+    message.includes('balance')
+  ) {
+    return { type: 'insufficient_credits', critical: false }
+  }
+
+  if (
+    status === 429 ||
+    message.includes('rate limit') ||
+    message.includes('too many requests')
+  ) {
+    return { type: 'rate_limit', critical: false }
+  }
+
+  if (message.includes('bot not found') || message.includes('user not found')) {
+    return { type: 'user_not_found', critical: false }
+  }
+
+  if (
+    message.includes('kie.ai unavailable') ||
+    message.includes('connection') ||
+    message.includes('network')
+  ) {
+    return { type: 'service_unavailable', critical: false }
+  }
+
+  if (message.includes('timeout') || message.includes('timed out')) {
+    return { type: 'timeout', critical: false }
+  }
+
+  return { type: 'unknown', critical: true }
+}
+
+function getUserFriendlyErrorMessage(error: any, isRu: boolean): string {
+  const errorType = categorizeError(error)
+
+  const messages = {
+    authentication: {
+      ru: '🔐 Проблема с авторизацией сервиса. Администратор уведомлен.',
+      en: '🔐 Service authentication issue. Administrator has been notified.',
+    },
+    insufficient_credits: {
+      ru: '💰 Недостаточно средств в системе. Попробуйте позже или обратитесь к администратору.',
+      en: '💰 Insufficient system credits. Please try later or contact administrator.',
+    },
+    rate_limit: {
+      ru: '⏱️ Система временно перегружена. Попробуйте через несколько минут.',
+      en: '⏱️ System temporarily overloaded. Please try again in a few minutes.',
+    },
+    user_not_found: {
+      ru: '❌ Пользователь не найден. Попробуйте перезапустить бота командой /start',
+      en: '❌ User not found. Please restart the bot with /start command.',
+    },
+    service_unavailable: {
+      ru: '🔧 Сервис временно недоступен. Попробуйте позже.',
+      en: '🔧 Service temporarily unavailable. Please try later.',
+    },
+    timeout: {
+      ru: '⏰ Превышено время ожидания. Попробуйте еще раз.',
+      en: '⏰ Request timed out. Please try again.',
+    },
+    unknown: {
+      ru: '❌ Произошла неожиданная ошибка. Администратор уведомлен.',
+      en: '❌ An unexpected error occurred. Administrator has been notified.',
+    },
+  }
+
+  return (
+    messages[errorType.type]?.[isRu ? 'ru' : 'en'] ||
+    messages.unknown[isRu ? 'ru' : 'en']
+  )
+}
 import { slugify } from 'inngest'
 
 // Интерфейс для данных события
@@ -169,8 +258,29 @@ export const generateVeo3Video = inngest.createFunction(
           logger.warn({
             message: '⚠️ Kie.ai generation failed, falling back to Vertex AI',
             error: kieError.message,
+            errorCode: kieError.response?.status,
             step: 'fallback-to-vertex',
+            telegram_id,
+            model,
           })
+
+          // Сообщаем пользователю о переходе на fallback
+          try {
+            const bot = botData.bot
+            if (bot && telegram_id) {
+              await bot.telegram.sendMessage(
+                telegram_id,
+                is_ru
+                  ? '⚠️ Основная система недоступна. Используем резервную (может быть медленнее)...'
+                  : '⚠️ Primary system unavailable. Using backup system (may be slower)...'
+              )
+            }
+          } catch (notifyError) {
+            logger.warn(
+              'Failed to notify user about fallback:',
+              notifyError.message
+            )
+          }
 
           // Fallback на Vertex AI
           const fallbackVideoUrl = await processVideoGeneration(
@@ -317,28 +427,53 @@ export const generateVeo3Video = inngest.createFunction(
         processingTime: generationResult.processingTime,
       }
     } catch (error: any) {
+      // Категоризируем ошибки для лучшей диагностики
+      const errorType = categorizeError(error)
+
       logger.error({
         message: '❌ VEO3 video generation failed',
         error: error.message,
+        errorType: errorType.type,
         telegram_id: event.data.telegram_id,
+        bot_name: event.data.bot_name,
+        model: event.data.model || 'veo3_fast',
         stack: error.stack,
+        httpStatus: error.response?.status,
+        responseData: error.response?.data,
       })
 
-      // Отправляем сообщение об ошибке пользователю
+      // Отправляем детальное сообщение об ошибке пользователю
       try {
         const bot = (await getBotByName(event.data.bot_name)) as { bot: any }
         if (bot?.bot) {
+          const userMessage = getUserFriendlyErrorMessage(
+            error,
+            event.data.is_ru
+          )
           await errorMessage(
             bot.bot,
             event.data.telegram_id,
             event.data.is_ru,
-            error.message
+            userMessage
           )
+
+          // Отправляем админское уведомление для критических ошибок
+          if (errorType.critical) {
+            await errorMessageAdmin(
+              bot.bot,
+              `🚨 Critical video generation error\n` +
+                `User: ${event.data.telegram_id}\n` +
+                `Bot: ${event.data.bot_name}\n` +
+                `Error: ${error.message}\n` +
+                `Type: ${errorType.type}`
+            )
+          }
         }
       } catch (botError: any) {
         logger.error({
           message: '❌ Failed to send error message to user',
           error: botError.message,
+          originalError: error.message,
         })
       }
 

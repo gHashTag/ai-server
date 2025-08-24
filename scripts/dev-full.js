@@ -44,7 +44,7 @@ build.on('close', code => {
       ...process.env,
       NODE_ENV: 'development',
       PORT: '4000',
-      N8N_WEBHOOK_URL: 'http://localhost:5678'
+      N8N_WEBHOOK_URL: 'http://localhost:5678',
     },
   })
 
@@ -72,7 +72,7 @@ build.on('close', code => {
   console.log('⏳ N8N will start in 3 seconds after AI Server is ready...')
   setTimeout(() => {
     console.log('🔧 Starting N8N locally...')
-    
+
     const n8n = spawn('npx', ['n8n', 'start'], {
       stdio: ['pipe', 'pipe', 'pipe'],
       shell: true,
@@ -92,20 +92,20 @@ build.on('close', code => {
         N8N_LOG_LEVEL: 'info',
         // Конфигурация для работы под прокси
         N8N_PATH: '/n8n',
-        N8N_SERVE_STATIC: 'true'
-      }
+        N8N_SERVE_STATIC: 'true',
+      },
     })
 
     // Handle N8N output
-    n8n.stdout.on('data', (data) => {
+    n8n.stdout.on('data', data => {
       process.stdout.write(`[N8N] ${data}`)
     })
-    
-    n8n.stderr.on('data', (data) => {
+
+    n8n.stderr.on('data', data => {
       process.stderr.write(`[N8N] ${data}`)
     })
 
-    n8n.on('close', (code) => {
+    n8n.on('close', code => {
       console.log(`[N8N] Process exited with code ${code}`)
     })
 
@@ -122,7 +122,7 @@ build.on('close', code => {
     server.removeAllListeners('close')
     inngest.removeAllListeners('close')
 
-    server.on('close', (code) => {
+    server.on('close', code => {
       console.log(`[SERVER] Process exited with code ${code}`)
       if (code !== 0) {
         console.log('[SERVER] Non-zero exit, shutting down other services')
@@ -131,7 +131,7 @@ build.on('close', code => {
       }
     })
 
-    inngest.on('close', (code) => {
+    inngest.on('close', code => {
       console.log(`[INNGEST] Process exited with code ${code}`)
       if (code !== 0) {
         console.log('[INNGEST] Non-zero exit, shutting down other services')
@@ -139,7 +139,6 @@ build.on('close', code => {
         n8n.kill('SIGTERM')
       }
     })
-
   }, 3000) // Wait 3 seconds for AI Server to start
 
   // Handle server output

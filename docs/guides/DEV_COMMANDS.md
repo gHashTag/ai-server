@@ -7,29 +7,35 @@
 - Собирает проект
 - Запускает всю экосистему разработки:
   - AI Server (порт 4000)
-  - Inngest Dev Server (порт 8289)  
+  - Inngest Dev Server (порт 8289)
   - N8N Workflow Admin (порт 5678)
 - **Автоматически показывает логи в реальном времени**
 
 ### `npm run dev:full`
+
 - То же самое что `npm run dev` - запускает полную экосистему
 
 ### `npm run dev:server`
+
 - Запускает только AI Server без Inngest и N8N
 
 ### `npm run dev:inngest`
+
 - Запускает только Inngest Dev Server
 
 ### `npm run dev:restart` или `bun dev:restart`
+
 - Пересобирает проект
 - Перезапускает все сервисы
 - Показывает логи
 
 ### `npm run dev:logs` или `bun dev:logs`
+
 - Показывает логи всех запущенных сервисов
 - Используйте если нужно снова посмотреть логи
 
 ### `npm run dev:stop` или `bun dev:stop`
+
 - Останавливает все сервисы PM2
 
 ## Новая Экосистема Сервисов
@@ -37,15 +43,18 @@
 После запуска `npm run dev` будут работать:
 
 1. **AI Server** (ai-server-main, порт 4000)
+
    - Основной Express сервер
    - API эндпоинты
    - Inngest роуты
    - N8N интеграция
 
 2. **ai-server-mcp**
+
    - MCP сервер для интеграции с Cursor/Claude
 
 3. **Inngest Dev Server** (порт 8289)
+
    - Workflow автоматизация
    - Dashboard: http://localhost:8289
 
@@ -61,7 +70,7 @@
 - **Inngest Dashboard:** http://localhost:8289
 - **Inngest API:** http://localhost:4000/api/inngest
 - **N8N Admin Panel:** http://localhost:5678 (admin/admin123)
-- **N8N API:** http://localhost:4000/api/n8n/*
+- **N8N API:** http://localhost:4000/api/n8n/\*
 
 ## Логи
 
@@ -115,11 +124,11 @@ curl http://localhost:4000/api/n8n/workflows
 
 - Процесс сборки проекта
 - Запуск AI Server на порту 4000
-- Запуск Inngest Dev Server на порту 8289  
+- Запуск Inngest Dev Server на порту 8289
 - Запуск N8N контейнера на порту 5678
 - **Реальные логи всех сервисов в одном окне с префиксами:**
   - `[SERVER]` - логи AI Server
-  - `[INNGEST]` - логи Inngest 
+  - `[INNGEST]` - логи Inngest
   - `[N8N]` - логи N8N
 - Ошибки и предупреждения
 - Inngest события и выполнение функций
@@ -133,5 +142,5 @@ curl http://localhost:4000/api/n8n/workflows
 - N8N запускается через 3 секунды после AI Server для корректной инициализации
 - Запускается локально через npx без Docker
 - Доступен сразу после запуска на http://localhost:5678
-- Интегрирован с AI Server API через http://localhost:4000/api/n8n/*
+- Интегрирован с AI Server API через http://localhost:4000/api/n8n/\*
 - Данные сохраняются в локальной папке `~/.n8n`
