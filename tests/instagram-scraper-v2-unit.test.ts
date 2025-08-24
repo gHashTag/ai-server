@@ -31,7 +31,7 @@ describe('Instagram Scraper V2 Unit Tests', () => {
       // Тестируем конфигурацию пула соединений
       const expectedConfig = {
         connectionTimeoutMillis: 30000,
-        idleTimeoutMillis: 30000, 
+        idleTimeoutMillis: 30000,
         queryTimeout: 60000,
         max: 10,
         min: 2,
@@ -58,14 +58,14 @@ describe('Instagram Scraper V2 Unit Tests', () => {
 
     it('should have correct retry attempt calculation', () => {
       const maxRetries = 3
-      
+
       // Проверяем что логика retry правильная
       for (let attempt = 1; attempt <= maxRetries; attempt++) {
         const isLastAttempt = attempt === maxRetries
         const shouldRetry = !isLastAttempt
-        
+
         if (attempt === 1) expect(shouldRetry).toBe(true)
-        if (attempt === 2) expect(shouldRetry).toBe(true) 
+        if (attempt === 2) expect(shouldRetry).toBe(true)
         if (attempt === 3) expect(shouldRetry).toBe(false) // Последняя попытка
       }
     })
@@ -117,7 +117,7 @@ describe('Instagram Scraper V2 Unit Tests', () => {
     it('should create appropriate error messages', () => {
       const baseError = 'Database connection failed'
       const retries = 3
-      
+
       const errorMessage = `Failed to get project after ${retries} attempts: ${baseError}`
       expect(errorMessage).toContain('Failed to get project')
       expect(errorMessage).toContain(`${retries} attempts`)
@@ -126,7 +126,7 @@ describe('Instagram Scraper V2 Unit Tests', () => {
 
     it('should handle missing environment variables', () => {
       const requiredEnvVars = ['SUPABASE_URL', 'APIFY_TOKEN']
-      
+
       requiredEnvVars.forEach(varName => {
         const errorMessage = `${varName} environment variable is required`
         expect(errorMessage).toContain(varName)
@@ -147,7 +147,9 @@ describe('Instagram Scraper V2 Unit Tests', () => {
       // Проверяем что настройки разумные
       expect(poolConfig.max).toBeGreaterThan(poolConfig.min)
       expect(poolConfig.connectionTimeoutMillis).toBeGreaterThan(1000) // Больше 1 секунды
-      expect(poolConfig.queryTimeout).toBeGreaterThan(poolConfig.connectionTimeoutMillis)
+      expect(poolConfig.queryTimeout).toBeGreaterThan(
+        poolConfig.connectionTimeoutMillis
+      )
       expect(poolConfig.max).toBeLessThan(50) // Не слишком много соединений
     })
   })
@@ -156,23 +158,23 @@ describe('Instagram Scraper V2 Unit Tests', () => {
     it('should create structured log messages', () => {
       const mockLog = {
         info: jest.fn(),
-        error: jest.fn(), 
+        error: jest.fn(),
         warn: jest.fn(),
       }
 
       // Тестируем формат сообщений логирования
       const testMessage = 'Test operation'
       const testData = { attempt: 1, total: 3 }
-      
+
       mockLog.info(testMessage, testData)
-      
+
       expect(mockLog.info).toHaveBeenCalledWith(testMessage, testData)
     })
 
     it('should mask sensitive information in logs', () => {
       const token = 'apify_api_1234567890abcdef'
       const maskedToken = `${token.substring(0, 10)}...`
-      
+
       expect(maskedToken).toBe('apify_api_...')
       expect(maskedToken).not.toContain('1234567890abcdef')
     })
@@ -189,7 +191,7 @@ describe('Instagram Scraper V2 Unit Tests', () => {
       const processedData = {
         username_or_id: String(eventData.username_or_id),
         max_users: 50, // дефолтное значение
-        max_reels_per_user: 50, // дефолтное значение  
+        max_reels_per_user: 50, // дефолтное значение
         scrape_reels: false, // дефолтное значение
       }
 

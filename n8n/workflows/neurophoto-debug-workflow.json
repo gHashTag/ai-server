@@ -34,7 +34,7 @@
               }
             },
             {
-              "id": "telegram-id-check", 
+              "id": "telegram-id-check",
               "leftValue": "={{$json.body[\"telegram_id\"]}}",
               "rightValue": "",
               "operator": {

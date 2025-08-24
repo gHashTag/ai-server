@@ -24,19 +24,19 @@ dbPool = new Pool({
   ssl: { rejectUnauthorized: false },
   // ⬇️ НОВЫЕ НАСТРОЙКИ
   connectionTimeoutMillis: 30000, // 30 секунд на подключение
-  idleTimeoutMillis: 30000,       // 30 секунд idle timeout  
-  queryTimeout: 60000,            // 60 секунд на выполнение запроса
-  max: 10,                        // Максимум 10 соединений в пуле
-  min: 2,                         // Минимум 2 соединения
-  acquireTimeoutMillis: 20000,    // 20 секунд на получение соединения из пула
+  idleTimeoutMillis: 30000, // 30 секунд idle timeout
+  queryTimeout: 60000, // 60 секунд на выполнение запроса
+  max: 10, // Максимум 10 соединений в пуле
+  min: 2, // Минимум 2 соединения
+  acquireTimeoutMillis: 20000, // 20 секунд на получение соединения из пула
 })
 
 // Обработка ошибок подключения
-dbPool.on('error', (err) => {
+dbPool.on('error', err => {
   log.error('PostgreSQL pool error:', err.message)
 })
 
-dbPool.on('connect', (client) => {
+dbPool.on('connect', client => {
   log.info('New PostgreSQL client connected')
 })
 ```
@@ -54,11 +54,11 @@ async getProjectById(projectId: number, retries: number = 3): Promise<Project | 
       // ... основная логика ...
     } catch (error: any) {
       log.error(`Error getting project by ID (attempt ${attempt}/${retries}):`, error.message)
-      
+
       if (attempt === retries) {
         throw new Error(`Failed to get project ${projectId} after ${retries} attempts: ${error.message}`)
       }
-      
+
       // Экспоненциальная задержка: 1s, 2s, 4s
       const delay = Math.pow(2, attempt - 1) * 1000
       log.info(`Retrying after ${delay}ms...`)
@@ -83,6 +83,7 @@ async getProjectById(projectId: number, retries: number = 3): Promise<Project | 
 ## 📋 Создано для тестирования
 
 1. **Диагностические тесты:** `tests/instagram-scraper-v2-diagnostic.ts`
+
    - Тест подключения к БД
    - Тест timeout handling
    - Тест retry логики
@@ -105,12 +106,14 @@ async getProjectById(projectId: number, retries: number = 3): Promise<Project | 
 ## 🚀 Изменения в коде
 
 ### Ключевые файлы:
+
 - `src/core/instagram/project-manager.ts` - Добавлена retry логика и timeout конфигурация
 - `src/inngest-functions/instagramScraper-v2.ts` - Улучшена конфигурация DB pool
 - `src/app.ts` - Исправлен merge conflict
 - `tests/` - Созданы диагностические и юнит-тесты
 
 ### Новые возможности:
+
 - Автоматический retry при сбоях подключения
 - Экспоненциальная задержка между попытками (1s, 2s, 4s)
 - Детализированное логирование для отладки
@@ -119,6 +122,7 @@ async getProjectById(projectId: number, retries: number = 3): Promise<Project | 
 ## 🔮 Ожидаемый результат
 
 Функция Instagram Scraper V2 теперь должна:
+
 1. Устойчиво работать при временных сбоях сети
 2. Автоматически восстанавливаться после кратковременных проблем с БД
 3. Предоставлять детальную диагностику проблем подключения

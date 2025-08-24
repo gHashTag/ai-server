@@ -137,15 +137,15 @@ export class App {
       res.status(503).json({
         error: 'N8N service temporarily unavailable',
         message: 'N8N is being configured for production deployment',
-        status: 'coming_soon'
+        status: 'coming_soon',
       })
     })
-    
+
     this.app.all('/n8n/*', (req, res) => {
       res.status(503).json({
-        error: 'N8N service temporarily unavailable', 
+        error: 'N8N service temporarily unavailable',
         message: 'N8N is being configured for production deployment',
-        status: 'coming_soon'
+        status: 'coming_soon',
       })
     })
 
@@ -187,7 +187,7 @@ export class App {
       try {
         const uptime = process.uptime()
         const memoryUsage = process.memoryUsage()
-        
+
         // Объединенная версия с лучшими частями из обеих версий
         const health = {
           status: 'OK',
@@ -202,10 +202,10 @@ export class App {
           },
           services: {
             api: 'healthy',
-            server: 'healthy', 
+            server: 'healthy',
             inngest: 'healthy',
             database: 'connected', // TODO: добавить реальную проверку БД
-          }
+          },
         }
 
         // STARTING логика для Railway (критично важно!)
@@ -218,14 +218,13 @@ export class App {
 
         const statusCode = health.status === 'OK' ? 200 : 503
         res.status(statusCode).json(health)
-        
       } catch (error) {
         logger.error('Health check failed:', error)
         res.status(503).json({
           status: 'ERROR',
           timestamp: new Date().toISOString(),
           error: 'Health check failed',
-          uptime: Math.round(process.uptime())
+          uptime: Math.round(process.uptime()),
         })
       }
     })

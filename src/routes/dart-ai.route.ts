@@ -15,7 +15,10 @@ export class DartAIRoute {
 
   private initializeRoutes() {
     // Webhook endpoints
-    this.router.post('/webhooks/dart-ai/tasks', this.dartAIController.handleTaskWebhook)
+    this.router.post(
+      '/webhooks/dart-ai/tasks',
+      this.dartAIController.handleTaskWebhook
+    )
     this.router.post(
       '/webhooks/github/issues',
       this.dartAIController.handleGitHubIssueWebhook
@@ -28,11 +31,20 @@ export class DartAIRoute {
     this.router.get('/api/dart-ai/tasks/:id', this.dartAIController.getTask)
     this.router.post('/api/dart-ai/tasks', this.dartAIController.createTask)
     this.router.put('/api/dart-ai/tasks/:id', this.dartAIController.updateTask)
-    this.router.delete('/api/dart-ai/tasks/:id', this.dartAIController.deleteTask)
+    this.router.delete(
+      '/api/dart-ai/tasks/:id',
+      this.dartAIController.deleteTask
+    )
 
     // Синхронизация
-    this.router.post('/api/dart-ai/sync/github-issue', this.dartAIController.syncGitHubIssue)
-    this.router.post('/api/dart-ai/sync/task', this.dartAIController.syncDartAITask)
+    this.router.post(
+      '/api/dart-ai/sync/github-issue',
+      this.dartAIController.syncGitHubIssue
+    )
+    this.router.post(
+      '/api/dart-ai/sync/task',
+      this.dartAIController.syncDartAITask
+    )
     this.router.post(
       '/api/dart-ai/sync/bulk-issues',
       this.dartAIController.bulkSyncGitHubIssues
