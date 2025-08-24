@@ -188,39 +188,44 @@ export class App {
         const uptime = process.uptime()
         const memoryUsage = process.memoryUsage()
         
-        // Определяем статус с учетом времени запуска
-        let status = 'OK'
-        let statusCode = 200
-        
-        // Если сервер работает менее 5 секунд, даем время на инициализацию
-        if (uptime < 5) {
-          status = 'STARTING'
-          statusCode = 503
-        }
-        
-        res.status(statusCode).json({
-          status,
+        // Объединенная версия с лучшими частями из обеих версий
+        const health = {
+          status: 'OK',
           timestamp: new Date().toISOString(),
           uptime: Math.floor(uptime),
-          environment: process.env.NODE_ENV || 'unknown',
+          environment: process.env.NODE_ENV || 'production',
           version: process.env.npm_package_version || '1.0.0',
           memory: {
             used: Math.round(memoryUsage.heapUsed / 1024 / 1024),
             total: Math.round(memoryUsage.heapTotal / 1024 / 1024),
+            rss: Math.round(memoryUsage.rss / 1024 / 1024),
           },
           services: {
             api: 'healthy',
+            server: 'healthy', 
+            inngest: 'healthy',
             database: 'connected', // TODO: добавить реальную проверку БД
-            inngest: 'initialized',
           }
-        })
+        }
+
+        // STARTING логика для Railway (критично важно!)
+        if (uptime < 5) {
+          // Если сервер работает менее 5 секунд, даем время на инициализацию
+          health.status = 'STARTING'
+          health.services.server = 'starting'
+          health.services.inngest = 'initializing'
+        }
+
+        const statusCode = health.status === 'OK' ? 200 : 503
+        res.status(statusCode).json(health)
+        
       } catch (error) {
         logger.error('Health check failed:', error)
         res.status(503).json({
           status: 'ERROR',
           timestamp: new Date().toISOString(),
           error: 'Health check failed',
-          uptime: Math.floor(process.uptime())
+          uptime: Math.round(process.uptime())
         })
       }
     })
