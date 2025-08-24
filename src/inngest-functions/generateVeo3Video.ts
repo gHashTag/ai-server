@@ -261,6 +261,22 @@ export const generateVeo3Video = inngest.createFunction(
             throw new Error('Kie.ai unavailable, fallback to Vertex AI')
           }
 
+          // ✅ ПОЛУЧАЕМ ИЛИ СОЗДАЕМ ПРОЕКТ ДЛЯ ПОЛЬЗОВАТЕЛЯ ПЕРВЫМ ДЕЛОМ
+          const projectManager = new ProjectManager()
+          const { project } = await projectManager.validateOrCreateProject(
+            undefined, // project_id не передан
+            telegram_id,
+            username,
+            bot_name
+          )
+          
+          logger.info('📊 Project validated/created', {
+            projectId: project.id,
+            projectName: project.name,
+            telegram_id,
+            username
+          })
+
           // ✅ ЛОГИРУЕМ ДАННЫЕ ПЕРЕД ОТПРАВКОЙ В KIE.AI API
           // ⚡ ВАЖНО: Добавляем callback URL для асинхронной доставки
           const callbackUrl = process.env.API_URL 
@@ -292,22 +308,6 @@ export const generateVeo3Video = inngest.createFunction(
             requestSize: JSON.stringify(requestPayload).length,
             timestamp: new Date().toISOString(),
             source: 'generateVeo3Video.inngest.kieai.request'
-          })
-
-          // ✅ ПОЛУЧАЕМ ИЛИ СОЗДАЕМ ПРОЕКТ ДЛЯ ПОЛЬЗОВАТЕЛЯ  
-          const projectManager = new ProjectManager()
-          const { project } = await projectManager.validateOrCreateProject(
-            undefined, // project_id не передан
-            telegram_id,
-            username,
-            bot_name
-          )
-          
-          logger.info('📊 Project validated/created', {
-            projectId: project.id,
-            projectName: project.name,
-            telegram_id,
-            username
           })
 
           // ✅ СОХРАНЯЕМ ЗАДАЧУ В БД ДЛЯ CALLBACK ОБРАБОТКИ
