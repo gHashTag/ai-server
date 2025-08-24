@@ -329,7 +329,7 @@ export const generateVeo3Video = inngest.createFunction(
             })
           }
 
-          // Генерируем через Kie.ai
+          // ✅ ASYNC ГЕНЕРАЦИЯ ЧЕРЕЗ KIE.AI (НЕ ЖДЕМ РЕЗУЛЬТАТ!)
           const result = await kieAiService.generateVideo(requestPayload)
 
           // ✅ ОБНОВЛЯЕМ ЗАДАЧУ С TASK_ID ОТ KIE.AI
@@ -366,8 +366,42 @@ export const generateVeo3Video = inngest.createFunction(
             }
           }
 
+          // ✅ ЕСЛИ CALLBACK ИСПОЛЬЗУЕТСЯ - ЗАВЕРШАЕМ ФУНКЦИЮ СРАЗУ!
+          if (result.callbackUrl) {
+            logger.info('🔗 ASYNC MODE: Task submitted to Kie.ai with callback', {
+              taskId: result.taskId,
+              callbackUrl: result.callbackUrl,
+              telegram_id,
+              bot_name,
+              taskTrackingId,
+            })
+
+            // Уведомляем пользователя что задача принята  
+            const bot = botData.bot
+            if (bot && telegram_id) {
+              await bot.telegram.sendMessage(
+                telegram_id,
+                is_ru 
+                  ? '🎬 Генерация видео запущена! Результат придет через несколько минут...'
+                  : '🎬 Video generation started! Result will be delivered in a few minutes...'
+              )
+            }
+
+            // ✅ ВОЗВРАЩАЕМ УСПЕХ БЕЗ ОЖИДАНИЯ РЕЗУЛЬТАТА!
+            return {
+              success: true,
+              taskId: result.taskId,
+              message: 'Video generation submitted to Kie.ai with callback',
+              provider: 'kie.ai',
+              model,
+              async: true,
+              callbackUrl: result.callbackUrl,
+            }
+          }
+
+          // ✅ СТАРЫЙ SYNC РЕЖИМ (если нет callback URL)
           logger.info({
-            message: '✅ Video generated via Kie.ai',
+            message: '✅ Video generated via Kie.ai (SYNC)',
             videoUrl: result.videoUrl,
             cost: result.cost,
             processingTime: result.processingTime,
