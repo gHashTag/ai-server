@@ -27,6 +27,18 @@ export class GenerationController {
     next: NextFunction
   ): Promise<void> => {
     try {
+      // ✅ ДЕТАЛЬНОЕ ЛОГИРОВАНИЕ ВХОДЯЩИХ ДАННЫХ ОТ БОТА
+      logger.info('📥 VEO3 VIDEO REQUEST от бота:', {
+        timestamp: new Date().toISOString(),
+        requestBody: req.body,
+        headers: {
+          'content-type': req.headers['content-type'],
+          'user-agent': req.headers['user-agent'],
+          'x-forwarded-for': req.headers['x-forwarded-for'],
+        },
+        source: 'generation.controller.veo3Video'
+      })
+
       const {
         prompt,
         duration = 5,
@@ -39,7 +51,26 @@ export class GenerationController {
         imageUrl,
       } = req.body
 
+      // Логируем каждый параметр отдельно для четкости
+      logger.info('🔍 PARSED REQUEST PARAMETERS:', {
+        prompt: prompt ? `"${prompt.substring(0, 100)}${prompt.length > 100 ? '...' : ''}"` : null,
+        duration,
+        telegram_id,
+        username,
+        is_ru,
+        bot_name,
+        style,
+        cameraMovement,
+        imageUrl,
+        source: 'generation.controller.veo3Video.parsed'
+      })
+
       if (!prompt) {
+        logger.warn('❌ VEO3 REQUEST REJECTED: отсутствует prompt', {
+          telegram_id,
+          bot_name,
+          source: 'generation.controller.veo3Video.validation'
+        })
         res.status(400).json({ message: 'prompt is required' })
         return
       }
@@ -84,15 +115,42 @@ export class GenerationController {
         },
       }
 
-      await inngest.send(veo3Event).catch(error => {
+      // ✅ ДЕТАЛЬНОЕ ЛОГИРОВАНИЕ ДАННЫХ, ОТПРАВЛЯЕМЫХ В INNGEST
+      logger.info('📤 ОТПРАВЛЯЮ СОБЫТИЕ В INNGEST:', {
+        timestamp: new Date().toISOString(),
+        jobId,
+        eventName: veo3Event.name,
+        eventData: {
+          ...veo3Event.data,
+          prompt: prompt ? `"${prompt.substring(0, 100)}${prompt.length > 100 ? '...' : ''}"` : null,
+        },
+        fullEventSize: JSON.stringify(veo3Event).length,
+        source: 'generation.controller.veo3Video.inngest'
+      })
+
+      const sendResult = await inngest.send(veo3Event).catch(error => {
         // Обновляем статус в случае ошибки
         import('@/services/videoJobTracker').then(({ setVideoJobError }) => {
           setVideoJobError(jobId, error.message)
         })
-        logger.error(
-          `Veo3 video generation event failed for job ${jobId}:`,
-          error
-        )
+        logger.error('❌ INNGEST SEND ERROR:', {
+          jobId,
+          error: error.message,
+          stack: error.stack,
+          timestamp: new Date().toISOString(),
+          source: 'generation.controller.veo3Video.inngest.error'
+        })
+        throw error
+      })
+
+      // ✅ ЛОГИРУЕМ УСПЕШНУЮ ОТПРАВКУ В INNGEST
+      logger.info('✅ INNGEST СОБЫТИЕ ОТПРАВЛЕНО УСПЕШНО:', {
+        jobId,
+        eventIds: sendResult?.ids,
+        telegram_id,
+        bot_name,
+        timestamp: new Date().toISOString(),
+        source: 'generation.controller.veo3Video.inngest.success'
       })
     } catch (error) {
       next(error)
