@@ -10,12 +10,9 @@ import { processVideoGeneration } from '@/services/generateTextToVideo'
 import { getBotByName } from '@/core/bot'
 import {
   getUserByTelegramId,
-  updateUserLevelPlusOne,
-  updateUserBalance,
   supabase,
 } from '@/core/supabase'
-import { saveVideoUrlToSupabase } from '@/core/supabase/saveVideoUrlToSupabase'
-import { processBalanceVideoOperation } from '@/price/helpers'
+import { ProjectManager } from '@/core/instagram/project-manager'
 import { errorMessage, errorMessageAdmin } from '@/helpers'
 import { logger } from '@/utils/logger'
 import { PaymentType } from '@/interfaces/payments.interface'
@@ -264,6 +261,22 @@ export const generateVeo3Video = inngest.createFunction(
             throw new Error('Kie.ai unavailable, fallback to Vertex AI')
           }
 
+          // ✅ ПОЛУЧАЕМ ИЛИ СОЗДАЕМ ПРОЕКТ ДЛЯ ПОЛЬЗОВАТЕЛЯ ПЕРВЫМ ДЕЛОМ
+          const projectManager = new ProjectManager()
+          const { project } = await projectManager.validateOrCreateProject(
+            undefined, // project_id не передан
+            telegram_id,
+            username,
+            bot_name
+          )
+          
+          logger.info('📊 Project validated/created', {
+            projectId: project.id,
+            projectName: project.name,
+            telegram_id,
+            username
+          })
+
           // ✅ ЛОГИРУЕМ ДАННЫЕ ПЕРЕД ОТПРАВКОЙ В KIE.AI API
           // ⚡ ВАЖНО: Добавляем callback URL для асинхронной доставки
           const callbackUrl = process.env.API_URL 
@@ -279,6 +292,7 @@ export const generateVeo3Video = inngest.createFunction(
             aspectRatio,
             imageUrl,
             userId: telegram_id,
+            projectId: project.id, // ✅ Уникальный ID проекта из БД
             callBackUrl: callbackUrl, // 🔗 Добавляем callback URL!
           }
           
@@ -308,6 +322,7 @@ export const generateVeo3Video = inngest.createFunction(
                 model: model,
                 status: 'processing',
                 provider: 'kie.ai',
+                project_id: project.id, // ✅ Связываем с проектом
                 created_at: new Date().toISOString(),
                 duration: duration,
                 aspect_ratio: aspectRatio,
@@ -482,63 +497,18 @@ export const generateVeo3Video = inngest.createFunction(
         }
       })
 
-      // Шаг 4: Обработка баланса пользователя
-      await step.run('process-balance', async () => {
+      // ⚡ ASYNC РЕЖИМ: баланс и сохранение происходят в webhook callback!
+
+      // Шаг 4: Уведомление о начале генерации 
+      await step.run('notify-generation-started', async () => {
         logger.info({
-          message: '💰 Processing user balance',
-          cost: generationResult.cost,
-          provider: generationResult.provider,
-          step: 'process-balance',
-        })
-
-        // Расчет стоимости в звездах (с наценкой)
-        const STAR_COST_USD = 0.016
-        const MARKUP_RATE = 1.5
-        const starsRequired = Math.ceil(
-          (generationResult.cost * MARKUP_RATE) / STAR_COST_USD
-        )
-
-        await processBalanceVideoOperation({
+          message: '📤 Sending generation started notification',
           telegram_id,
-          cost: starsRequired,
-          paymentType: PaymentType.VEO3_VIDEO_GENERATION,
-          mode: ModeEnum.TextToVideo,
-          username,
-          is_ru,
-          bot,
-        })
-      })
-
-      // Шаг 5: Сохранение видео в базу данных
-      await step.run('save-video-url', async () => {
-        logger.info({
-          message: '💾 Saving video URL to database',
-          videoUrl: generationResult.videoUrl,
-          step: 'save-video-url',
+          taskId: generationResult.taskId,
+          step: 'notify-generation-started',
         })
 
-        await saveVideoUrlToSupabase(
-          generationResult.videoUrl,
-          telegram_id,
-          prompt,
-          'veo3_video_generation'
-        )
-      })
-
-      // Шаг 6: Отправка результата пользователю (только для sync mode)
-      await step.run('send-result', async () => {
-        logger.info({
-          message: '📤 Sending result to user',
-          telegram_id,
-          provider: generationResult.provider,
-          status: generationResult.status,
-          asyncMode: generationResult.metadata?.asyncMode,
-          step: 'send-result',
-        })
-
-        // Проверяем режим генерации
-        if (generationResult.metadata?.asyncMode) {
-          // Async режим - результат придет через callback
+        // Отправляем уведомление о начале генерации
           const asyncMessage = is_ru
             ? `⏳ **Генерация видео начата!**\n\n` +
               `📱 **Формат:** ${aspectRatio}\n` +
@@ -562,85 +532,31 @@ export const generateVeo3Video = inngest.createFunction(
           })
 
           logger.info({
-            message: '✅ Async generation notification sent',
+            message: '✅ Generation started notification sent',
             taskId: generationResult.taskId,
             telegram_id,
           })
-        } else {
-          // Sync режим - отправляем готовое видео
-          const successMessage = is_ru
-            ? `🎬 **Видео готово!**\n\n` +
-              `📱 **Формат:** ${aspectRatio}\n` +
-              `⏱️ **Длительность:** ${duration}с\n` +
-              `🤖 **Модель:** ${generationResult.model}\n` +
-              `🔗 **Провайдер:** ${generationResult.provider}\n\n` +
-              `✨ Создано с помощью VEO3 AI`
-            : `🎬 **Video Ready!**\n\n` +
-              `📱 **Format:** ${aspectRatio}\n` +
-              `⏱️ **Duration:** ${duration}s\n` +
-              `🤖 **Model:** ${generationResult.model}\n` +
-              `🔗 **Provider:** ${generationResult.provider}\n\n` +
-              `✨ Generated with VEO3 AI`
-
-          // Отправляем видео файлом
-          try {
-            await bot.telegram.sendVideo(
-              telegram_id,
-              generationResult.videoUrl,
-              {
-                caption: successMessage,
-                parse_mode: 'Markdown',
-              }
-            )
-
-            logger.info({
-              message: '✅ Video sent to user successfully',
-              videoUrl: generationResult.videoUrl,
-            })
-          } catch (videoError: any) {
-            // Если видео не отправилось, отправляем ссылку
-            logger.warn({
-              message: '⚠️ Failed to send video file, sending URL instead',
-              error: videoError.message,
-            })
-
-            await bot.telegram.sendMessage(
-              telegram_id,
-              `${successMessage}\n\n📎 **Скачать видео:** ${generationResult.videoUrl}`,
-              { parse_mode: 'Markdown' }
-            )
-          }
-        }
       })
 
-      // Шаг 7: Повышение уровня пользователя
-      await step.run('level-up', async () => {
-        logger.info({
-          message: '⭐ Processing user level up',
-          telegram_id,
-          step: 'level-up',
-        })
-
-        await updateUserLevelPlusOne(telegram_id)
-      })
+      // ⚡ Функция завершена! Дальше webhook обработает результат
 
       logger.info({
-        message: '✅ VEO3 video generation completed successfully',
+        message: '✅ VEO3 video generation request sent successfully',
         telegram_id,
+        taskId: generationResult.taskId,
         provider: generationResult.provider,
-        cost: generationResult.cost,
-        videoUrl: generationResult.videoUrl,
+        asyncMode: true,
       })
 
       return {
         success: true,
-        videoUrl: generationResult.videoUrl,
+        taskId: generationResult.taskId,
         provider: generationResult.provider,
         model: generationResult.model,
         aspectRatio,
         duration,
-        cost: generationResult.cost,
-        processingTime: generationResult.processingTime,
+        asyncMode: true,
+        message: 'Generation started, video will be delivered via callback'
       }
     } catch (error: any) {
       // Категоризируем ошибки для лучшей диагностики

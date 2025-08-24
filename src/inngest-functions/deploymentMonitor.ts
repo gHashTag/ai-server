@@ -69,7 +69,9 @@ export const deploymentAutoDetector = inngest.createFunction(
               version: deploymentInfo.version,
               commit: deploymentInfo.commit,
               branch: deploymentInfo.branch,
-              deployedAt: deploymentInfo.startedAt.toISOString(),
+              deployedAt: deploymentInfo.startedAt instanceof Date 
+                ? deploymentInfo.startedAt.toISOString()
+                : new Date(deploymentInfo.startedAt || Date.now()).toISOString(),
               environment: deploymentInfo.environment,
               autoDetected: true,
             },
