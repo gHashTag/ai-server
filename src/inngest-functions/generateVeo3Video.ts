@@ -12,6 +12,7 @@ import {
   getUserByTelegramId,
   updateUserLevelPlusOne,
   updateUserBalance,
+  supabase,
 } from '@/core/supabase'
 import { saveVideoUrlToSupabase } from '@/core/supabase/saveVideoUrlToSupabase'
 import { processBalanceVideoOperation } from '@/price/helpers'
@@ -282,14 +283,93 @@ export const generateVeo3Video = inngest.createFunction(
             source: 'generateVeo3Video.inngest.kieai.request'
           })
 
+          // ✅ СОХРАНЯЕМ ЗАДАЧУ В БД ДЛЯ CALLBACK ОБРАБОТКИ
+          let taskTrackingId: string | null = null
+          try {
+            const { data: taskRecord, error: taskError } = await supabase
+              .from('video_tasks')
+              .insert({
+                telegram_id: telegram_id,
+                bot_name: bot_name,
+                prompt: prompt,
+                model: model,
+                status: 'processing',
+                provider: 'kie.ai',
+                created_at: new Date().toISOString(),
+                duration: duration,
+                aspect_ratio: aspectRatio,
+                estimated_cost: duration * 0.05, // $0.05/сек для veo3_fast
+              })
+              .select('id')
+              .single()
+
+            if (taskError) {
+              logger.warn('⚠️ Failed to save task to database', {
+                error: taskError.message,
+                telegram_id,
+                model,
+              })
+            } else {
+              taskTrackingId = taskRecord?.id?.toString() || null
+              logger.info('✅ Task saved to database', {
+                taskId: taskTrackingId,
+                telegram_id,
+                bot_name,
+                model,
+              })
+            }
+          } catch (dbError) {
+            logger.error('❌ Database save error', {
+              error: dbError,
+              telegram_id,
+              model,
+            })
+          }
+
           // Генерируем через Kie.ai
           const result = await kieAiService.generateVideo(requestPayload)
+
+          // ✅ ОБНОВЛЯЕМ ЗАДАЧУ С TASK_ID ОТ KIE.AI
+          if (result.taskId && taskTrackingId) {
+            try {
+              const { error: updateError } = await supabase
+                .from('video_tasks')
+                .update({ 
+                  task_id: result.taskId,
+                  external_task_id: result.taskId, // Дублируем для поиска
+                })
+                .eq('id', taskTrackingId)
+
+              if (updateError) {
+                logger.warn('⚠️ Failed to update task with Kie.ai task_id', {
+                  error: updateError.message,
+                  taskTrackingId,
+                  kieaiTaskId: result.taskId,
+                })
+              } else {
+                logger.info('✅ Task updated with Kie.ai task_id', {
+                  taskTrackingId,
+                  kieaiTaskId: result.taskId,
+                  telegram_id,
+                  bot_name,
+                })
+              }
+            } catch (updateError) {
+              logger.error('❌ Database update error', {
+                error: updateError,
+                taskTrackingId,
+                kieaiTaskId: result.taskId,
+              })
+            }
+          }
 
           logger.info({
             message: '✅ Video generated via Kie.ai',
             videoUrl: result.videoUrl,
             cost: result.cost,
             processingTime: result.processingTime,
+            taskId: result.taskId,
+            taskTrackingId,
           })
 
           return {

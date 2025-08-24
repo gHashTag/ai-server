@@ -496,6 +496,7 @@ export class KieAiService {
         fullRequestSize: JSON.stringify(requestBody).length,
       })
 
+      // ✅ ИСПРАВЛЯЕМ TIMEOUT ДЛЯ ASYNC CALLBACK РЕЖИМА
       const response = await axios.post(
         `${this.baseUrl}/veo/generate`,
         requestBody,
@@ -504,7 +505,7 @@ export class KieAiService {
             Authorization: `Bearer ${this.apiKey}`,
             'Content-Type': 'application/json',
           },
-          timeout: 300000, // 5 минут на генерацию
+          timeout: finalCallBackUrl ? 30000 : 300000, // 30 сек для async, 5 мин для sync
         }
       )
 
