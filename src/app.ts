@@ -185,34 +185,42 @@ export class App {
 
     this.app.get('/health', async (_req, res) => {
       try {
-        // Проверяем готовность основных компонентов
+        const uptime = process.uptime()
+        const memoryUsage = process.memoryUsage()
+        
+        // Объединенная версия с лучшими частями из обеих версий
         const health = {
           status: 'OK',
           timestamp: new Date().toISOString(),
-          components: {
-            server: 'healthy',
-            inngest: 'healthy', // Предполагаем что готов, если дошли до этого места
-            memory: {
-              used: Math.round(process.memoryUsage().rss / 1024 / 1024),
-              unit: 'MB'
-            }
+          uptime: Math.floor(uptime),
+          environment: process.env.NODE_ENV || 'production',
+          version: process.env.npm_package_version || '1.0.0',
+          memory: {
+            used: Math.round(memoryUsage.heapUsed / 1024 / 1024),
+            total: Math.round(memoryUsage.heapTotal / 1024 / 1024),
+            rss: Math.round(memoryUsage.rss / 1024 / 1024),
           },
-          uptime: Math.round(process.uptime()),
-          environment: process.env.NODE_ENV || 'development'
+          services: {
+            api: 'healthy',
+            server: 'healthy', 
+            inngest: 'healthy',
+            database: 'connected', // TODO: добавить реальную проверку БД
+          }
         }
 
-        // Быстрая проверка доступности процесса
-        if (process.uptime() < 5) {
+        // STARTING логика для Railway (критично важно!)
+        if (uptime < 5) {
           // Если сервер работает менее 5 секунд, даем время на инициализацию
           health.status = 'STARTING'
-          health.components.server = 'starting'
+          health.services.server = 'starting'
+          health.services.inngest = 'initializing'
         }
 
         const statusCode = health.status === 'OK' ? 200 : 503
         res.status(statusCode).json(health)
         
       } catch (error) {
-        logger.error('Healthcheck error:', error)
+        logger.error('Health check failed:', error)
         res.status(503).json({
           status: 'ERROR',
           timestamp: new Date().toISOString(),

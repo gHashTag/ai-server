@@ -142,8 +142,7 @@ const logger = winston.createLogger({
   exitOnError: false,
 })
 
-// Использование logger  
-logger.info('Server started')
+// Logger готов к использованию
 
 // Создаем разные форматы логирования
 const morganDev = morgan('dev', {
