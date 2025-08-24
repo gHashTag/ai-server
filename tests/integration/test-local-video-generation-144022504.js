@@ -3,8 +3,33 @@
  * Тестирование пользователя 144022504 без трат на реальную генерацию
  */
 
-const { inngest } = require('@/core/inngest/clients')
-const { logger } = require('@/utils/logger')
+// Устанавливаем минимальные переменные окружения для mock тестов
+const mockEnvVars = {
+  'SUPABASE_URL': 'https://mock.supabase.co',
+  'SUPABASE_ANON_KEY': 'mock-anon-key',
+  'SUPABASE_SERVICE_KEY': 'mock-service-key',
+  'SUPABASE_SERVICE_ROLE_KEY': 'mock-service-role-key',
+  'SECRET_KEY': 'mock-secret-key',
+  'SECRET_API_KEY': 'mock-secret-api-key',
+  'SYNC_LABS_API_KEY': 'mock-sync-labs-key',
+  'NEXT_PUBLIC_MANAGEMENT_TOKEN': 'mock-management-token',
+  'INNGEST_EVENT_KEY': 'mock-inngest-key',
+  'INNGEST_SIGNING_KEY': 'mock-signing-key',
+  'NODE_ENV': 'test',
+  'API_URL': 'https://mock-api.com',
+  'LOG_DIR': '/tmp/test-logs',
+  'NGROK_URL': 'https://mock.ngrok.io'
+}
+
+// Устанавливаем переменные, если они не заданы
+Object.keys(mockEnvVars).forEach(key => {
+  if (!process.env[key]) {
+    process.env[key] = mockEnvVars[key]
+  }
+})
+
+const { inngest } = require('../../dist/core/inngest/clients')
+const { logger } = require('../../dist/utils/logger')
 
 // Mock режим для тестирования без трат
 const MOCK_MODE = process.env.MOCK_VIDEO_GENERATION === 'true' || true
