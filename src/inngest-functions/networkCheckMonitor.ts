@@ -443,12 +443,13 @@ export const networkCheckMonitor = inngest.createFunction(
       await step.run('send-alerts', async () => {
         const botData = getBotByName('neuro_blogger_bot')
 
-        if (!botData.bot) {
+        if (!botData || !botData.bot) {
           logger.error(
             '❌ Bot не найден для отправки уведомлений NetworkCheck',
             {
-              error: botData.error,
+              error: botData?.error || 'getBotByName returned null/undefined',
               bot_name: 'neuro_blogger_bot',
+              botData: botData,
             }
           )
           return
@@ -653,10 +654,11 @@ export const postDeployNetworkCheck = inngest.createFunction(
     await step.run('send-post-deploy-report', async () => {
       const botData = getBotByName('neuro_blogger_bot')
 
-      if (!botData.bot) {
+      if (!botData || !botData.bot) {
         logger.error('❌ Bot не найден для отправки POST-DEPLOY отчета', {
-          error: botData.error,
+          error: botData?.error || 'getBotByName returned null/undefined',
           bot_name: 'neuro_blogger_bot',
+          botData: botData,
         })
         return
       }

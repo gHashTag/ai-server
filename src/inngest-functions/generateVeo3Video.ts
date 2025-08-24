@@ -150,7 +150,7 @@ export const generateVeo3Video = inngest.createFunction(
         prompt,
         model = 'veo3_fast',
         aspectRatio = '9:16',
-        duration = 3,
+        duration: inputDuration,
         telegram_id,
         username,
         is_ru,
@@ -159,6 +159,9 @@ export const generateVeo3Video = inngest.createFunction(
         style,
         cameraMovement,
       } = event.data as Veo3GenerationEventData
+
+      // ✅ VEO3_FAST ВСЕГДА 8 СЕКУНД - НЕ ПРИНИМАЕМ ДРУГИЕ ЗНАЧЕНИЯ!
+      const duration = model === 'veo3_fast' ? 8 : (inputDuration || 5)
 
       // Обеспечиваем fallback для bot_name
       const bot_name = rawBotName || 'neuro_blogger_bot'
