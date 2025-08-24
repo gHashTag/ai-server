@@ -64,22 +64,32 @@ export class GenerationController {
         message: 'Processing Veo 3 video generation',
       })
 
-      // Используем существующую функцию generateTextToVideo с моделью veo3-fast
-      generateTextToVideo(
-        prompt,
-        'veo3-fast', // используем нашу новую модель
-        telegram_id,
-        username,
-        is_ru,
-        bot_name,
-        duration, // передаем duration из запроса
-        jobId // передаем jobId для отслеживания
-      ).catch(error => {
+      // Используем новую Inngest функцию для VEO3 генерации
+      const { inngest } = await import('@/core/inngest/clients')
+      
+      const veo3Event = {
+        name: 'veo3/video.generate',
+        data: {
+          prompt,
+          model: 'veo3_fast',
+          aspectRatio: '9:16' as '9:16',
+          duration: duration || 5,
+          telegram_id,
+          username: username || '',
+          is_ru: is_ru || false,
+          bot_name: bot_name || 'neuro_blogger_bot',
+          imageUrl,
+          style: style || '',
+          cameraMovement: cameraMovement || '',
+        },
+      }
+
+      await inngest.send(veo3Event).catch(error => {
         // Обновляем статус в случае ошибки
         import('@/services/videoJobTracker').then(({ setVideoJobError }) => {
           setVideoJobError(jobId, error.message)
         })
-        logger.error(`Veo3 video generation failed for job ${jobId}:`, error)
+        logger.error(`Veo3 video generation event failed for job ${jobId}:`, error)
       })
     } catch (error) {
       next(error)

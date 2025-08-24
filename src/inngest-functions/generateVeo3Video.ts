@@ -142,11 +142,21 @@ export const generateVeo3Video = inngest.createFunction(
         telegram_id,
         username,
         is_ru,
-        bot_name,
+        bot_name: rawBotName,
         imageUrl,
         style,
         cameraMovement,
       } = event.data as Veo3GenerationEventData
+
+      // Обеспечиваем fallback для bot_name
+      const bot_name = rawBotName || 'neuro_blogger_bot'
+      
+      logger.info('📋 Event data validation:', {
+        received_bot_name: rawBotName,
+        actual_bot_name: bot_name,
+        telegram_id,
+        has_prompt: !!prompt,
+      })
 
       logger.info({
         message: '🎬 Starting VEO3 video generation',
