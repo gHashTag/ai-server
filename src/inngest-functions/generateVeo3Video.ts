@@ -12,6 +12,7 @@ import {
   getUserByTelegramId,
   updateUserLevelPlusOne,
   updateUserBalance,
+  supabase,
 } from '@/core/supabase'
 import { saveVideoUrlToSupabase } from '@/core/supabase/saveVideoUrlToSupabase'
 import { processBalanceVideoOperation } from '@/price/helpers'
@@ -133,12 +134,23 @@ export const generateVeo3Video = inngest.createFunction(
   },
   { event: 'veo3/video.generate' },
   async ({ event, step }) => {
+    // ✅ ДЕТАЛЬНОЕ ЛОГИРОВАНИЕ ПОЛУЧЕНИЯ СОБЫТИЯ ОТ INNGEST 
+    logger.info('📨 VEO3 INNGEST ФУНКЦИЯ ПОЛУЧИЛА СОБЫТИЕ:', {
+      timestamp: new Date().toISOString(),
+      eventId: event.id,
+      eventName: event.name,
+      eventTimestamp: event.timestamp,
+      rawEventData: event.data,
+      eventDataSize: JSON.stringify(event.data).length,
+      source: 'generateVeo3Video.inngest.received'
+    })
+
     try {
       const {
         prompt,
         model = 'veo3_fast',
         aspectRatio = '9:16',
-        duration = 3,
+        duration: inputDuration,
         telegram_id,
         username,
         is_ru,
@@ -148,8 +160,30 @@ export const generateVeo3Video = inngest.createFunction(
         cameraMovement,
       } = event.data as Veo3GenerationEventData
 
+      // ✅ VEO3_FAST ВСЕГДА 8 СЕКУНД - НЕ ПРИНИМАЕМ ДРУГИЕ ЗНАЧЕНИЯ!
+      const duration = model === 'veo3_fast' ? 8 : (inputDuration || 5)
+
       // Обеспечиваем fallback для bot_name
       const bot_name = rawBotName || 'neuro_blogger_bot'
+
+      // ✅ ДЕТАЛЬНОЕ ЛОГИРОВАНИЕ РАЗОБРАННЫХ ПАРАМЕТРОВ
+      logger.info('🔍 VEO3 РАЗОБРАННЫЕ ПАРАМЕТРЫ СОБЫТИЯ:', {
+        telegram_id,
+        username,
+        is_ru,
+        received_bot_name: rawBotName,
+        actual_bot_name: bot_name,
+        model,
+        aspectRatio,
+        duration,
+        prompt: prompt ? `"${prompt.substring(0, 150)}${prompt.length > 150 ? '...' : ''}"` : 'ОТСУТСТВУЕТ',
+        promptLength: prompt?.length || 0,
+        imageUrl: imageUrl ? `PROVIDED (${imageUrl.substring(0, 100)}...)` : 'NOT_PROVIDED',
+        style: style || 'NOT_PROVIDED',
+        cameraMovement: cameraMovement || 'NOT_PROVIDED',
+        timestamp: new Date().toISOString(),
+        source: 'generateVeo3Video.inngest.parsed'
+      })
 
       logger.info('📋 Event data validation:', {
         received_bot_name: rawBotName,
@@ -230,21 +264,159 @@ export const generateVeo3Video = inngest.createFunction(
             throw new Error('Kie.ai unavailable, fallback to Vertex AI')
           }
 
-          // Генерируем через Kie.ai
-          const result = await kieAiService.generateVideo({
+          // ✅ ЛОГИРУЕМ ДАННЫЕ ПЕРЕД ОТПРАВКОЙ В KIE.AI API
+          // ⚡ ВАЖНО: Добавляем callback URL для асинхронной доставки
+          const callbackUrl = process.env.API_URL 
+            ? `${process.env.API_URL}/api/kie-ai/callback`
+            : process.env.CALLBACK_BASE_URL 
+            ? `${process.env.CALLBACK_BASE_URL}/api/kie-ai/callback`
+            : null
+
+          const requestPayload = {
             model,
             prompt,
             duration,
             aspectRatio,
             imageUrl,
             userId: telegram_id,
+            callBackUrl: callbackUrl, // 🔗 Добавляем callback URL!
+          }
+          
+          logger.info('📤 ОТПРАВЛЯЮ ЗАПРОС В KIE.AI API:', {
+            telegram_id,
+            bot_name,
+            callbackUrl: callbackUrl || 'НЕ НАСТРОЕН ❌',
+            hasCallbackUrl: !!callbackUrl,
+            requestPayload: {
+              ...requestPayload,
+              prompt: prompt ? `"${prompt.substring(0, 150)}${prompt.length > 150 ? '...' : ''}"` : null,
+            },
+            requestSize: JSON.stringify(requestPayload).length,
+            timestamp: new Date().toISOString(),
+            source: 'generateVeo3Video.inngest.kieai.request'
           })
 
+          // ✅ СОХРАНЯЕМ ЗАДАЧУ В БД ДЛЯ CALLBACK ОБРАБОТКИ
+          let taskTrackingId: string | null = null
+          try {
+            const { data: taskRecord, error: taskError } = await supabase
+              .from('video_tasks')
+              .insert({
+                telegram_id: telegram_id,
+                bot_name: bot_name,
+                prompt: prompt,
+                model: model,
+                status: 'processing',
+                provider: 'kie.ai',
+                created_at: new Date().toISOString(),
+                duration: duration,
+                aspect_ratio: aspectRatio,
+                estimated_cost: duration * 0.05, // $0.05/сек для veo3_fast
+              })
+              .select('id')
+              .single()
+
+            if (taskError) {
+              logger.warn('⚠️ Failed to save task to database', {
+                error: taskError.message,
+                telegram_id,
+                model,
+              })
+            } else {
+              taskTrackingId = taskRecord?.id?.toString() || null
+              logger.info('✅ Task saved to database', {
+                taskId: taskTrackingId,
+                telegram_id,
+                bot_name,
+                model,
+              })
+            }
+          } catch (dbError) {
+            logger.error('❌ Database save error', {
+              error: dbError,
+              telegram_id,
+              model,
+            })
+          }
+
+          // ✅ ASYNC ГЕНЕРАЦИЯ ЧЕРЕЗ KIE.AI (НЕ ЖДЕМ РЕЗУЛЬТАТ!)
+          const result = await kieAiService.generateVideo(requestPayload)
+
+          // ✅ ОБНОВЛЯЕМ ЗАДАЧУ С TASK_ID ОТ KIE.AI
+          if (result.taskId && taskTrackingId) {
+            try {
+              const { error: updateError } = await supabase
+                .from('video_tasks')
+                .update({ 
+                  task_id: result.taskId,
+                  external_task_id: result.taskId, // Дублируем для поиска
+                })
+                .eq('id', taskTrackingId)
+
+              if (updateError) {
+                logger.warn('⚠️ Failed to update task with Kie.ai task_id', {
+                  error: updateError.message,
+                  taskTrackingId,
+                  kieaiTaskId: result.taskId,
+                })
+              } else {
+                logger.info('✅ Task updated with Kie.ai task_id', {
+                  taskTrackingId,
+                  kieaiTaskId: result.taskId,
+                  telegram_id,
+                  bot_name,
+                })
+              }
+            } catch (updateError) {
+              logger.error('❌ Database update error', {
+                error: updateError,
+                taskTrackingId,
+                kieaiTaskId: result.taskId,
+              })
+            }
+          }
+
+          // ✅ ЕСЛИ CALLBACK ИСПОЛЬЗУЕТСЯ - ЗАВЕРШАЕМ ФУНКЦИЮ СРАЗУ!
+          if (result.callbackUrl) {
+            logger.info('🔗 ASYNC MODE: Task submitted to Kie.ai with callback', {
+              taskId: result.taskId,
+              callbackUrl: result.callbackUrl,
+              telegram_id,
+              bot_name,
+              taskTrackingId,
+            })
+
+            // Уведомляем пользователя что задача принята  
+            const bot = botData.bot
+            if (bot && telegram_id) {
+              await bot.telegram.sendMessage(
+                telegram_id,
+                is_ru 
+                  ? '🎬 Генерация видео запущена! Результат придет через несколько минут...'
+                  : '🎬 Video generation started! Result will be delivered in a few minutes...'
+              )
+            }
+
+            // ✅ ВОЗВРАЩАЕМ УСПЕХ БЕЗ ОЖИДАНИЯ РЕЗУЛЬТАТА!
+            return {
+              success: true,
+              taskId: result.taskId,
+              message: 'Video generation submitted to Kie.ai with callback',
+              provider: 'kie.ai',
+              model,
+              async: true,
+              callbackUrl: result.callbackUrl,
+            }
+          }
+
+          // ✅ СТАРЫЙ SYNC РЕЖИМ (если нет callback URL)
           logger.info({
-            message: '✅ Video generated via Kie.ai',
+            message: '✅ Video generated via Kie.ai (SYNC)',
             videoUrl: result.videoUrl,
             cost: result.cost,
             processingTime: result.processingTime,
+            taskId: result.taskId,
+            taskTrackingId,
           })
 
           return {

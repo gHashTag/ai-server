@@ -207,11 +207,12 @@ async function sendVideoToUser(
 
     // Получаем экземпляр бота
     const botData = getBotByName(taskRecord.bot_name || 'neuro_blogger_bot')
-    if (!botData.bot) {
+    if (!botData || !botData.bot) {
       logger.error('❌ Bot not found for video delivery', {
         taskId: callbackData.taskId,
         botName: taskRecord.bot_name,
-        error: botData.error,
+        error: botData?.error || 'getBotByName returned null/undefined',
+        botData: botData,
       })
       return
     }
@@ -297,11 +298,12 @@ async function sendErrorToUser(
 
     // Получаем экземпляр бота
     const botData = getBotByName(taskRecord.bot_name || 'neuro_blogger_bot')
-    if (!botData.bot) {
+    if (!botData || !botData.bot) {
       logger.error('❌ Bot not found for error delivery', {
         taskId: callbackData.taskId,
         botName: taskRecord.bot_name,
-        error: botData.error,
+        error: botData?.error || 'getBotByName returned null/undefined',
+        botData: botData,
       })
       return
     }
