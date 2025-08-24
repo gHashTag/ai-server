@@ -17,6 +17,7 @@
     "logs:api": "node scripts/logs-viewer.js api",
     "logs:minimal": "node scripts/logs-viewer.js minimal",
     "logs:help": "node scripts/logs-viewer.js --help",
+    "diagnose": "node scripts/diagnose-video-errors.js",
     "build": "npx swc src -d dist --source-maps --copy-files",
     "build:tsc": "tsc && tsc-alias",
     "test": "jest --forceExit --detectOpenHandles",

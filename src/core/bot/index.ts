@@ -88,7 +88,19 @@ export function getBotByName(bot_name: string): {
   logger.info('🔎 getBotByName запрошен для:', {
     description: 'getBotByName requested for',
     bot_name,
+    bot_name_type: typeof bot_name,
+    is_null: bot_name === null,
+    is_undefined: bot_name === undefined,
   })
+
+  // Проверка на null/undefined bot_name
+  if (!bot_name || bot_name === 'null' || bot_name === 'undefined') {
+    logger.warn('⚠️ bot_name is null/undefined, using default bot', {
+      received_bot_name: bot_name,
+      fallback_bot_name: DEFAULT_BOT_NAME,
+    })
+    bot_name = DEFAULT_BOT_NAME
+  }
 
   // Проверяем наличие бота в конфигурации
   let token = BOT_NAMES[bot_name]

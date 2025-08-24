@@ -1,35 +1,53 @@
 import { Router } from 'express'
 import { DartAIController } from '@controllers/dart-ai.controller'
 
-const router = Router()
-const dartAIController = new DartAIController()
-
 /**
  * Dart AI Task Manager Integration Routes
  */
+export class DartAIRoute {
+  public path = '/dart-ai'
+  public router: Router = Router()
+  private dartAIController = new DartAIController()
 
-// Webhook endpoints
-router.post('/webhooks/dart-ai/tasks', dartAIController.handleTaskWebhook)
-router.post(
-  '/webhooks/github/issues',
-  dartAIController.handleGitHubIssueWebhook
-)
+  constructor() {
+    this.initializeRoutes()
+  }
 
-// API endpoints
-router.get('/api/dart-ai/status', dartAIController.getStatus)
+  private initializeRoutes() {
+    // Webhook endpoints
+    this.router.post(
+      '/webhooks/dart-ai/tasks',
+      this.dartAIController.handleTaskWebhook
+    )
+    this.router.post(
+      '/webhooks/github/issues',
+      this.dartAIController.handleGitHubIssueWebhook
+    )
 
-// CRUD операции для задач
-router.get('/api/dart-ai/tasks/:id', dartAIController.getTask)
-router.post('/api/dart-ai/tasks', dartAIController.createTask)
-router.put('/api/dart-ai/tasks/:id', dartAIController.updateTask)
-router.delete('/api/dart-ai/tasks/:id', dartAIController.deleteTask)
+    // API endpoints
+    this.router.get('/api/dart-ai/status', this.dartAIController.getStatus)
 
-// Синхронизация
-router.post('/api/dart-ai/sync/github-issue', dartAIController.syncGitHubIssue)
-router.post('/api/dart-ai/sync/task', dartAIController.syncDartAITask)
-router.post(
-  '/api/dart-ai/sync/bulk-issues',
-  dartAIController.bulkSyncGitHubIssues
-)
+    // CRUD операции для задач
+    this.router.get('/api/dart-ai/tasks/:id', this.dartAIController.getTask)
+    this.router.post('/api/dart-ai/tasks', this.dartAIController.createTask)
+    this.router.put('/api/dart-ai/tasks/:id', this.dartAIController.updateTask)
+    this.router.delete(
+      '/api/dart-ai/tasks/:id',
+      this.dartAIController.deleteTask
+    )
 
-export default router
+    // Синхронизация
+    this.router.post(
+      '/api/dart-ai/sync/github-issue',
+      this.dartAIController.syncGitHubIssue
+    )
+    this.router.post(
+      '/api/dart-ai/sync/task',
+      this.dartAIController.syncDartAITask
+    )
+    this.router.post(
+      '/api/dart-ai/sync/bulk-issues',
+      this.dartAIController.bulkSyncGitHubIssues
+    )
+  }
+}
