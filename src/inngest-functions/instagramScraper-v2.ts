@@ -35,6 +35,12 @@ import {
   type CreateInstagramUserEvent,
   type CreateUserResult,
   CreateUserResultSchema,
+  // Новые импорты для Apify integration
+  ApifyScrapingCallParamsSchema,
+  type ApifyScrapingCallParams,
+  ApifyScrapingResultSchema,
+  type ApifyScrapingResult,
+  createApifyParams,
 } from '../core/instagram/schemas'
 
 // Импортируем Project Manager для автоматического создания проектов
@@ -1096,13 +1102,31 @@ export const instagramScraperV2 = inngest.createFunction(
       async () => {
         log.info('🤖 Starting Apify Instagram scraping instead of RapidAPI...')
 
-        // Запускаем Apify парсинг
-        const result = await triggerApifyInstagramScraping({
-          username_or_hashtag: username_or_id,
-          project_id: project_id,
-          source_type: 'competitor',
-          max_reels: max_users,
-          requester_telegram_id: 'auto-system', // Системный вызов
+        // Создаем валидированные параметры для Apify используя helper функцию
+        const apifyParams = createApifyParams(
+          {
+            username_or_id,
+            max_users,
+            max_reels_per_user, // ИСПРАВЛЕНО: передаем количество рилсов на пользователя
+            scrape_reels,
+            requester_telegram_id,
+            telegram_username,
+            bot_name,
+          },
+          project_id
+        )
+
+        log.info('🔍 Apify params created with Zod validation:', apifyParams)
+
+        // Запускаем Apify парсинг с валидированными параметрами
+        const result = await triggerApifyInstagramScraping(apifyParams)
+
+        // Валидируем результат
+        const validatedResult = ApifyScrapingResultSchema.parse(result)
+
+        log.info('✅ Apify scraping triggered successfully:', {
+          eventId: validatedResult.eventId,
+          maxReels: apifyParams.max_reels,
         })
 
         // Возвращаем результат в формате совместимом с остальным кодом
@@ -1110,8 +1134,9 @@ export const instagramScraperV2 = inngest.createFunction(
           success: true,
           users: [], // Apify обрабатывает данные асинхронно
           total: 0,
-          message: 'Apify scraping initiated successfully',
-          apifyEventId: result.eventId,
+          message: 'Apify scraping initiated successfully with Zod validation',
+          apifyEventId: validatedResult.eventId,
+          apifyParams,
         }
       }
     )

@@ -446,3 +446,52 @@ export function validateInstagramReels(
     errors,
   }
 }
+
+// ===================================
+// APIFY SCRAPER INTEGRATION SCHEMAS
+// ===================================
+
+// Схема для валидации параметров вызова Apify Instagram Scraper
+export const ApifyScrapingCallParamsSchema = z.object({
+  username_or_hashtag: z.string().min(1, 'Username or hashtag is required'),
+  project_id: z.number().positive('Project ID must be a positive number'),
+  source_type: z.enum(['competitor', 'hashtag']).default('competitor'),
+  max_reels: z.number().min(1).max(500).default(50),
+  min_views: z.number().min(0).optional(),
+  max_age_days: z.number().min(1).max(365).optional(),
+  requester_telegram_id: z.string().optional(),
+  bot_name: z.string().optional(),
+})
+
+// Тип для параметров вызова Apify
+export type ApifyScrapingCallParams = z.infer<
+  typeof ApifyScrapingCallParamsSchema
+>
+
+// Схема для результата вызова Apify
+export const ApifyScrapingResultSchema = z.object({
+  eventId: z.string(),
+  success: z.boolean().default(true),
+  message: z.string().optional(),
+})
+
+// Тип для результата вызова Apify
+export type ApifyScrapingResult = z.infer<typeof ApifyScrapingResultSchema>
+
+/**
+ * Создает валидированные параметры для вызова Apify Instagram Scraper
+ * на основе параметров основного события Instagram Scraper V2
+ */
+export function createApifyParams(
+  mainEventData: InstagramScrapingEvent,
+  projectId: number
+): ApifyScrapingCallParams {
+  return ApifyScrapingCallParamsSchema.parse({
+    username_or_hashtag: mainEventData.username_or_id,
+    project_id: projectId,
+    source_type: 'competitor',
+    max_reels: mainEventData.max_reels_per_user || 50, // ИСПРАВЛЕНО: используем max_reels_per_user
+    requester_telegram_id: mainEventData.requester_telegram_id || 'auto-system',
+    bot_name: mainEventData.bot_name,
+  })
+}
