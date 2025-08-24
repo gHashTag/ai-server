@@ -133,6 +133,17 @@ export const generateVeo3Video = inngest.createFunction(
   },
   { event: 'veo3/video.generate' },
   async ({ event, step }) => {
+    // ✅ ДЕТАЛЬНОЕ ЛОГИРОВАНИЕ ПОЛУЧЕНИЯ СОБЫТИЯ ОТ INNGEST 
+    logger.info('📨 VEO3 INNGEST ФУНКЦИЯ ПОЛУЧИЛА СОБЫТИЕ:', {
+      timestamp: new Date().toISOString(),
+      eventId: event.id,
+      eventName: event.name,
+      eventTimestamp: event.timestamp,
+      rawEventData: event.data,
+      eventDataSize: JSON.stringify(event.data).length,
+      source: 'generateVeo3Video.inngest.received'
+    })
+
     try {
       const {
         prompt,
@@ -150,7 +161,26 @@ export const generateVeo3Video = inngest.createFunction(
 
       // Обеспечиваем fallback для bot_name
       const bot_name = rawBotName || 'neuro_blogger_bot'
-      
+
+      // ✅ ДЕТАЛЬНОЕ ЛОГИРОВАНИЕ РАЗОБРАННЫХ ПАРАМЕТРОВ
+      logger.info('🔍 VEO3 РАЗОБРАННЫЕ ПАРАМЕТРЫ СОБЫТИЯ:', {
+        telegram_id,
+        username,
+        is_ru,
+        received_bot_name: rawBotName,
+        actual_bot_name: bot_name,
+        model,
+        aspectRatio,
+        duration,
+        prompt: prompt ? `"${prompt.substring(0, 150)}${prompt.length > 150 ? '...' : ''}"` : 'ОТСУТСТВУЕТ',
+        promptLength: prompt?.length || 0,
+        imageUrl: imageUrl ? `PROVIDED (${imageUrl.substring(0, 100)}...)` : 'NOT_PROVIDED',
+        style: style || 'NOT_PROVIDED',
+        cameraMovement: cameraMovement || 'NOT_PROVIDED',
+        timestamp: new Date().toISOString(),
+        source: 'generateVeo3Video.inngest.parsed'
+      })
+
       logger.info('📋 Event data validation:', {
         received_bot_name: rawBotName,
         actual_bot_name: bot_name,
@@ -230,15 +260,30 @@ export const generateVeo3Video = inngest.createFunction(
             throw new Error('Kie.ai unavailable, fallback to Vertex AI')
           }
 
-          // Генерируем через Kie.ai
-          const result = await kieAiService.generateVideo({
+          // ✅ ЛОГИРУЕМ ДАННЫЕ ПЕРЕД ОТПРАВКОЙ В KIE.AI API
+          const requestPayload = {
             model,
             prompt,
             duration,
             aspectRatio,
             imageUrl,
             userId: telegram_id,
+          }
+          
+          logger.info('📤 ОТПРАВЛЯЮ ЗАПРОС В KIE.AI API:', {
+            telegram_id,
+            bot_name,
+            requestPayload: {
+              ...requestPayload,
+              prompt: prompt ? `"${prompt.substring(0, 150)}${prompt.length > 150 ? '...' : ''}"` : null,
+            },
+            requestSize: JSON.stringify(requestPayload).length,
+            timestamp: new Date().toISOString(),
+            source: 'generateVeo3Video.inngest.kieai.request'
           })
+
+          // Генерируем через Kie.ai
+          const result = await kieAiService.generateVideo(requestPayload)
 
           logger.info({
             message: '✅ Video generated via Kie.ai',
@@ -353,47 +398,91 @@ export const generateVeo3Video = inngest.createFunction(
         )
       })
 
-      // Шаг 6: Отправка результата пользователю
+      // Шаг 6: Отправка результата пользователю (только для sync mode)
       await step.run('send-result', async () => {
         logger.info({
           message: '📤 Sending result to user',
           telegram_id,
           provider: generationResult.provider,
+          status: generationResult.status,
+          asyncMode: generationResult.metadata?.asyncMode,
           step: 'send-result',
         })
 
-        const successMessage = is_ru
-          ? `🎬 **Видео готово!**\n\n` +
-            `📱 **Формат:** ${aspectRatio}\n` +
-            `⏱️ **Длительность:** ${duration}с\n` +
-            `🤖 **Модель:** ${generationResult.model}\n` +
-            `🔗 **Провайдер:** ${generationResult.provider}\n\n` +
-            `✨ Создано с помощью VEO3 AI`
-          : `🎬 **Video Ready!**\n\n` +
-            `📱 **Format:** ${aspectRatio}\n` +
-            `⏱️ **Duration:** ${duration}s\n` +
-            `🤖 **Model:** ${generationResult.model}\n` +
-            `🔗 **Provider:** ${generationResult.provider}\n\n` +
-            `✨ Generated with VEO3 AI`
+        // Проверяем режим генерации
+        if (generationResult.metadata?.asyncMode) {
+          // Async режим - результат придет через callback
+          const asyncMessage = is_ru
+            ? `⏳ **Генерация видео начата!**\n\n` +
+              `📱 **Формат:** ${aspectRatio}\n` +
+              `⏱️ **Длительность:** ${duration}с\n` +
+              `🤖 **Модель:** ${generationResult.model}\n` +
+              `🔗 **Провайдер:** ${generationResult.provider}\n` +
+              `📋 **ID задачи:** ${generationResult.taskId}\n\n` +
+              `🔔 **Видео будет доставлено автоматически после завершения генерации**\n\n` +
+              `✨ Создается с помощью VEO3 AI`
+            : `⏳ **Video Generation Started!**\n\n` +
+              `📱 **Format:** ${aspectRatio}\n` +
+              `⏱️ **Duration:** ${duration}s\n` +
+              `🤖 **Model:** ${generationResult.model}\n` +
+              `🔗 **Provider:** ${generationResult.provider}\n` +
+              `📋 **Task ID:** ${generationResult.taskId}\n\n` +
+              `🔔 **Video will be delivered automatically after generation completes**\n\n` +
+              `✨ Generating with VEO3 AI`
 
-        // Отправляем видео файлом
-        try {
-          await bot.telegram.sendVideo(telegram_id, generationResult.videoUrl, {
-            caption: successMessage,
+          await bot.telegram.sendMessage(telegram_id, asyncMessage, {
             parse_mode: 'Markdown',
           })
-        } catch (videoError: any) {
-          // Если видео не отправилось, отправляем ссылку
-          logger.warn({
-            message: '⚠️ Failed to send video file, sending URL instead',
-            error: videoError.message,
-          })
 
-          await bot.telegram.sendMessage(
+          logger.info({
+            message: '✅ Async generation notification sent',
+            taskId: generationResult.taskId,
             telegram_id,
-            `${successMessage}\n\n📎 **Скачать видео:** ${generationResult.videoUrl}`,
-            { parse_mode: 'Markdown' }
-          )
+          })
+        } else {
+          // Sync режим - отправляем готовое видео
+          const successMessage = is_ru
+            ? `🎬 **Видео готово!**\n\n` +
+              `📱 **Формат:** ${aspectRatio}\n` +
+              `⏱️ **Длительность:** ${duration}с\n` +
+              `🤖 **Модель:** ${generationResult.model}\n` +
+              `🔗 **Провайдер:** ${generationResult.provider}\n\n` +
+              `✨ Создано с помощью VEO3 AI`
+            : `🎬 **Video Ready!**\n\n` +
+              `📱 **Format:** ${aspectRatio}\n` +
+              `⏱️ **Duration:** ${duration}s\n` +
+              `🤖 **Model:** ${generationResult.model}\n` +
+              `🔗 **Provider:** ${generationResult.provider}\n\n` +
+              `✨ Generated with VEO3 AI`
+
+          // Отправляем видео файлом
+          try {
+            await bot.telegram.sendVideo(
+              telegram_id,
+              generationResult.videoUrl,
+              {
+                caption: successMessage,
+                parse_mode: 'Markdown',
+              }
+            )
+
+            logger.info({
+              message: '✅ Video sent to user successfully',
+              videoUrl: generationResult.videoUrl,
+            })
+          } catch (videoError: any) {
+            // Если видео не отправилось, отправляем ссылку
+            logger.warn({
+              message: '⚠️ Failed to send video file, sending URL instead',
+              error: videoError.message,
+            })
+
+            await bot.telegram.sendMessage(
+              telegram_id,
+              `${successMessage}\n\n📎 **Скачать видео:** ${generationResult.videoUrl}`,
+              { parse_mode: 'Markdown' }
+            )
+          }
         }
       })
 

@@ -442,15 +442,18 @@ export const networkCheckMonitor = inngest.createFunction(
     if (isCritical || (isPostDeploy && trends.failureRate > 10)) {
       await step.run('send-alerts', async () => {
         const botData = getBotByName('neuro_blogger_bot')
-        
+
         if (!botData.bot) {
-          logger.error('❌ Bot не найден для отправки уведомлений NetworkCheck', {
-            error: botData.error,
-            bot_name: 'neuro_blogger_bot',
-          })
+          logger.error(
+            '❌ Bot не найден для отправки уведомлений NetworkCheck',
+            {
+              error: botData.error,
+              bot_name: 'neuro_blogger_bot',
+            }
+          )
           return
         }
-        
+
         const bot = botData.bot
 
         let message = ''
@@ -649,7 +652,7 @@ export const postDeployNetworkCheck = inngest.createFunction(
     // Отправляем отчет
     await step.run('send-post-deploy-report', async () => {
       const botData = getBotByName('neuro_blogger_bot')
-      
+
       if (!botData.bot) {
         logger.error('❌ Bot не найден для отправки POST-DEPLOY отчета', {
           error: botData.error,
@@ -657,7 +660,7 @@ export const postDeployNetworkCheck = inngest.createFunction(
         })
         return
       }
-      
+
       const bot = botData.bot
 
       let message = '🚀 POST-DEPLOY NETWORK CHECK REPORT\n\n'

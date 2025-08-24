@@ -300,18 +300,16 @@ export const githubWebhookMiddleware = new GitHubWebhookMiddleware()
 
 // Расширяем Request типы для TypeScript
 declare global {
-  namespace Express {
-    interface Request {
-      github_webhook?: {
-        event: string
-        delivery: string
-        signature: string
-        validated_at: string
-      }
+  interface Request {
+    github_webhook?: {
+      event: string
+      delivery: string
+      signature: string
+      validated_at: string
     }
   }
 
-  var webhookRateLimit: {
+  let webhookRateLimit: {
     [key: string]: {
       count: number
       resetTime: number
