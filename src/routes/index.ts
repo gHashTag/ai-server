@@ -18,7 +18,7 @@ import { CompetitorSubscriptionsRoute } from './competitor-subscriptions.route'
 import { UniversalWebhookRoute } from './universalWebhook.route'
 import N8nRoute from './n8n.route'
 import { GitHubWebhookRoute } from './github-webhook.route'
-import DartAIRoute from './dart-ai.route'
+import { DartAIRoute } from './dart-ai.route'
 
 export const routes = [
   new UploadRoute(),
@@ -41,5 +41,5 @@ export const routes = [
   new UniversalWebhookRoute(), // Универсальный webhook для всех AI провайдеров
   new N8nRoute(), // N8N Workflow Administration Interface
   new GitHubWebhookRoute(), // GitHub PR Auto-fixer с Claude Code интеграцией
-  DartAIRoute, // Dart AI Task Manager Integration
+  new DartAIRoute(), // Dart AI Task Manager Integration
 ]
