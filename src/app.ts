@@ -27,6 +27,7 @@ import morgan from 'morgan'
 // import { checkSecretKey } from './utils/checkSecretKey'
 import { inngestRouter } from './routes/inngest.route'
 import { UploadRoute } from './routes/upload.route'
+import kieAiCallbackRoutes from './routes/kie-ai-callback.routes'
 import { inngest } from './core/inngest/clients'
 
 // const nexrenderPort = NEXRENDER_PORT
@@ -67,6 +68,8 @@ export class App {
       logger.info(`   GET  /trigger        - Trigger test event`)
       logger.info(`   POST /api/inngest    - Inngest webhook`)
       logger.info(`   POST /api/upload     - File upload`)
+      logger.info(`   POST /api/kie-ai/callback - Kie.ai async callback`)
+      logger.info(`   GET  /api/kie-ai/callback/health - Callback health check`)
       logger.info(`   GET  /api-docs       - Swagger documentation`)
       logger.info(`   GET  /uploads/*      - Static files`)
       logger.info(`=================================`)
@@ -151,6 +154,7 @@ export class App {
 
     this.app.use('/api/inngest', inngestRouter)
     this.app.use('/api/upload', new UploadRoute().router)
+    this.app.use('/api/kie-ai', kieAiCallbackRoutes)
     this.app.get('/trigger', async (req, res) => {
       await inngest.send({
         name: 'test/hello',
