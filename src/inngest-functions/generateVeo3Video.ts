@@ -265,6 +265,13 @@ export const generateVeo3Video = inngest.createFunction(
           }
 
           // ✅ ЛОГИРУЕМ ДАННЫЕ ПЕРЕД ОТПРАВКОЙ В KIE.AI API
+          // ⚡ ВАЖНО: Добавляем callback URL для асинхронной доставки
+          const callbackUrl = process.env.API_URL 
+            ? `${process.env.API_URL}/api/kie-ai/callback`
+            : process.env.CALLBACK_BASE_URL 
+            ? `${process.env.CALLBACK_BASE_URL}/api/kie-ai/callback`
+            : null
+
           const requestPayload = {
             model,
             prompt,
@@ -272,11 +279,14 @@ export const generateVeo3Video = inngest.createFunction(
             aspectRatio,
             imageUrl,
             userId: telegram_id,
+            callBackUrl: callbackUrl, // 🔗 Добавляем callback URL!
           }
           
           logger.info('📤 ОТПРАВЛЯЮ ЗАПРОС В KIE.AI API:', {
             telegram_id,
             bot_name,
+            callbackUrl: callbackUrl || 'НЕ НАСТРОЕН ❌',
+            hasCallbackUrl: !!callbackUrl,
             requestPayload: {
               ...requestPayload,
               prompt: prompt ? `"${prompt.substring(0, 150)}${prompt.length > 150 ? '...' : ''}"` : null,
