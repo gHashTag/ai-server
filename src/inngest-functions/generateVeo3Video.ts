@@ -279,6 +279,9 @@ export const generateVeo3Video = inngest.createFunction(
             aspectRatio,
             imageUrl,
             userId: telegram_id,
+            projectId: bot_name 
+              ? parseInt(bot_name.replace(/\D/g, '').slice(0, 9)) || 1
+              : 1, // Default project ID
             callBackUrl: callbackUrl, // 🔗 Добавляем callback URL!
           }
           
