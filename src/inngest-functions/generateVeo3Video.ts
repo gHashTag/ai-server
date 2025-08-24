@@ -12,6 +12,7 @@ import {
   getUserByTelegramId,
   supabase,
 } from '@/core/supabase'
+import { ProjectManager } from '@/core/instagram/project-manager'
 import { errorMessage, errorMessageAdmin } from '@/helpers'
 import { logger } from '@/utils/logger'
 import { PaymentType } from '@/interfaces/payments.interface'
@@ -275,9 +276,7 @@ export const generateVeo3Video = inngest.createFunction(
             aspectRatio,
             imageUrl,
             userId: telegram_id,
-            projectId: bot_name 
-              ? parseInt(bot_name.replace(/\D/g, '').slice(0, 9)) || 1
-              : 1, // Default project ID
+            projectId: project.id, // ✅ Уникальный ID проекта из БД
             callBackUrl: callbackUrl, // 🔗 Добавляем callback URL!
           }
           
@@ -295,6 +294,22 @@ export const generateVeo3Video = inngest.createFunction(
             source: 'generateVeo3Video.inngest.kieai.request'
           })
 
+          // ✅ ПОЛУЧАЕМ ИЛИ СОЗДАЕМ ПРОЕКТ ДЛЯ ПОЛЬЗОВАТЕЛЯ  
+          const projectManager = new ProjectManager()
+          const { project } = await projectManager.validateOrCreateProject(
+            undefined, // project_id не передан
+            telegram_id,
+            username,
+            bot_name
+          )
+          
+          logger.info('📊 Project validated/created', {
+            projectId: project.id,
+            projectName: project.name,
+            telegram_id,
+            username
+          })
+
           // ✅ СОХРАНЯЕМ ЗАДАЧУ В БД ДЛЯ CALLBACK ОБРАБОТКИ
           let taskTrackingId: string | null = null
           try {
@@ -307,6 +322,7 @@ export const generateVeo3Video = inngest.createFunction(
                 model: model,
                 status: 'processing',
                 provider: 'kie.ai',
+                project_id: project.id, // ✅ Связываем с проектом
                 created_at: new Date().toISOString(),
                 duration: duration,
                 aspect_ratio: aspectRatio,

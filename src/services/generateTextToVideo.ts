@@ -162,9 +162,7 @@ export const processVideoGeneration = async (
       aspectRatio: kieAspectRatio,
       imageUrl,
       userId: telegram_id, // Передаем telegram_id для сохранения в БД
-      projectId: bot_name
-        ? parseInt(bot_name.replace(/\D/g, '').slice(0, 9)) || 1
-        : undefined, // Преобразуем bot_name в число
+      // ПРИМЕЧАНИЕ: projectId теперь генерируется корректно в generateVeo3Video.ts
     })
 
     return result.videoUrl
