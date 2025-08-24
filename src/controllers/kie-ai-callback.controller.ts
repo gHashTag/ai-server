@@ -7,6 +7,11 @@ import { Request, Response } from 'express'
 import { logger } from '@/utils/logger'
 import { supabase } from '@/core/supabase'
 import { getBotByName } from '@/core/bot'
+import { saveVideoUrlToSupabase } from '@/core/supabase/saveVideoUrlToSupabase'
+import { processBalanceVideoOperation } from '@/price/helpers'
+import { updateUserLevelPlusOne } from '@/core/supabase'
+import { PaymentType } from '@/interfaces/payments.interface'
+import { ModeEnum } from '@/interfaces/modes'
 
 /**
  * Интерфейс для callback данных от Kie.ai
@@ -238,6 +243,61 @@ async function sendVideoToUser(
         `🤖 **Model:** ${taskRecord.model || 'N/A'}\n` +
         `🔗 **Provider:** Kie.ai\n\n` +
         `✨ Generated with VEO3 AI`
+
+    // 💰 ОБРАБОТКА БАЛАНСА И СОХРАНЕНИЯ (теперь когда видео готово!)
+    try {
+      // 1. Списываем баланс
+      const STAR_COST_USD = 0.016
+      const MARKUP_RATE = 1.5
+      const starsRequired = Math.ceil((callbackData.cost * MARKUP_RATE) / STAR_COST_USD)
+      
+      logger.info('💰 Processing balance for completed video', {
+        taskId: callbackData.taskId,
+        cost: callbackData.cost,
+        starsRequired,
+      })
+
+      await processBalanceVideoOperation({
+        telegram_id: taskRecord.telegram_id,
+        cost: starsRequired,
+        paymentType: PaymentType.VEO3_VIDEO_GENERATION,
+        mode: ModeEnum.TextToVideo,
+        username: taskRecord.metadata?.username,
+        is_ru: taskRecord.is_ru !== false,
+        bot,
+      })
+
+      // 2. Сохраняем видео в базу данных
+      logger.info('💾 Saving video to database', {
+        taskId: callbackData.taskId,
+        videoUrl: callbackData.videoUrl,
+      })
+
+      await saveVideoUrlToSupabase(
+        callbackData.videoUrl!,
+        taskRecord.telegram_id,
+        taskRecord.metadata?.prompt || 'VEO3 Video',
+        'veo3_video_generation'
+      )
+
+      // 3. Повышаем уровень пользователя
+      logger.info('⭐ Processing user level up', {
+        taskId: callbackData.taskId,
+        telegramId: taskRecord.telegram_id,
+      })
+
+      await updateUserLevelPlusOne(taskRecord.telegram_id)
+
+      logger.info('✅ All post-generation processing completed', {
+        taskId: callbackData.taskId,
+      })
+    } catch (processingError: any) {
+      logger.error('❌ Failed to process balance/save/level-up', {
+        taskId: callbackData.taskId,
+        error: processingError.message,
+      })
+      // Продолжаем отправку видео даже если обработка не удалась
+    }
 
     // Отправляем видео
     try {
