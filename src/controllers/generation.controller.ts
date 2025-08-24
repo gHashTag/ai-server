@@ -66,13 +66,13 @@ export class GenerationController {
 
       // Используем новую Inngest функцию для VEO3 генерации
       const { inngest } = await import('@/core/inngest/clients')
-      
+
       const veo3Event = {
         name: 'veo3/video.generate',
         data: {
           prompt,
           model: 'veo3_fast',
-          aspectRatio: '9:16' as '9:16',
+          aspectRatio: '9:16' as const,
           duration: duration || 5,
           telegram_id,
           username: username || '',
@@ -89,7 +89,10 @@ export class GenerationController {
         import('@/services/videoJobTracker').then(({ setVideoJobError }) => {
           setVideoJobError(jobId, error.message)
         })
-        logger.error(`Veo3 video generation event failed for job ${jobId}:`, error)
+        logger.error(
+          `Veo3 video generation event failed for job ${jobId}:`,
+          error
+        )
       })
     } catch (error) {
       next(error)

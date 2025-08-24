@@ -150,7 +150,7 @@ export const generateVeo3Video = inngest.createFunction(
 
       // Обеспечиваем fallback для bot_name
       const bot_name = rawBotName || 'neuro_blogger_bot'
-      
+
       logger.info('📋 Event data validation:', {
         received_bot_name: rawBotName,
         actual_bot_name: bot_name,
