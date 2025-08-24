@@ -70,7 +70,6 @@
     "form-data": "^4.0.1",
     "helmet": "^5.1.1",
     "hpp": "^0.2.3",
-    "http-proxy-middleware": "^2.0.6",
     "inngest": "^3.37.0",
     "jest-mock": "^29.7.0",
     "jsonwebtoken": "^8.5.1",
@@ -131,7 +130,6 @@
     "ts-node": "^10.9.1",
     "tsc-alias": "^1.7.0",
     "tsconfig-paths": "^4.0.0",
-    "typescript": "^5.0.0",
-    "n8n": "^1.71.2"
+    "typescript": "^5.0.0"
   }
 }
